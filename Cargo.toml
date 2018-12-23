@@ -1,0 +1,54 @@
+[package]
+edition = "2018"
+authors = ["Vitaly Domnikov <oss@vitaly.codes>"]
+categories = [
+    "embedded",
+    "hardware-support",
+    "no-std",
+]
+description = "Peripheral access API for STM32G0 series microcontrollers"
+documentation = "https://docs.rs/stm32g0xx-hal"
+keywords = [
+    "arm",
+    "cortex-m",
+    "stm32g0xx",
+    "hal",
+]
+license = "MIT/Apache-2.0"
+name = "stm32g0xx-hal"
+readme = "README.md"
+repository = "https://github.com/stm32-rs/stm32g0xx-hal"
+version = "0.0.0"
+
+[dependencies]
+cortex-m = "0.5.8"
+nb = "0.1.1"
+stm32g0 = { path = "../stm32-rs/stm32g0" }
+
+[dependencies.bare-metal]
+features = ["const-fn"]
+version = "0.2.4"
+
+[dependencies.cast]
+default-features = false
+version = "0.2.2"
+
+[dependencies.embedded-hal]
+features = ["unproven"]
+version = "0.2.2"
+
+[features]
+default = ["rt"]
+rt = ["stm32g0/rt"]
+stm32g070 = ["stm32g0/stm32g0x0"]
+stm32g071 = ["stm32g0/stm32g0x1"]
+stm32g081 = ["stm32g0/stm32g0x1"]
+
+[profile.dev]
+codegen-units = 1
+incremental = false
+
+[profile.release]
+codegen-units = 1
+debug = true
+lto = true
