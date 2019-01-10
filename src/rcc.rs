@@ -18,7 +18,7 @@ pub enum ClockSrc {
   HSI,
   HSE(Hertz),
   LSE(Hertz),
-  PLL(PLLSource, PLLMul, PLLDiv),
+  PLL(PLLS, PLLMul, PLLDiv),
 }
 
 /// PLL divider
@@ -45,7 +45,7 @@ pub enum PLLMul {
 
 /// AHB prescaler
 #[derive(Clone, Copy)]
-pub enum AHBPrescaler {
+pub enum AHBPsc {
   NotDivided = 0,
   Div2 = 0b1000,
   Div4 = 0b1001,
@@ -59,7 +59,7 @@ pub enum AHBPrescaler {
 
 /// APB prescaler
 #[derive(Clone, Copy)]
-pub enum APBPrescaler {
+pub enum APBPsc {
   NotDivided = 0,
   Div2 = 0b100,
   Div4 = 0b101,
@@ -69,7 +69,7 @@ pub enum APBPrescaler {
 
 /// PLL clock input source
 #[derive(Clone, Copy)]
-pub enum PLLSource {
+pub enum PLLS {
   HSI,
   HSE(Hertz),
 }
@@ -80,18 +80,18 @@ pub const HSI_FREQ: u32 = 15_998_976;
 /// Clocks configutation
 pub struct Config {
   mux: ClockSrc,
-  ahb_pre: AHBPrescaler,
-  apb1_pre: APBPrescaler,
-  apb2_pre: APBPrescaler,
+  ahb_psc: AHBPsc,
+  apb1_psc: APBPsc,
+  apb2_psc: APBPsc,
 }
 
 impl Default for Config {
   fn default() -> Config {
     Config {
       mux: ClockSrc::HSI,
-      ahb_pre: AHBPrescaler::NotDivided,
-      apb1_pre: APBPrescaler::NotDivided,
-      apb2_pre: APBPrescaler::NotDivided,
+      ahb_psc: AHBPsc::NotDivided,
+      apb1_psc: APBPsc::NotDivided,
+      apb2_psc: APBPsc::NotDivided,
     }
   }
 }
@@ -102,18 +102,18 @@ impl Config {
     self
   }
 
-  pub fn ahb_pre(mut self, pre: AHBPrescaler) -> Self {
-    self.ahb_pre = pre;
+  pub fn ahb_psc(mut self, psc: AHBPsc) -> Self {
+    self.ahb_psc = psc;
     self
   }
 
-  pub fn apb1_pre(mut self, pre: APBPrescaler) -> Self {
-    self.apb1_pre = pre;
+  pub fn apb1_psc(mut self, psc: APBPsc) -> Self {
+    self.apb1_psc = psc;
     self
   }
 
-  pub fn apb2_pre(mut self, pre: APBPrescaler) -> Self {
-    self.apb2_pre = pre;
+  pub fn apb2_psc(mut self, psc: APBPsc) -> Self {
+    self.apb2_psc = psc;
     self
   }
 
@@ -137,13 +137,13 @@ impl Config {
       }
       ClockSrc::PLL(src, mul, div) => {
         let (src_bit, freq) = match src {
-          PLLSource::HSE(freq) => {
+          PLLS::HSE(freq) => {
             // Enable HSE
             rcc.cr.write(|w| w.hseon().set_bit());
             while rcc.cr.read().hserdy().bit_is_clear() {}
             (true, freq.0)
           }
-          PLLSource::HSI => {
+          PLLS::HSI => {
             // Enable HSI
             rcc.cr.write(|w| w.hsion().set_bit());
             while rcc.cr.read().hsirdy().bit_is_clear() {}
@@ -198,28 +198,28 @@ impl Config {
     //   w.sw()
     //     .bits(sw_bits)
     //     .hpre()
-    //     .bits(self.ahb_pre as u8)
+    //     .bits(self.ahb_psc as u8)
     //     .ppre1()
-    //     .bits(self.apb1_pre as u8)
+    //     .bits(self.apb1_psc as u8)
     //     .ppre2()
-    //     .bits(self.apb2_pre as u8)
+    //     .bits(self.apb2_psc as u8)
     // });
 
-    let ahb_freq = match self.ahb_pre {
-      AHBPrescaler::NotDivided => sys_clk,
+    let ahb_freq = match self.ahb_psc {
+      AHBPsc::NotDivided => sys_clk,
       pre => sys_clk / (1 << (pre as u8 - 7)),
     };
 
-    let (apb1_freq, apb1_tim_freq) = match self.apb1_pre {
-      APBPrescaler::NotDivided => (ahb_freq, ahb_freq),
+    let (apb1_freq, apb1_tim_freq) = match self.apb1_psc {
+      APBPsc::NotDivided => (ahb_freq, ahb_freq),
       pre => {
         let freq = ahb_freq / (1 << (pre as u8 - 3));
         (freq, freq * 2)
       }
     };
 
-    let (apb2_freq, apb2_tim_freq) = match self.apb2_pre {
-      APBPrescaler::NotDivided => (ahb_freq, ahb_freq),
+    let (apb2_freq, apb2_tim_freq) = match self.apb2_psc {
+      APBPsc::NotDivided => (ahb_freq, ahb_freq),
       pre => {
         let freq = ahb_freq / (1 << (pre as u8 - 3));
         (freq, freq * 2)

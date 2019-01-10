@@ -27,5 +27,6 @@ pub use stm32g0::stm32g0x1 as stm32;
 pub use crate::stm32::interrupt;
 
 pub mod prelude;
+pub mod gpio;
 pub mod rcc;
 pub mod time;
