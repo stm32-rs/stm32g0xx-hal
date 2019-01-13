@@ -8,11 +8,10 @@ compile_error!(
 
 extern crate bare_metal;
 extern crate cast;
-extern crate cortex_m;
 
+pub extern crate cortex_m;
 pub extern crate embedded_hal as hal;
 pub extern crate nb;
-
 pub extern crate stm32g0;
 
 pub use nb::block;
@@ -26,7 +25,11 @@ pub use stm32g0::stm32g0x1 as stm32;
 #[cfg(feature = "rt")]
 pub use crate::stm32::interrupt;
 
-pub mod prelude;
+#[macro_use]
+pub mod debug;
+
+pub mod delay;
 pub mod gpio;
+pub mod prelude;
 pub mod rcc;
 pub mod time;

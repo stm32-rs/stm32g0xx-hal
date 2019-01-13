@@ -5,25 +5,17 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
-extern crate cortex_m_semihosting as sh;
 extern crate panic_semihosting;
+
+#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
-use sh::hprintln;
-use rt::{entry, exception, ExceptionFrame};
+use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hprintln!("Hello, STM32G0!").unwrap();
+    hal::debug::init();
+    println!("Hello, STM32G0!");
+
     loop {}
-}
-
-#[exception]
-fn HardFault(ef: &ExceptionFrame) -> ! {
-    panic!("{:#?}", ef);
-}
-
-#[exception]
-fn DefaultHandler(irqn: i16) {
-    panic!("Unhandled exception (IRQn = {})", irqn);
 }

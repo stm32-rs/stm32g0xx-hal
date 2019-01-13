@@ -22,6 +22,7 @@ version = "0.0.0"
 
 [dependencies]
 cortex-m = "0.5.8"
+cortex-m-semihosting = "0.3.2"
 nb = "0.1.1"
 stm32g0 = { path = "../../stm32-rs/stm32g0" }
 
@@ -39,13 +40,13 @@ version = "0.2.2"
 
 [dev-dependencies]
 cortex-m-rt = "0.6.7"
-cortex-m-semihosting = "0.3.2"
 panic-semihosting = "0.5.1"
 cortex-m-rtfm = "0.4.0"
 
 [features]
-default = ["rt"]
+default = ["rt", "debug", "stm32g071"]
 rt = ["stm32g0/rt"]
+debug = [] 
 stm32g070 = ["stm32g0/stm32g0x0"]
 stm32g071 = ["stm32g0/stm32g0x1"]
 stm32g081 = ["stm32g0/stm32g0x1"]
