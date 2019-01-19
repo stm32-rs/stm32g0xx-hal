@@ -38,6 +38,10 @@ version = "0.2.2"
 features = ["unproven"]
 version = "0.2.2"
 
+[dependencies.void]
+default-features = false
+version = "1.0.2"
+
 [dev-dependencies]
 cortex-m-rt = "0.6.7"
 panic-semihosting = "0.5.1"

@@ -8,6 +8,7 @@ compile_error!(
 
 extern crate bare_metal;
 extern crate cast;
+extern crate void;
 
 pub extern crate cortex_m;
 pub extern crate embedded_hal as hal;
@@ -33,4 +34,5 @@ pub mod gpio;
 pub mod prelude;
 pub mod rcc;
 pub mod time;
+pub mod timer;
 pub mod watchdog;

@@ -9,5 +9,6 @@ pub use crate::gpio::GpioExt as _stm32g0xx_hal_gpio_GpioExt;
 pub use crate::rcc::RccExt as _stm32g0xx_hal_rcc_RccExt;
 pub use crate::time::MonoTimerExt as _stm32g0xx_hal_time_MonoTimerExt;
 pub use crate::time::U32Ext as _stm32g0xx_hal_time_U32Ext;
+pub use crate::timer::TimerExt as _stm32g0xx_hal_timer_TimerExt;
 pub use crate::watchdog::IndependedWatchdogExt as _stm32g0xx_hal_watchdog_IndependedWatchdogExt;
 pub use crate::watchdog::WindowWatchdogExt as _stm32g0xx_hal_watchdog_WindowWatchdogExt;
