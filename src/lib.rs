@@ -32,6 +32,8 @@ pub mod debug;
 pub mod delay;
 pub mod gpio;
 pub mod prelude;
+pub mod pwm;
+pub mod qei;
 pub mod rcc;
 pub mod time;
 pub mod timer;

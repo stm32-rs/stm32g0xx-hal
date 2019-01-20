@@ -6,6 +6,8 @@ pub use hal::watchdog::WatchdogEnable as _hal_watchdog_WatchdogEnable;
 
 pub use crate::delay::DelayExt as _stm32g0xx_hal_delay_DelayExt;
 pub use crate::gpio::GpioExt as _stm32g0xx_hal_gpio_GpioExt;
+pub use crate::pwm::PwmExt as _stm32g0xx_hal_pwm_PwmExt;
+pub use crate::qei::QeiExt as _stm32g0xx_hal_qei_QeiExt;
 pub use crate::rcc::RccExt as _stm32g0xx_hal_rcc_RccExt;
 pub use crate::time::MonoTimerExt as _stm32g0xx_hal_time_MonoTimerExt;
 pub use crate::time::U32Ext as _stm32g0xx_hal_time_U32Ext;

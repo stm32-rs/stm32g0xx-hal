@@ -5,12 +5,10 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
-extern crate cortex_m_semihosting;
 extern crate panic_semihosting;
-
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
+use cortex_m::asm;
 use hal::prelude::*;
 use hal::stm32;
 use rt::{entry, exception, ExceptionFrame};
@@ -18,24 +16,26 @@ use rt::{entry, exception, ExceptionFrame};
 #[entry]
 fn main() -> ! {
     hal::debug::init();
-
     let dp = stm32::Peripherals::take().unwrap();
-    let cp = cortex_m::Peripherals::take().unwrap();
 
     let mut rcc = dp.RCC.constrain();
-    let mut delay = cp.SYST.delay(&rcc.clocks);
+    let gpioa = dp.GPIOA.split(&mut rcc);
+    let mut pwm = dp.TIM14.pwm(gpioa.pa4, 10.khz(), &mut rcc);
 
-    println!("Starting watchdog");
+    let max = pwm.get_max_duty();
+    pwm.set_duty(max / 2);
 
-    let mut watchdog = dp.WWDG.watchdog(&mut rcc);
-    // let mut watchdog = dp.IWDG.watchdog();
+    pwm.enable();
+    asm::bkpt();
 
-    watchdog.start(100.ms());
+    pwm.set_duty(max / 4);
+    asm::bkpt();
 
-    delay.delay(90.ms());
-    // delay.delay(110.ms());
+    pwm.set_duty(max / 8);
+    asm::bkpt();
 
-    cortex_m::asm::bkpt();
+    pwm.set_duty(max);
+    asm::bkpt();
 
     loop {}
 }
@@ -43,4 +43,9 @@ fn main() -> ! {
 #[exception]
 fn HardFault(ef: &ExceptionFrame) -> ! {
     panic!("Hard fault {:#?}", ef);
+}
+
+#[exception]
+fn DefaultHandler(irqn: i16) {
+    panic!("Unhandled exception (IRQn = {})", irqn);
 }

@@ -1,7 +1,8 @@
+use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::{IWDG, WWDG};
-use crate::time::MicroSecond;
-use hal::watchdog::{self, Watchdog};
+use crate::time::{Hertz, MicroSecond};
+use hal::watchdog;
 
 pub struct IndependedWatchdog {
     iwdg: IWDG,
@@ -20,9 +21,7 @@ impl watchdog::WatchdogEnable for IndependedWatchdog {
     where
         T: Into<MicroSecond>,
     {
-        const IWDG_CLOCK: u32 = 16_384_u32;
-        let us = period.into().0;
-        let mut ticks = IWDG_CLOCK.saturating_mul(us) / 1_000_000;
+        let mut ticks = period.into().ticks(16_384_u32.hz());
         let mut psc = 0_u8;
         let mut reload = 0;
         while psc < 6 {
@@ -63,7 +62,7 @@ impl IndependedWatchdogExt for IWDG {
 
 pub struct WindowWatchdog {
     wwdg: WWDG,
-    clk: u32,
+    clk: Hertz,
 }
 
 impl watchdog::Watchdog for WindowWatchdog {
@@ -77,9 +76,7 @@ impl WindowWatchdog {
     where
         T: Into<MicroSecond>,
     {
-        let us = window.into().0;
-        assert!(us > 0);
-        let mut ticks = self.clk.saturating_mul(us) / 1_000_000;
+        let mut ticks = window.into().ticks(self.clk);
         let mut psc = 0u8;
         let mut window = 0;
         while psc < 8 {
@@ -125,9 +122,10 @@ pub trait WindowWatchdogExt {
 impl WindowWatchdogExt for WWDG {
     fn watchdog(self, rcc: &mut Rcc) -> WindowWatchdog {
         rcc.rb.apbenr1.modify(|_, w| w.wwdgen().set_bit());
+        let clk = rcc.clocks.apb_clk.0 / 4096;
         WindowWatchdog {
             wwdg: self,
-            clk: rcc.clocks.apb_clk.0 / 4096,
+            clk: clk.hz(),
         }
     }
 }

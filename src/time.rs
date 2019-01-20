@@ -46,15 +46,15 @@ impl U32Ext for u32 {
     }
 
     fn khz(self) -> Hertz {
-        Hertz(self * 1_000)
+        Hertz(self.saturating_mul(1_000))
     }
 
     fn mhz(self) -> Hertz {
-        Hertz(self * 1_000_000)
+        Hertz(self.saturating_mul(1_000_000))
     }
 
     fn ms(self) -> MicroSecond {
-        MicroSecond(self * 1_000)
+        MicroSecond(self.saturating_mul(1_000))
     }
 
     fn us(self) -> MicroSecond {
@@ -62,10 +62,20 @@ impl U32Ext for u32 {
     }
 }
 
+impl MicroSecond {
+    pub fn ticks(&self, clk: Hertz) -> u32 {
+        assert!(self.0 > 0);
+        let clk = clk.0 as u64;
+        let period = self.0 as u64;
+        let ticks = clk.saturating_mul(period) / 1_000_000_u64;
+        ticks as u32
+    }
+}
+
 impl Into<MicroSecond> for Hertz {
     fn into(self) -> MicroSecond {
         let freq = self.0;
-        assert!(freq != 0 && freq <= 1_000_000);
+        assert!(freq > 0 && freq <= 1_000_000);
         MicroSecond(1_000_000 / freq)
     }
 }
@@ -73,7 +83,7 @@ impl Into<MicroSecond> for Hertz {
 impl Into<Hertz> for MicroSecond {
     fn into(self) -> Hertz {
         let period = self.0;
-        assert!(period != 0 && period <= 1_000_000);
+        assert!(period > 0 && period <= 1_000_000);
         Hertz(1_000_000 / period)
     }
 }
@@ -86,7 +96,7 @@ pub struct MonoTimer {
 
 impl MonoTimer {
     /// Creates a new `Monotonic` timer
-    pub fn new<T>(mut dwt: DWT, sys_clk: T) -> Self
+    pub fn new<T>(mut dwt: DWT, clk: T) -> Self
     where
         T: Into<Hertz>,
     {
@@ -96,7 +106,7 @@ impl MonoTimer {
         drop(dwt);
 
         MonoTimer {
-            frequency: sys_clk.into(),
+            frequency: clk.into(),
         }
     }
 

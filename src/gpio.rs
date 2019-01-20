@@ -4,6 +4,9 @@ use core::marker::PhantomData;
 
 use crate::rcc::Rcc;
 
+/// Default pin mode
+pub type DefaultMode = Input<Floating>;
+
 /// Extension trait to split a GPIO peripheral in independent pins and registers
 pub trait GpioExt {
     /// The parts to split the GPIO into
@@ -50,26 +53,20 @@ pub enum Speed {
 }
 
 #[allow(dead_code)]
-pub(crate) enum AltMode {
-    SYSTEM = 0,
-    TIM2 = 1,
-    TIM3_5 = 2,
-    TIM9_11 = 3,
-    I2C = 4,
-    SPI1_2 = 5,
-    SPI3 = 6,
-    USART1_3 = 7,
-    UART4_5 = 8,
-    USB = 10,
-    LCD = 11,
-    FSMC = 12,
-    RI = 14,
-    EVENTOUT = 15,
+pub(crate) enum AltFunction {
+    AF0 = 0,
+    AF1 = 1,
+    AF2 = 2,
+    AF3 = 3,
+    AF4 = 4,
+    AF5 = 5,
+    AF6 = 6,
+    AF7 = 7,
 }
 
 macro_rules! gpio {
     ($GPIOX:ident, $gpiox:ident, $iopxenr:ident, $PXx:ident, [
-        $($PXi:ident: ($pxi:ident, $i:expr, $MODE:ty),)+
+        $($PXi:ident: ($pxi:ident, $i:expr),)+
     ]) => {
         /// GPIO
         pub mod $gpiox {
@@ -80,14 +77,14 @@ macro_rules! gpio {
             use crate::rcc::Rcc;
             use super::{
                 Floating, GpioExt, Input, OpenDrain, Output, Speed,
-                PullDown, PullUp, PushPull, AltMode, Analog
+                PullDown, PullUp, PushPull, AltFunction, Analog
             };
 
             /// GPIO parts
             pub struct Parts {
                 $(
                     /// Pin
-                    pub $pxi: $PXi<$MODE>,
+                    pub $pxi: $PXi<Input<Floating>>,
                 )+
             }
 
@@ -278,7 +275,7 @@ macro_rules! gpio {
                     }
 
                     #[allow(dead_code)]
-                    pub(crate) fn set_alt_mode(&self, mode: AltMode) {
+                    pub(crate) fn set_alt_mode(&self, mode: AltFunction) {
                         let mode = mode as u32;
                         let offset = 2 * $i;
                         let offset2 = 4 * $i;
@@ -383,79 +380,98 @@ macro_rules! gpio {
         }
     }
 }
-//IOPAEN
+
 gpio!(GPIOA, gpioa, iopaen, PA, [
-    PA0: (pa0, 0, Input<Floating>),
-    PA1: (pa1, 1, Input<Floating>),
-    PA2: (pa2, 2, Input<Floating>),
-    PA3: (pa3, 3, Input<Floating>),
-    PA4: (pa4, 4, Input<Floating>),
-    PA5: (pa5, 5, Input<Floating>),
-    PA6: (pa6, 6, Input<Floating>),
-    PA7: (pa7, 7, Input<Floating>),
-    PA8: (pa8, 8, Input<Floating>),
-    PA9: (pa9, 9, Input<Floating>),
-    PA10: (pa10, 10, Input<Floating>),
-    PA11: (pa11, 11, Input<Floating>),
-    PA12: (pa12, 12, Input<Floating>),
-    PA13: (pa13, 13, Input<Floating>),
-    PA14: (pa14, 14, Input<Floating>),
-    PA15: (pa15, 15, Input<Floating>),
+    PA0: (pa0, 0),
+    PA1: (pa1, 1),
+    PA2: (pa2, 2),
+    PA3: (pa3, 3),
+    PA4: (pa4, 4),
+    PA5: (pa5, 5),
+    PA6: (pa6, 6),
+    PA7: (pa7, 7),
+    PA8: (pa8, 8),
+    PA9: (pa9, 9),
+    PA10: (pa10, 10),
+    PA11: (pa11, 11),
+    PA12: (pa12, 12),
+    PA13: (pa13, 13),
+    PA14: (pa14, 14),
+    PA15: (pa15, 15),
 ]);
 
 gpio!(GPIOB, gpiob, iopben, PB, [
-    PB0: (pb0, 0, Input<Floating>),
-    PB1: (pb1, 1, Input<Floating>),
-    PB2: (pb2, 2, Input<Floating>),
-    PB3: (pb3, 3, Input<Floating>),
-    PB4: (pb4, 4, Input<Floating>),
-    PB5: (pb5, 5, Input<Floating>),
-    PB6: (pb6, 6, Input<Floating>),
-    PB7: (pb7, 7, Input<Floating>),
-    PB8: (pb8, 8, Input<Floating>),
-    PB9: (pb9, 9, Input<Floating>),
-    PB10: (pb10, 10, Input<Floating>),
-    PB11: (pb11, 11, Input<Floating>),
-    PB12: (pb12, 12, Input<Floating>),
-    PB13: (pb13, 13, Input<Floating>),
-    PB14: (pb14, 14, Input<Floating>),
-    PB15: (pb15, 15, Input<Floating>),
+    PB0: (pb0, 0),
+    PB1: (pb1, 1),
+    PB2: (pb2, 2),
+    PB3: (pb3, 3),
+    PB4: (pb4, 4),
+    PB5: (pb5, 5),
+    PB6: (pb6, 6),
+    PB7: (pb7, 7),
+    PB8: (pb8, 8),
+    PB9: (pb9, 9),
+    PB10: (pb10, 10),
+    PB11: (pb11, 11),
+    PB12: (pb12, 12),
+    PB13: (pb13, 13),
+    PB14: (pb14, 14),
+    PB15: (pb15, 15),
 ]);
 
 gpio!(GPIOC, gpioc, iopcen, PC, [
-    PC0: (pc0, 0, Input<Floating>),
-    PC1: (pc1, 1, Input<Floating>),
-    PC2: (pc2, 2, Input<Floating>),
-    PC3: (pc3, 3, Input<Floating>),
-    PC4: (pc4, 4, Input<Floating>),
-    PC5: (pc5, 5, Input<Floating>),
-    PC6: (pc6, 6, Input<Floating>),
-    PC7: (pc7, 7, Input<Floating>),
-    PC8: (pc8, 8, Input<Floating>),
-    PC9: (pc9, 9, Input<Floating>),
-    PC10: (pc10, 10, Input<Floating>),
-    PC11: (pc11, 11, Input<Floating>),
-    PC12: (pc12, 12, Input<Floating>),
-    PC13: (pc13, 13, Input<Floating>),
-    PC14: (pc14, 14, Input<Floating>),
-    PC15: (pc15, 15, Input<Floating>),
+    PC0: (pc0, 0),
+    PC1: (pc1, 1),
+    PC2: (pc2, 2),
+    PC3: (pc3, 3),
+    PC4: (pc4, 4),
+    PC5: (pc5, 5),
+    PC6: (pc6, 6),
+    PC7: (pc7, 7),
+    PC8: (pc8, 8),
+    PC9: (pc9, 9),
+    PC10: (pc10, 10),
+    PC11: (pc11, 11),
+    PC12: (pc12, 12),
+    PC13: (pc13, 13),
+    PC14: (pc14, 14),
+    PC15: (pc15, 15),
 ]);
 
 gpio!(GPIOD, gpiod, iopden, PD, [
-    PD0: (pd0, 0, Input<Floating>),
-    PD1: (pd1, 1, Input<Floating>),
-    PD2: (pd2, 2, Input<Floating>),
-    PD3: (pd3, 3, Input<Floating>),
-    PD4: (pd4, 4, Input<Floating>),
-    PD5: (pd5, 5, Input<Floating>),
-    PD6: (pd6, 6, Input<Floating>),
-    PD7: (pd7, 7, Input<Floating>),
-    PD8: (pd8, 8, Input<Floating>),
-    PD9: (pd9, 9, Input<Floating>),
-    PD10: (pd10, 10, Input<Floating>),
-    PD11: (pd11, 11, Input<Floating>),
-    PD12: (pd12, 12, Input<Floating>),
-    PD13: (pd13, 13, Input<Floating>),
-    PD14: (pd14, 14, Input<Floating>),
-    PD15: (pd15, 15, Input<Floating>),
+    PD0: (pd0, 0),
+    PD1: (pd1, 1),
+    PD2: (pd2, 2),
+    PD3: (pd3, 3),
+    PD4: (pd4, 4),
+    PD5: (pd5, 5),
+    PD6: (pd6, 6),
+    PD7: (pd7, 7),
+    PD8: (pd8, 8),
+    PD9: (pd9, 9),
+    PD10: (pd10, 10),
+    PD11: (pd11, 11),
+    PD12: (pd12, 12),
+    PD13: (pd13, 13),
+    PD14: (pd14, 14),
+    PD15: (pd15, 15),
+]);
+
+gpio!(GPIOF, gpiof, iopfen, PF, [
+    PF0: (pf0, 0),
+    PF1: (pf1, 1),
+    PF2: (pf2, 2),
+    PF3: (pf3, 3),
+    PF4: (pf4, 4),
+    PF5: (pf5, 5),
+    PF6: (pf6, 6),
+    PF7: (pf7, 7),
+    PF8: (pf8, 8),
+    PF9: (pf9, 9),
+    PF10: (pf10, 10),
+    PF11: (pf11, 11),
+    PF12: (pf12, 12),
+    PF13: (pf13, 13),
+    PF14: (pf14, 14),
+    PF15: (pf15, 15),
 ]);
