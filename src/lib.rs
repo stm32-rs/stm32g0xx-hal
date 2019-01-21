@@ -29,6 +29,8 @@ pub use crate::stm32::interrupt;
 #[macro_use]
 pub mod debug;
 
+pub mod adc;
+pub mod dac;
 pub mod delay;
 pub mod gpio;
 pub mod prelude;
