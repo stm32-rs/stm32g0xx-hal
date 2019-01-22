@@ -1,21 +1,12 @@
 //! Delays
 use cast::u32;
+use core::cmp;
 use cortex_m::peripheral::SYST;
 use hal::blocking::delay::{DelayMs, DelayUs};
 
+use crate::prelude::*;
 use crate::rcc::Clocks;
-use crate::time::Hertz;
-use crate::time::MicroSecond;
-
-pub trait DelayExt {
-    fn delay(self, clocks: &Clocks) -> Delay;
-}
-
-impl DelayExt for SYST {
-    fn delay(self, clocks: &Clocks) -> Delay {
-        Delay::new(self, clocks)
-    }
-}
+use crate::time::{Hertz, MicroSecond};
 
 /// System timer (SysTick) as a delay provider
 pub struct Delay {
@@ -36,8 +27,16 @@ impl Delay {
     where
         T: Into<MicroSecond>,
     {
-        let us = delay.into();
-        self.delay_us(us.0)
+        let mut ticks = delay.into().ticks(self.clk);
+        while ticks > 0 {
+            let reload = cmp::min(ticks, 0x00FF_FFFF);
+            ticks -= reload;
+            self.syst.set_reload(reload);
+            self.syst.clear_current();
+            self.syst.enable_counter();
+            while !self.syst.has_wrapped() {}
+            self.syst.disable_counter();
+        }
     }
 
     /// Releases the system timer (SysTick) resource
@@ -46,9 +45,27 @@ impl Delay {
     }
 }
 
+impl DelayUs<u32> for Delay {
+    fn delay_us(&mut self, us: u32) {
+        self.delay(us.us())
+    }
+}
+
+impl DelayUs<u16> for Delay {
+    fn delay_us(&mut self, us: u16) {
+        self.delay_us(u32(us))
+    }
+}
+
+impl DelayUs<u8> for Delay {
+    fn delay_us(&mut self, us: u8) {
+        self.delay_us(u32(us))
+    }
+}
+
 impl DelayMs<u32> for Delay {
     fn delay_ms(&mut self, ms: u32) {
-        self.delay_us(ms * 1_000_u32);
+        self.delay_us(ms.saturating_mul(1_000_u32));
     }
 }
 
@@ -64,42 +81,12 @@ impl DelayMs<u8> for Delay {
     }
 }
 
-impl DelayUs<u32> for Delay {
-    fn delay_us(&mut self, us: u32) {
-        let mut total_rvr = match (self.clk.0, us) {
-            (clk, us) if clk >= 1_000_000 => us * (clk / 1_000_000),
-            (clk, us) if us >= 1_000 => {
-                let ms = us / 1000;
-                ms * (clk / 1_000)
-            }
-            _ => 1,
-        };
-
-        const MAX_RVR: u32 = 0x00FF_FFFF;
-        while total_rvr > 0 {
-            let current_rvr = if total_rvr <= MAX_RVR {
-                total_rvr
-            } else {
-                MAX_RVR
-            };
-            self.syst.set_reload(current_rvr);
-            self.syst.clear_current();
-            self.syst.enable_counter();
-            total_rvr -= current_rvr;
-            while !self.syst.has_wrapped() {}
-            self.syst.disable_counter();
-        }
-    }
+pub trait DelayExt {
+    fn delay(self, clocks: &Clocks) -> Delay;
 }
 
-impl DelayUs<u16> for Delay {
-    fn delay_us(&mut self, us: u16) {
-        self.delay_us(u32(us))
-    }
-}
-
-impl DelayUs<u8> for Delay {
-    fn delay_us(&mut self, us: u8) {
-        self.delay_us(u32(us))
+impl DelayExt for SYST {
+    fn delay(self, clocks: &Clocks) -> Delay {
+        Delay::new(self, clocks)
     }
 }
