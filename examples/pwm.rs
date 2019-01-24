@@ -16,7 +16,7 @@ use rt::{entry, exception, ExceptionFrame};
 #[entry]
 fn main() -> ! {
     hal::debug::init();
-    let dp = stm32::Peripherals::take().unwrap();
+    let dp = stm32::Peripherals::take().expect("cannot take peripherals");
 
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);

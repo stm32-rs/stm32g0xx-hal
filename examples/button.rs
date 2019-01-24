@@ -14,8 +14,8 @@ use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    let dp = stm32::Peripherals::take().unwrap();
-    let cp = cortex_m::Peripherals::take().unwrap();
+    let dp = stm32::Peripherals::take().expect("cannot take peripherals");
+    let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.constrain();
     let mut delay = cp.SYST.delay(&rcc.clocks);

@@ -1,5 +1,4 @@
 //! DAC
-use cast::u32;
 use core::mem;
 
 use crate::delay::Delay;
@@ -56,9 +55,8 @@ macro_rules! dac {
     ($CX:ident, $en:ident, $cen:ident, $cal_flag:ident, $trim:ident, $mode:ident, $dhrx:ident, $dac_dor:ident, $daccxdhr:ident) => {
         impl DacPin for $CX {
             fn enable(&mut self) {
-                unsafe {
-                    (*DAC::ptr()).dac_cr.modify(|_, w| w.$en().set_bit());
-                }
+                let dac = unsafe { &(*DAC::ptr()) };
+                dac.dac_cr.modify(|_, w| w.$en().set_bit());
             }
 
             fn calibrate(&mut self, delay: &mut Delay) {
@@ -81,25 +79,13 @@ macro_rules! dac {
 
         impl DacOut<u16> for $CX {
             fn set_value(&mut self, val: u16) {
-                unsafe {
-                    (*DAC::ptr()).$dhrx.modify(|_, w| w.bits(u32(val)));
-                }
+                let dac = unsafe { &(*DAC::ptr()) };
+                dac.$dhrx.write(|w| unsafe { w.bits(val as u32) });
             }
 
             fn get_value(&mut self) -> u16 {
-                unsafe { (*DAC::ptr()).$dac_dor.read().bits() as u16 }
-            }
-        }
-
-        impl DacOut<u8> for $CX {
-            fn set_value(&mut self, val: u8) {
-                unsafe {
-                    (*DAC::ptr()).$dhrx.modify(|_, w| w.bits(u32(val)));
-                }
-            }
-
-            fn get_value(&mut self) -> u8 {
-                unsafe { (*DAC::ptr()).$dac_dor.read().bits() as u8 }
+                let dac = unsafe { &(*DAC::ptr()) };
+                dac.$dac_dor.read().bits() as u16
             }
         }
     };
@@ -131,6 +117,7 @@ dac!(
     dac_dor1,
     dacc1dhr
 );
+
 dac!(
     C2,
     en2,

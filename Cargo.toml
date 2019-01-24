@@ -25,22 +25,9 @@ cortex-m = "0.5.8"
 cortex-m-semihosting = "0.3.2"
 nb = "0.1.1"
 stm32g0 = { path = "../../stm32-rs/stm32g0" }
-
-[dependencies.bare-metal]
-features = ["const-fn"]
-version = "0.2.4"
-
-[dependencies.cast]
-default-features = false
-version = "0.2.2"
-
-[dependencies.embedded-hal]
-features = ["unproven"]
-version = "0.2.2"
-
-[dependencies.void]
-default-features = false
-version = "1.0.2"
+bare-metal = { version = "0.2.4", features = ["const-fn"] }
+embedded-hal = { version = "0.2.2", features = ["unproven"] }
+void = { version = "1.0.2", default-features = false }
 
 [dev-dependencies]
 cortex-m-rt = "0.6.7"

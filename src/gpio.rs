@@ -1,5 +1,4 @@
 //! General Purpose Input / Output
-
 use core::marker::PhantomData;
 
 use crate::rcc::Rcc;
@@ -52,6 +51,13 @@ pub enum Speed {
     VeryHigh = 3,
 }
 
+/// Trigger edgw
+pub enum SignalEdge {
+    Rising,
+    Falling,
+    All,
+}
+
 #[allow(dead_code)]
 pub(crate) enum AltFunction {
     AF0 = 0,
@@ -65,7 +71,7 @@ pub(crate) enum AltFunction {
 }
 
 macro_rules! gpio {
-    ($GPIOX:ident, $gpiox:ident, $iopxenr:ident, $PXx:ident, [
+    ($GPIOX:ident, $gpiox:ident, $iopxenr:ident, $PXx:ident, $Pxn:expr, [
         $($PXi:ident: ($pxi:ident, $i:expr),)+
     ]) => {
         /// GPIO
@@ -73,17 +79,14 @@ macro_rules! gpio {
             use core::marker::PhantomData;
 
             use hal::digital::{toggleable, InputPin, OutputPin, StatefulOutputPin};
-            use crate::stm32::$GPIOX;
+            use crate::stm32::{EXTI, $GPIOX};
+            use crate::exti::{ExtiExt, Event};
             use crate::rcc::Rcc;
-            use super::{
-                Floating, GpioExt, Input, OpenDrain, Output, Speed,
-                PullDown, PullUp, PushPull, AltFunction, Analog
-            };
+            use super::*;
 
             /// GPIO parts
             pub struct Parts {
                 $(
-                    /// Pin
                     pub $pxi: $PXi<Input<Floating>>,
                 )+
             }
@@ -155,70 +158,65 @@ macro_rules! gpio {
             }
 
             $(
-                /// Pin
                 pub struct $PXi<MODE> {
                     _mode: PhantomData<MODE>,
                 }
 
                 impl<MODE> $PXi<MODE> {
                     /// Configures the pin to operate as a floating input pin
-                    pub fn into_floating_input(
-                        self,
-                    ) -> $PXi<Input<Floating>> {
+                    pub fn into_floating_input(self) -> $PXi<Input<Floating>> {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b00 << offset))
+                            let gpio = &(*$GPIOX::ptr());
+                            gpio.pupdr.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
                             });
-                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b00 << offset))
+                            gpio.moder.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
                             })
                         };
                         $PXi { _mode: PhantomData }
                     }
 
                     /// Configures the pin to operate as a pulled down input pin
-                    pub fn into_pull_down_input(
-                        self,
-                        ) -> $PXi<Input<PullDown>> {
+                    pub fn into_pull_down_input(self) -> $PXi<Input<PullDown>> {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
+                            let gpio = &(*$GPIOX::ptr());
+                            gpio.pupdr.modify(|r, w| {
                                 w.bits((r.bits() & !(0b11 << offset)) | (0b10 << offset))
                             });
-                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b00 << offset))
+                            gpio.moder.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
                             })
                         };
                         $PXi { _mode: PhantomData }
                     }
 
                     /// Configures the pin to operate as a pulled up input pin
-                    pub fn into_pull_up_input(
-                        self,
-                    ) -> $PXi<Input<PullUp>> {
+                    pub fn into_pull_up_input(self) -> $PXi<Input<PullUp>> {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
+                            let gpio = &(*$GPIOX::ptr());
+                            gpio.pupdr.modify(|r, w| {
                                 w.bits((r.bits() & !(0b11 << offset)) | (0b01 << offset))
                             });
-                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b00 << offset))
+                            gpio.moder.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
                             })
                         };
                         $PXi { _mode: PhantomData }
                     }
 
                     /// Configures the pin to operate as an analog pin
-                    pub fn into_analog(
-                        self,
-                    ) -> $PXi<Analog> {
+                    pub fn into_analog(self) -> $PXi<Analog> {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b00 << offset))
+                            let gpio = &(*$GPIOX::ptr());
+                            gpio.pupdr.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
                             });
-                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
+                            gpio.moder.modify(|r, w| {
                                 w.bits((r.bits() & !(0b11 << offset)) | (0b11 << offset))
                             });
                         }
@@ -226,18 +224,17 @@ macro_rules! gpio {
                     }
 
                     /// Configures the pin to operate as an open drain output pin
-                    pub fn into_open_drain_output(
-                        self,
-                    ) -> $PXi<Output<OpenDrain>> {
+                    pub fn into_open_drain_output(self) -> $PXi<Output<OpenDrain>> {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b00 << offset))
+                            let gpio = &(*$GPIOX::ptr());
+                            gpio.pupdr.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
                             });
-                            &(*$GPIOX::ptr()).otyper.modify(|r, w| {
+                            gpio.otyper.modify(|r, w| {
                                 w.bits(r.bits() | (0b1 << $i))
                             });
-                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
+                            gpio.moder.modify(|r, w| {
                                 w.bits((r.bits() & !(0b11 << offset)) | (0b01 << offset))
                             })
                         };
@@ -245,21 +242,53 @@ macro_rules! gpio {
                     }
 
                     /// Configures the pin to operate as an push pull output pin
-                    pub fn into_push_pull_output(
-                        self,
-                    ) -> $PXi<Output<PushPull>> {
+                    pub fn into_push_pull_output(self) -> $PXi<Output<PushPull>> {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b00 << offset))
+                            let gpio = &(*$GPIOX::ptr());
+                            gpio.pupdr.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
                             });
-                            &(*$GPIOX::ptr()).otyper.modify(|r, w| {
+                            gpio.otyper.modify(|r, w| {
                                 w.bits(r.bits() & !(0b1 << $i))
                             });
-                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
+                            gpio.moder.modify(|r, w| {
                                 w.bits((r.bits() & !(0b11 << offset)) | (0b01 << offset))
                             })
                         };
+                        $PXi { _mode: PhantomData }
+                    }
+
+                    /// Configures the pin as external trigger
+                    pub fn listen(self, edge: SignalEdge, exti: &mut EXTI) -> $PXi<Input<PushPull>> {
+                        let offset = 2 * $i;
+                        unsafe {
+                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
+                            });
+                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
+                                w.bits(r.bits() & !(0b11 << offset))
+                            })
+                        };
+                        let offset = ($i % 4) * 8;
+                        let mask = $Pxn << offset;
+                        let reset = !(0xff << offset);
+                        match $i as u8 {
+                            0...4   => exti.exticr1.modify(|r, w| unsafe {
+                                w.bits(r.bits() & reset | mask)
+                            }),
+                            4...8  => exti.exticr2.modify(|r, w| unsafe {
+                                w.bits(r.bits() & reset | mask)
+                            }),
+                            8...12 => exti.exticr3.modify(|r, w| unsafe {
+                                w.bits(r.bits() & reset | mask)
+                            }),
+                            12...16 => exti.exticr4.modify(|r, w| unsafe {
+                                w.bits(r.bits() & reset | mask)
+                            }),
+                            _ => unreachable!(),
+                        }
+                        exti.listen(Event::from_code($i), edge);
                         $PXi { _mode: PhantomData }
                     }
 
@@ -280,17 +309,18 @@ macro_rules! gpio {
                         let offset = 2 * $i;
                         let offset2 = 4 * $i;
                         unsafe {
+                            let gpio = &(*$GPIOX::ptr());
                             if offset2 < 32 {
-                                &(*$GPIOX::ptr()).afrl.modify(|r, w| {
+                                gpio.afrl.modify(|r, w| {
                                     w.bits((r.bits() & !(0b1111 << offset2)) | (mode << offset2))
                                 });
                             } else {
                                 let offset2 = offset2 - 32;
-                                &(*$GPIOX::ptr()).afrh.modify(|r, w| {
+                                gpio.afrh.modify(|r, w| {
                                     w.bits((r.bits() & !(0b1111 << offset2)) | (mode << offset2))
                                 });
                             }
-                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
+                            gpio.moder.modify(|r, w| {
                                 w.bits((r.bits() & !(0b11 << offset)) | (0b10 << offset))
                             });
                         }
@@ -303,10 +333,7 @@ macro_rules! gpio {
                     /// This is useful when you want to collect the pins into an array where you
                     /// need all the elements to have the same type
                     pub fn downgrade(self) -> $PXx<Output<MODE>> {
-                        $PXx {
-                            i: $i,
-                            _mode: self._mode,
-                        }
+                        $PXx { i: $i, _mode: self._mode }
                     }
                 }
 
@@ -352,10 +379,7 @@ macro_rules! gpio {
                     /// This is useful when you want to collect the pins into an array where you
                     /// need all the elements to have the same type
                     pub fn downgrade(self) -> $PXx<Input<MODE>> {
-                        $PXx {
-                            i: $i,
-                            _mode: self._mode,
-                        }
+                        $PXx { i: $i, _mode: self._mode }
                     }
                 }
 
@@ -371,17 +395,16 @@ macro_rules! gpio {
                 }
             )+
 
-                impl<TYPE> $PXx<TYPE> {
-                    pub fn get_id (&self) -> u8
-                    {
-                        self.i
-                    }
+            impl<TYPE> $PXx<TYPE> {
+                pub fn get_id (&self) -> u8 {
+                    self.i
                 }
+            }
         }
     }
 }
 
-gpio!(GPIOA, gpioa, iopaen, PA, [
+gpio!(GPIOA, gpioa, iopaen, PA, 0, [
     PA0: (pa0, 0),
     PA1: (pa1, 1),
     PA2: (pa2, 2),
@@ -400,7 +423,7 @@ gpio!(GPIOA, gpioa, iopaen, PA, [
     PA15: (pa15, 15),
 ]);
 
-gpio!(GPIOB, gpiob, iopben, PB, [
+gpio!(GPIOB, gpiob, iopben, PB, 1, [
     PB0: (pb0, 0),
     PB1: (pb1, 1),
     PB2: (pb2, 2),
@@ -419,7 +442,7 @@ gpio!(GPIOB, gpiob, iopben, PB, [
     PB15: (pb15, 15),
 ]);
 
-gpio!(GPIOC, gpioc, iopcen, PC, [
+gpio!(GPIOC, gpioc, iopcen, PC, 2, [
     PC0: (pc0, 0),
     PC1: (pc1, 1),
     PC2: (pc2, 2),
@@ -438,7 +461,7 @@ gpio!(GPIOC, gpioc, iopcen, PC, [
     PC15: (pc15, 15),
 ]);
 
-gpio!(GPIOD, gpiod, iopden, PD, [
+gpio!(GPIOD, gpiod, iopden, PD, 3, [
     PD0: (pd0, 0),
     PD1: (pd1, 1),
     PD2: (pd2, 2),
@@ -457,7 +480,7 @@ gpio!(GPIOD, gpiod, iopden, PD, [
     PD15: (pd15, 15),
 ]);
 
-gpio!(GPIOF, gpiof, iopfen, PF, [
+gpio!(GPIOF, gpiof, iopfen, PF, 5, [
     PF0: (pf0, 0),
     PF1: (pf1, 1),
     PF2: (pf2, 2),

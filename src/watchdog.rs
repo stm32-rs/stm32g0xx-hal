@@ -21,16 +21,16 @@ impl watchdog::WatchdogEnable for IndependedWatchdog {
     where
         T: Into<MicroSecond>,
     {
-        let mut ticks = period.into().ticks(16_384_u32.hz());
-        let mut psc = 0_u8;
+        let mut cycles = period.into().cycles(16_384.hz());
+        let mut psc = 0;
         let mut reload = 0;
         while psc < 6 {
-            reload = ticks;
+            reload = cycles;
             if reload <= 0xfff {
                 break;
             }
             psc += 1;
-            ticks /= 2;
+            cycles /= 2;
         }
 
         // Enable watchdog
@@ -50,11 +50,17 @@ impl watchdog::WatchdogEnable for IndependedWatchdog {
     }
 }
 
-pub trait IndependedWatchdogExt {
+pub trait IWDGExt {
     fn watchdog(self) -> IndependedWatchdog;
 }
 
-impl IndependedWatchdogExt for IWDG {
+impl IndependedWatchdog {
+    pub fn release(self) -> IWDG {
+        self.iwdg
+    }
+}
+
+impl IWDGExt for IWDG {
     fn watchdog(self) -> IndependedWatchdog {
         IndependedWatchdog { iwdg: self }
     }
@@ -76,16 +82,16 @@ impl WindowWatchdog {
     where
         T: Into<MicroSecond>,
     {
-        let mut ticks = window.into().ticks(self.clk);
+        let mut cycles = window.into().cycles(self.clk);
         let mut psc = 0u8;
         let mut window = 0;
         while psc < 8 {
-            window = ticks;
+            window = cycles;
             if window <= 0x40 {
                 break;
             }
             psc += 1;
-            ticks /= 2;
+            cycles /= 2;
         }
         assert!(window <= 0x40);
         self.wwdg
@@ -99,6 +105,10 @@ impl WindowWatchdog {
 
     pub fn unlisten(&mut self) {
         self.wwdg.cfr.write(|w| w.ewi().clear_bit());
+    }
+
+    pub fn release(self) -> WWDG {
+        self.wwdg
     }
 }
 
@@ -115,11 +125,11 @@ impl watchdog::WatchdogEnable for WindowWatchdog {
     }
 }
 
-pub trait WindowWatchdogExt {
+pub trait WWDGExt {
     fn watchdog(self, rcc: &mut Rcc) -> WindowWatchdog;
 }
 
-impl WindowWatchdogExt for WWDG {
+impl WWDGExt for WWDG {
     fn watchdog(self, rcc: &mut Rcc) -> WindowWatchdog {
         rcc.rb.apbenr1.modify(|_, w| w.wwdgen().set_bit());
         let clk = rcc.clocks.apb_clk.0 / 4096;

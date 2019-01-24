@@ -6,7 +6,6 @@
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate panic_semihosting;
-
 #[macro_use]
 extern crate stm32g0xx_hal as hal;
 
@@ -19,7 +18,7 @@ use rt::entry;
 fn main() -> ! {
     hal::debug::init();
 
-    let dp = stm32::Peripherals::take().unwrap();
+    let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);
 
@@ -31,11 +30,11 @@ fn main() -> ! {
     vtemp.enable(&mut adc);
 
     loop {
-        let u: u32 = adc.read(&mut adc_pin).unwrap();
-        let temp: u32 = adc.read(&mut vtemp).unwrap();
+        let u: u32 = adc.read(&mut adc_pin).expect("adc read failed");
+        let temp: u32 = adc.read(&mut vtemp).expect("temperature read failed");
 
-        let u = 3300_u32 * u / 4096_u32;
-        let temp = temp / 42_u32;
+        let u = 3300 * u / 4096;
+        let temp = temp / 42;
         println!("u: {:?} mV | t: {:?}°C", u, temp);
     }
 }

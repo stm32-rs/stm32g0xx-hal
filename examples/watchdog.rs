@@ -7,7 +7,6 @@ extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate cortex_m_semihosting;
 extern crate panic_semihosting;
-
 #[macro_use]
 extern crate stm32g0xx_hal as hal;
 
@@ -19,8 +18,8 @@ use rt::{entry, exception, ExceptionFrame};
 fn main() -> ! {
     hal::debug::init();
 
-    let dp = stm32::Peripherals::take().unwrap();
-    let cp = cortex_m::Peripherals::take().unwrap();
+    let dp = stm32::Peripherals::take().expect("cannot take peripherals");
+    let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.constrain();
     let mut delay = cp.SYST.delay(&rcc.clocks);

@@ -1,5 +1,4 @@
 //! Delays
-use cast::u32;
 use core::cmp;
 use cortex_m::peripheral::SYST;
 use hal::blocking::delay::{DelayMs, DelayUs};
@@ -27,10 +26,10 @@ impl Delay {
     where
         T: Into<MicroSecond>,
     {
-        let mut ticks = delay.into().ticks(self.clk);
-        while ticks > 0 {
-            let reload = cmp::min(ticks, 0x00FF_FFFF);
-            ticks -= reload;
+        let mut cycles = delay.into().cycles(self.clk);
+        while cycles > 0 {
+            let reload = cmp::min(cycles, 0x00ff_ffff);
+            cycles -= reload;
             self.syst.set_reload(reload);
             self.syst.clear_current();
             self.syst.enable_counter();
@@ -40,7 +39,7 @@ impl Delay {
     }
 
     /// Releases the system timer (SysTick) resource
-    pub fn free(self) -> SYST {
+    pub fn release(self) -> SYST {
         self.syst
     }
 }
@@ -53,31 +52,31 @@ impl DelayUs<u32> for Delay {
 
 impl DelayUs<u16> for Delay {
     fn delay_us(&mut self, us: u16) {
-        self.delay_us(u32(us))
+        self.delay_us(us as u32)
     }
 }
 
 impl DelayUs<u8> for Delay {
     fn delay_us(&mut self, us: u8) {
-        self.delay_us(u32(us))
+        self.delay_us(us as u32)
     }
 }
 
 impl DelayMs<u32> for Delay {
     fn delay_ms(&mut self, ms: u32) {
-        self.delay_us(ms.saturating_mul(1_000_u32));
+        self.delay_us(ms.saturating_mul(1_000));
     }
 }
 
 impl DelayMs<u16> for Delay {
     fn delay_ms(&mut self, ms: u16) {
-        self.delay_ms(u32(ms));
+        self.delay_ms(ms as u32);
     }
 }
 
 impl DelayMs<u8> for Delay {
     fn delay_ms(&mut self, ms: u8) {
-        self.delay_ms(u32(ms));
+        self.delay_ms(ms as u32);
     }
 }
 

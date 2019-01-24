@@ -10,7 +10,6 @@ use crate::gpio::{AltFunction, DefaultMode};
 use crate::rcc::Rcc;
 use crate::stm32::{TIM1, TIM14, TIM15, TIM16, TIM17};
 use crate::time::Hertz;
-use cast::{u16, u32};
 use hal;
 
 pub struct C1;
@@ -108,16 +107,29 @@ macro_rules! pwm16 {
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().set_bit());
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
                 let reload = rcc.clocks.apb_tim_clk.0 / freq.0;
-                let psc = u16((reload - 1) / (1 << 16)).unwrap();
-                let arr = u16(reload / u32(psc + 1)).unwrap();
-                tim.psc.write(|w| unsafe { w.psc().bits(psc) });
-                tim.arr.write(|w| unsafe { w.$arr().bits(arr) });
+                let psc = (reload - 1) / 0xffff;
+                let arr = reload / (psc + 1);
+                tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
+                tim.arr.write(|w| unsafe { w.$arr().bits(arr as u16) });
                 tim.cr1.write(|w| w.cen().set_bit());
                 pins.setup();
                 unsafe { mem::uninitialized() }
             }
         )+
     }
+}
+
+pwm16_channel! {
+    TIM1: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
+    TIM1: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2),
+    TIM1: (C3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3),
+    TIM1: (C4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4),
+    TIM1: (C5, cc5e, ccmr3_output, oc5pe, oc5m, ccr5),
+    TIM1: (C6, cc6e, ccmr3_output, oc6pe, oc6m, ccr6),
+    TIM14: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
+    TIM15: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
+    TIM16: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
+    TIM17: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
 }
 
 pwm_pins!(TIM1, [
@@ -150,19 +162,6 @@ pwm_pins!(TIM17, [
     (C1, PB9<DefaultMode>, AltFunction::AF2),
     (C1, PD1<DefaultMode>, AltFunction::AF2),
 ]);
-
-pwm16_channel! {
-    TIM1: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
-    TIM1: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2),
-    TIM1: (C3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3),
-    TIM1: (C4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4),
-    TIM1: (C5, cc5e, ccmr3_output, oc5pe, oc5m, ccr5),
-    TIM1: (C6, cc6e, ccmr3_output, oc6pe, oc6m, ccr6),
-    TIM14: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
-    TIM15: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
-    TIM16: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
-    TIM17: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
-}
 
 pwm16! {
     TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst, arr),

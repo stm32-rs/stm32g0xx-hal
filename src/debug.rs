@@ -11,7 +11,6 @@
 //! ATTENTION: If you intend your program to run without a debugger attached,
 //! always compile it without the `debug` feature. Programs that enable
 //! semihosting cannot run without a debugger attached.
-
 use core::cell::RefCell;
 
 use cortex_m::interrupt::Mutex;

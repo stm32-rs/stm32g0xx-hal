@@ -7,7 +7,6 @@ compile_error!(
 );
 
 extern crate bare_metal;
-extern crate cast;
 extern crate void;
 
 pub extern crate cortex_m;
@@ -32,11 +31,15 @@ pub mod debug;
 pub mod adc;
 pub mod dac;
 pub mod delay;
+pub mod exti;
 pub mod gpio;
+pub mod i2c;
 pub mod prelude;
 pub mod pwm;
 pub mod qei;
 pub mod rcc;
+pub mod rng;
+pub mod serial;
 pub mod time;
 pub mod timer;
 pub mod watchdog;

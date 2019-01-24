@@ -4,7 +4,6 @@ use crate::gpio::{AltFunction, DefaultMode};
 use crate::hal::{self, Direction};
 use crate::rcc::Rcc;
 use crate::stm32::{TIM1, TIM2, TIM3};
-use core::u16;
 
 pub trait Pins<TIM> {
     fn setup(&self);
@@ -77,7 +76,7 @@ macro_rules! qei {
 
                     // Encoder mode, count up/down on both TI1FP1 and TI2FP2
                     tim.smcr.write(|w| unsafe { w.sms().bits(0b011) });
-                    tim.arr.write(|w| unsafe { w.$arr().bits(u16::MAX) });
+                    tim.arr.write(|w| unsafe { w.$arr().bits(0xffff) });
                     tim.cr1.write(|w| w.cen().set_bit());
                     pins.setup();
                     Qei { tim, pins }

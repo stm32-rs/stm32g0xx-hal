@@ -17,8 +17,8 @@ use rt::entry;
 fn main() -> ! {
     hal::debug::init();
 
-    let dp = stm32::Peripherals::take().unwrap();
-    let cp = cortex_m::Peripherals::take().unwrap();
+    let dp = stm32::Peripherals::take().expect("cannot take peripherals");
+    let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.constrain();
     let mut delay = cp.SYST.delay(&rcc.clocks);
@@ -30,12 +30,12 @@ fn main() -> ! {
     dac.enable();
 
     let mut dir = Direction::Upcounting;
-    let mut val: u16 = 0;
+    let mut val = 0;
 
-    dac.set_value(2058_u16);
+    dac.set_value(2058);
     cortex_m::asm::bkpt();
 
-    dac.set_value(4095_u16);
+    dac.set_value(4095);
     cortex_m::asm::bkpt();
 
     loop {

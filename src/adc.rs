@@ -94,6 +94,10 @@ impl Adc {
         self.rb.isr.modify(|_, w| w.adrdy().set_bit());
         while self.rb.cr.read().aden().bit_is_set() {}
     }
+
+    pub fn release(self) -> ADC {
+        self.rb
+    }
 }
 
 pub trait AdcExt {
@@ -146,7 +150,7 @@ where
     }
 }
 
-macro_rules! adc_int {
+macro_rules! int_adc {
     ($($Chan:ident: ($chan:expr, $en:ident)),+ $(,)*) => {
         $(
             pub struct $Chan;
@@ -188,7 +192,7 @@ macro_rules! adc_pins {
     };
 }
 
-adc_int! {
+int_adc! {
     VTemp: (12, tsen),
     VRef: (13, vrefen),
     VBat: (14, vbaten),

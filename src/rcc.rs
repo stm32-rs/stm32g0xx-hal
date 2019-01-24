@@ -1,5 +1,3 @@
-use cast::u32;
-
 use crate::stm32::RCC;
 use crate::time::{Hertz, U32Ext};
 
@@ -22,7 +20,7 @@ pub enum Prescaler {
 }
 
 /// System clock mux source
-pub enum SysClockSrc {
+pub enum SysClkSource {
     LSI,
     PLL,
     HSI(Prescaler),
@@ -34,7 +32,7 @@ pub enum SysClockSrc {
 
 /// PLL clock input source
 #[derive(Clone, Copy)]
-pub enum PLLSrc {
+pub enum PLLSource {
     HSI,
     HSE(Hertz),
     HSE_BYPASS(Hertz),
@@ -49,7 +47,7 @@ pub type PLLMul = u8;
 /// PLL config
 #[derive(Clone, Copy)]
 pub struct PllConfig {
-    mux: PLLSrc,
+    mux: PLLSource,
     m: PLLDiv,
     n: PLLMul,
     r: PLLDiv,
@@ -60,7 +58,7 @@ pub struct PllConfig {
 impl Default for PllConfig {
     fn default() -> PllConfig {
         PllConfig {
-            mux: PLLSrc::HSI,
+            mux: PLLSource::HSI,
             m: 1,
             n: 8,
             r: 2,
@@ -72,18 +70,18 @@ impl Default for PllConfig {
 
 /// Clocks configutation
 pub struct RccConfig {
-    sys_mux: SysClockSrc,
+    sys_mux: SysClkSource,
     pll_cfg: PllConfig,
     ahb_psc: Prescaler,
     apb_psc: Prescaler,
 }
 
 impl RccConfig {
-    pub fn new(mux: SysClockSrc) -> Self {
+    pub fn new(mux: SysClkSource) -> Self {
         RccConfig::default().clock_src(mux)
     }
 
-    pub fn clock_src(mut self, mux: SysClockSrc) -> Self {
+    pub fn clock_src(mut self, mux: SysClkSource) -> Self {
         self.sys_mux = mux;
         self
     }
@@ -107,7 +105,7 @@ impl RccConfig {
 impl Default for RccConfig {
     fn default() -> RccConfig {
         RccConfig {
-            sys_mux: SysClockSrc::HSI(Prescaler::NotDivided),
+            sys_mux: SysClkSource::HSI(Prescaler::NotDivided),
             pll_cfg: PllConfig::default(),
             ahb_psc: Prescaler::NotDivided,
             apb_psc: Prescaler::NotDivided,
@@ -173,28 +171,28 @@ impl Rcc {
         let pll_clk = self.config_pll(rcc_cfg.pll_cfg);
 
         let (sys_clk, sw_bits) = match rcc_cfg.sys_mux {
-            SysClockSrc::HSE(freq) => {
+            SysClkSource::HSE(freq) => {
                 self.enable_hse(false);
                 (freq, 0b001)
             }
-            SysClockSrc::HSE_BYPASS(freq) => {
+            SysClkSource::HSE_BYPASS(freq) => {
                 self.enable_hse(true);
                 (freq, 0b001)
             }
-            SysClockSrc::PLL => (pll_clk.r, 0b010),
-            SysClockSrc::LSE(freq) => {
+            SysClkSource::PLL => (pll_clk.r, 0b010),
+            SysClkSource::LSE(freq) => {
                 self.enable_lse(false);
                 (freq, 0b100)
             }
-            SysClockSrc::LSE_BYPASS(freq) => {
+            SysClkSource::LSE_BYPASS(freq) => {
                 self.enable_lse(true);
                 (freq, 0b100)
             }
-            SysClockSrc::LSI => {
+            SysClkSource::LSI => {
                 self.enable_lsi();
                 (32_768.hz(), 0b011)
             }
-            SysClockSrc::HSI(prs) => {
+            SysClkSource::HSI(prs) => {
                 self.enable_hsi();
                 let (freq, div_bits) = match prs {
                     Prescaler::Div2 => (HSI_FREQ / 2, 0b001),
@@ -264,28 +262,28 @@ impl Rcc {
         while self.rb.cr.read().pllrdy().bit_is_set() {}
 
         let (freq, pll_sw_bits) = match pll_cfg.mux {
-            PLLSrc::HSI => {
+            PLLSource::HSI => {
                 self.enable_hsi();
                 (HSI_FREQ, 0b10)
             }
-            PLLSrc::HSE(freq) => {
+            PLLSource::HSE(freq) => {
                 self.enable_hse(false);
                 (freq.0, 0b11)
             }
-            PLLSrc::HSE_BYPASS(freq) => {
+            PLLSource::HSE_BYPASS(freq) => {
                 self.enable_hse(true);
                 (freq.0, 0b11)
             }
         };
 
-        let pll_freq = freq / u32(pll_cfg.m) * u32(pll_cfg.n);
-        let r = (pll_freq / u32(pll_cfg.r)).hz();
+        let pll_freq = freq / (pll_cfg.m as u32) * (pll_cfg.n as u32);
+        let r = (pll_freq / (pll_cfg.r as u32)).hz();
         let q = match pll_cfg.q {
             Some(div) if div > 1 && div <= 8 => {
                 self.rb
                     .pllsyscfgr
                     .write(move |w| unsafe { w.pllq().bits(div - 1) });
-                let req = freq / u32(div);
+                let req = freq / div as u32;
                 Some(req.hz())
             }
             _ => None,
@@ -296,7 +294,7 @@ impl Rcc {
                 self.rb
                     .pllsyscfgr
                     .write(move |w| unsafe { w.pllp().bits(div - 1) });
-                let req = freq / u32(div);
+                let req = freq / div as u32;
                 Some(req.hz())
             }
             _ => None,
