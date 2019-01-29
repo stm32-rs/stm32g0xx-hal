@@ -3,7 +3,6 @@ use hal::blocking::i2c::{Read, Write, WriteRead};
 
 use crate::gpio::{gpioa::*, gpiob::*};
 use crate::gpio::{AltFunction, OpenDrain, Output};
-use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::{I2C1, I2C2};
 use crate::time::Hertz;
@@ -137,7 +136,7 @@ macro_rules! i2c {
                 assert!(scldel < 16);
                 assert!(sdadel < 16);
 
-                i2c.timingr.write(|w| {
+                i2c.timingr.write(|w| unsafe {
                     w.presc()
                         .bits(psc as u8)
                         .sdadel()
