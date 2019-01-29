@@ -40,6 +40,7 @@ pub mod qei;
 pub mod rcc;
 pub mod rng;
 pub mod serial;
+pub mod spi;
 pub mod time;
 pub mod timer;
 pub mod watchdog;
