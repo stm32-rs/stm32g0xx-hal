@@ -29,6 +29,7 @@ pub use crate::stm32::interrupt;
 pub mod debug;
 
 pub mod adc;
+pub mod crc;
 pub mod dac;
 pub mod delay;
 pub mod exti;

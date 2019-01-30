@@ -178,7 +178,7 @@ macro_rules! spi {
                 Spi { spi, pins }
             }
 
-            pub fn free(self) -> ($SPIX, PINS) {
+            pub fn release(self) -> ($SPIX, PINS) {
                 (self.spi, self.pins)
             }
         }

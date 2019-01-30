@@ -5,6 +5,7 @@ pub use hal::watchdog::Watchdog as _hal_watchdog_Watchdog;
 pub use hal::watchdog::WatchdogEnable as _hal_watchdog_WatchdogEnable;
 
 pub use crate::adc::AdcExt as _stm32g0_hal_analog_AdcExt;
+pub use crate::crc::CrcExt as _stm32g0_hal_crc_CrcExt;
 pub use crate::dac::DacExt as _stm32g0_hal_analog_DacExt;
 pub use crate::dac::DacOut as _stm32g0_hal_analog_DacOut;
 pub use crate::dac::DacPin as _stm32g0_hal_analog_DacPin;
