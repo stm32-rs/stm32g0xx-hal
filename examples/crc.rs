@@ -21,8 +21,12 @@ fn main() -> ! {
     let mut rcc = dp.RCC.constrain();
 
     let mut crc = dp.CRC.enable(&mut rcc);
-    let hash_sum = crc.digest("The quick brown fox jumps over the lazy dog");
-    println!("crc32: 0x{:x}", hash_sum);
+    crc.reverse_input(InputReverse::Byte);
+    crc.reverse_output(true);
 
-    loop {}
+    loop {
+        crc.reset();
+        let hash_sum = crc.digest("The quick brown fox jumps over the lazy dog");
+        println!("crc32: 0x{:x}, crc32b: 0x{:x}", hash_sum, hash_sum ^ 0xffffffff);
+    }
 }

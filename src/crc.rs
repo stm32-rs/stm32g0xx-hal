@@ -60,8 +60,8 @@ impl Digest<&str> for Crc {
     fn digest(&mut self, s: &str) -> u32 {
         s.as_bytes()
             .into_iter()
-            .map(|c| {
-                self.rb.dr.write(|w| unsafe { w.dr().bits(*c as u32) });
+            .map(|c| unsafe {
+                core::ptr::write_volatile(&self.rb.dr as *const _ as *mut u8, *c);
             })
             .last();
         self.rb.dr.read().bits()
