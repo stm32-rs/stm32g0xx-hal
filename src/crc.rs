@@ -56,25 +56,16 @@ pub trait Digest<W> {
     fn digest(&mut self, data: W) -> u32;
 }
 
-impl Digest<&str> for Crc {
-    fn digest(&mut self, s: &str) -> u32 {
-        s.as_bytes()
-            .into_iter()
-            .map(|c| unsafe {
-                core::ptr::write_volatile(&self.rb.dr as *const _ as *mut u8, *c);
-            })
-            .last();
+impl Digest<u32> for Crc {
+    fn digest(&mut self, data: u32) -> u32 {
+        self.rb.dr.write(|w| unsafe { w.dr().bits(data) });
         self.rb.dr.read().bits()
     }
 }
 
 impl Digest<&[u32]> for Crc {
     fn digest(&mut self, data: &[u32]) -> u32 {
-        data.into_iter()
-            .map(|v| {
-                self.rb.dr.write(|w| unsafe { w.dr().bits(*v) });
-            })
-            .last();
+        data.into_iter().map(|v| self.digest(*v)).last();
         self.rb.dr.read().bits()
     }
 }
@@ -82,8 +73,8 @@ impl Digest<&[u32]> for Crc {
 impl Digest<&[u16]> for Crc {
     fn digest(&mut self, data: &[u16]) -> u32 {
         data.into_iter()
-            .map(|v| {
-                self.rb.dr.write(|w| unsafe { w.dr().bits(*v as u32) });
+            .map(|v| unsafe {
+                core::ptr::write_volatile(&self.rb.dr as *const _ as *mut u16, *v);
             })
             .last();
         self.rb.dr.read().bits()
@@ -92,12 +83,24 @@ impl Digest<&[u16]> for Crc {
 
 impl Digest<&[u8]> for Crc {
     fn digest(&mut self, data: &[u8]) -> u32 {
-        data.into_iter()
-            .map(|v| {
-                self.rb.dr.write(|w| unsafe { w.dr().bits(*v as u32) });
+        let words = data.len() / 4;
+        let bytes = data.len() - words * 4;
+        let word_slice: &[u32] =
+            unsafe { core::slice::from_raw_parts(data.as_ptr() as *const _, words) };
+        self.digest(word_slice);
+        data[words * 4..]
+            .into_iter()
+            .map(|v| unsafe {
+                core::ptr::write_volatile(&self.rb.dr as *const _ as *mut u8, *v);
             })
             .last();
         self.rb.dr.read().bits()
+    }
+}
+
+impl Digest<&str> for Crc {
+    fn digest(&mut self, s: &str) -> u32 {
+        self.digest(&s.as_bytes()[..])
     }
 }
 

@@ -21,12 +21,24 @@ fn main() -> ! {
     let mut rcc = dp.RCC.constrain();
 
     let mut crc = dp.CRC.enable(&mut rcc);
-    crc.reverse_input(InputReverse::Byte);
+    crc.reverse_input(InputReverse::Word);
     crc.reverse_output(true);
 
     loop {
         crc.reset();
+        let hash_sum = crc.digest("123456789");
+        println!(
+            "crc32: 0x{:x}, crc32b: 0x{:x}",
+            hash_sum,
+            hash_sum ^ 0xffffffff
+        );
+       
+        crc.reset();
         let hash_sum = crc.digest("The quick brown fox jumps over the lazy dog");
-        println!("crc32: 0x{:x}, crc32b: 0x{:x}", hash_sum, hash_sum ^ 0xffffffff);
+        println!(
+            "crc32: 0x{:x}, crc32b: 0x{:x}",
+            hash_sum,
+            hash_sum ^ 0xffffffff
+        );
     }
 }
