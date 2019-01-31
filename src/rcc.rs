@@ -1,4 +1,4 @@
-use crate::stm32::RCC;
+use crate::stm32::{FLASH, RCC};
 use crate::time::{Hertz, U32Ext};
 
 /// HSI speed
@@ -228,6 +228,20 @@ impl Rcc {
             Prescaler::Div16 => (sys_freq / 16, sys_freq / 8, 0b111),
             _ => (sys_clk.0, sys_clk.0, 0b000),
         };
+
+        unsafe {
+            // Adjust flash wait states
+            let flash = &(*FLASH::ptr());
+            flash.acr.modify(|_, w| {
+                w.latency().bits(if sys_clk.0 <= 24_000_000 {
+                    0b000
+                } else if sys_clk.0 <= 48_000_000 {
+                    0b001
+                } else {
+                    0b010
+                })
+            })
+        }
 
         self.rb.cfgr.modify(|_, w| unsafe {
             w.hpre()

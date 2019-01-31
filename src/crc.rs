@@ -84,7 +84,6 @@ impl Digest<&[u16]> for Crc {
 impl Digest<&[u8]> for Crc {
     fn digest(&mut self, data: &[u8]) -> u32 {
         let words = data.len() / 4;
-        let bytes = data.len() - words * 4;
         let word_slice: &[u32] =
             unsafe { core::slice::from_raw_parts(data.as_ptr() as *const _, words) };
         self.digest(word_slice);

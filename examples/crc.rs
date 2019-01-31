@@ -32,7 +32,7 @@ fn main() -> ! {
             hash_sum,
             hash_sum ^ 0xffffffff
         );
-       
+
         crc.reset();
         let hash_sum = crc.digest("The quick brown fox jumps over the lazy dog");
         println!(
