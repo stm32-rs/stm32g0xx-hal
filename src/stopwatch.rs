@@ -26,6 +26,10 @@ impl Stopwatch {
         }
     }
 
+    pub fn release(self) -> TIM2 {
+        self.tim
+    }
+
     pub fn now(&self) -> Instant {
         let low = self.tim.cnt.read().cnt_l().bits() as u32;
         let high = self.tim.cnt.read().cnt_h().bits() as u32;

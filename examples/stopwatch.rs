@@ -21,7 +21,7 @@ fn main() -> ! {
 
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
-    let mut rcc = dp.RCC.freeze(RccConfig::new(SysClkSource::PLL));
+    let mut rcc = dp.RCC.constrain();
 
     let mut delay = cp.SYST.delay(&rcc.clocks);
     let mut timer = dp.TIM17.timer(&mut rcc);
@@ -37,6 +37,32 @@ fn main() -> ! {
         block!(timer.wait()).unwrap();
     });
     println!("Timer: 2us -> {}us", elapsed_us.0);
+    
+    let elapsed_us = stopwatch.trace(|| {
+        let x = calc_something();
+        assert!(x > 0);
+    });
+    println!("Calc @ 16MHz: {}us", elapsed_us.0);
+
+    // Increase MCU core speed
+    let mut rcc = rcc.freeze(RccConfig::new(SysClkSource::PLL));
+    // Invalidate stopwatch
+    let tim2 = stopwatch.release();
+    let stopwatch = tim2.stopwatch(&mut rcc);
+
+    let elapsed_us = stopwatch.trace(|| {
+        let x = calc_something();
+        assert!(x > 0);
+    });
+    println!("Calc @ 64MHz: {}us", elapsed_us.0);
 
     loop {}
+}
+
+fn calc_something() -> u32 {
+    let mut result = 0;
+    for i in 1..1_000 {
+        result = (result + i) / 3
+    }
+    result
 }
