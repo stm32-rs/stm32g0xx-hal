@@ -1,7 +1,7 @@
-/// A monotonic nondecreasing timer
-use crate::time::{Hertz, Instant, MicroSecond};
+//! A monotonic nondecreasing timer
 use crate::rcc::Rcc;
 use crate::stm32::TIM2;
+use crate::time::{Hertz, Instant, MicroSecond};
 
 pub trait StopwatchExt {
     fn stopwatch(self, rcc: &mut Rcc) -> Stopwatch;
@@ -24,6 +24,15 @@ impl Stopwatch {
             tim,
             clk: rcc.clocks.apb_tim_clk,
         }
+    }
+
+    pub fn set_clock<T>(&mut self, clk: T)
+    where
+        T: Into<Hertz>,
+    {
+        let clk = clk.into();
+        assert!(clk.0 > 1_000_000);
+        self.clk = clk;
     }
 
     pub fn release(self) -> TIM2 {

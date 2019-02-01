@@ -162,6 +162,36 @@ macro_rules! gpio {
                     _mode: PhantomData<MODE>,
                 }
 
+                impl Into<$PXi<Input<PullDown>>> for $PXi<DefaultMode> {
+                    fn into(self) -> $PXi<Input<PullDown>> {
+                        self.into_pull_down_input()
+                    }
+                }
+
+                impl Into<$PXi<Input<PullUp>>> for $PXi<DefaultMode> {
+                    fn into(self) -> $PXi<Input<PullUp>> {
+                        self.into_pull_up_input()
+                    }
+                }
+
+                impl Into<$PXi<Analog>> for $PXi<DefaultMode> {
+                    fn into(self) -> $PXi<Analog> {
+                        self.into_analog()
+                    }
+                }
+
+                impl Into<$PXi<Output<OpenDrain>>> for $PXi<DefaultMode> {
+                    fn into(self) -> $PXi<Output<OpenDrain>> {
+                        self.into_open_drain_output()
+                    }
+                }
+
+                impl Into<$PXi<Output<PushPull>>> for $PXi<DefaultMode> {
+                    fn into(self) -> $PXi<Output<PushPull>> {
+                        self.into_push_pull_output()
+                    }
+                }
+
                 impl<MODE> $PXi<MODE> {
                     /// Configures the pin to operate as a floating input pin
                     pub fn into_floating_input(self) -> $PXi<Input<Floating>> {

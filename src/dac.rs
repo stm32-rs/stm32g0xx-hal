@@ -3,7 +3,7 @@ use core::mem;
 
 use crate::delay::Delay;
 use crate::gpio::gpioa::{PA4, PA5};
-use crate::gpio::{Floating, Input};
+use crate::gpio::DefaultMode;
 use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::DAC;
@@ -25,15 +25,15 @@ pub trait Pins<DAC> {
     type Output;
 }
 
-impl Pins<DAC> for PA4<Input<Floating>> {
+impl Pins<DAC> for PA4<DefaultMode> {
     type Output = C1;
 }
 
-impl Pins<DAC> for PA5<Input<Floating>> {
+impl Pins<DAC> for PA5<DefaultMode> {
     type Output = C2;
 }
 
-impl Pins<DAC> for (PA4<Input<Floating>>, PA5<Input<Floating>>) {
+impl Pins<DAC> for (PA4<DefaultMode>, PA5<DefaultMode>) {
     type Output = (C1, C2);
 }
 

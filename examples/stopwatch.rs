@@ -25,30 +25,27 @@ fn main() -> ! {
 
     let mut delay = cp.SYST.delay(&rcc.clocks);
     let mut timer = dp.TIM17.timer(&mut rcc);
-    let stopwatch = dp.TIM2.stopwatch(&mut rcc);
+    let mut stopwatch = dp.TIM2.stopwatch(&mut rcc);
 
     let elapsed_us = stopwatch.trace(|| {
-        delay.delay(2.us());
+        delay.delay(10.us());
     });
-    println!("Delay: 2us -> {}us", elapsed_us.0);
+    println!("Delay: 10us -> {}us", elapsed_us.0);
 
-    timer.start(2.us());
+    timer.start(10.us());
     let elapsed_us = stopwatch.trace(|| {
         block!(timer.wait()).unwrap();
     });
-    println!("Timer: 2us -> {}us", elapsed_us.0);
-    
+    println!("Timer: 10us -> {}us", elapsed_us.0);
+
     let elapsed_us = stopwatch.trace(|| {
         let x = calc_something();
         assert!(x > 0);
     });
     println!("Calc @ 16MHz: {}us", elapsed_us.0);
 
-    // Increase MCU core speed
-    let mut rcc = rcc.freeze(RccConfig::new(SysClkSource::PLL));
-    // Invalidate stopwatch
-    let tim2 = stopwatch.release();
-    let stopwatch = tim2.stopwatch(&mut rcc);
+    let rcc = rcc.freeze(RccConfig::new(SysClkSource::PLL));
+    stopwatch.set_clock(rcc.clocks.apb_tim_clk);
 
     let elapsed_us = stopwatch.trace(|| {
         let x = calc_something();
