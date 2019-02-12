@@ -1,4 +1,4 @@
-#![deny(warnings)]
+//#![deny(warnings)]
 #![deny(unsafe_code)]
 #![no_main]
 #![no_std]
@@ -10,7 +10,9 @@ extern crate panic_semihosting;
 extern crate stm32g0xx_hal as hal;
 
 use hal::prelude::*;
-use hal::{spi, stm32};
+use hal::rcc::{RccConfig, SysClkSource};
+use hal::spi;
+use hal::stm32;
 use rt::entry;
 
 #[entry]
@@ -18,18 +20,18 @@ fn main() -> ! {
     hal::debug::init();
 
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
-    let mut rcc = dp.RCC.constrain();
-    let gpiob = dp.GPIOB.split(&mut rcc);
+    let mut rcc = dp.RCC.freeze(RccConfig::new(SysClkSource::PLL));
+    let gpioa = dp.GPIOA.split(&mut rcc);
 
-    let sck = gpiob.pb3;
-    let miso = gpiob.pb4;
-    let mosi = gpiob.pb5;
+    let sck = gpioa.pa1;
+    let mosi = gpioa.pa2;
+    let miso = gpioa.pa6;
 
     let mut spi = dp
         .SPI1
-        .spi((sck, miso, mosi), spi::MODE_0, 100.khz(), &mut rcc);
+        .spi((sck, miso, mosi), spi::MODE_0, 3.mhz(), &mut rcc);
 
     loop {
-        spi.write(&[0, 1]).unwrap();
+        spi.send(128).unwrap_or_else(|_| ());
     }
 }

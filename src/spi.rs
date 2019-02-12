@@ -71,7 +71,7 @@ pub trait SpiExt<SPI>: Sized {
 }
 
 macro_rules! spi {
-    ($SPIX:ident, $spiX:ident, $apbXenr:ident, $spiXen:ident,
+    ($SPIX:ident, $spiX:ident, $apbXenr:ident, $apbXrst:ident, $spiXen:ident, $spiXrst:ident,
         sck: [ $(($SCK:ty, $SCK_AF:expr),)+ ],
         miso: [ $(($MISO:ty, $MISO_AF:expr),)+ ],
         mosi: [ $(($MOSI:ty, $MOSI_AF:expr),)+ ],
@@ -124,6 +124,8 @@ macro_rules! spi {
             {
                 // Enable clock for SPI
                 rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().set_bit());
+                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().set_bit());
+                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().clear_bit());
 
                 // disable SS output
                 spi.cr2.write(|w| w.ssoe().clear_bit());
@@ -170,7 +172,7 @@ macro_rules! spi {
                         .dff()
                         .clear_bit()
                         .bidimode()
-                        .clear_bit()
+                        .set_bit()
                         .spe()
                         .set_bit()
                 });
@@ -245,7 +247,9 @@ spi!(
     SPI1,
     spi1,
     apbenr2,
+    apbrstr2,
     spi1en,
+    spi1rst,
     sck: [
         (PA1<DefaultMode>, AltFunction::AF0),
         (PA5<DefaultMode>, AltFunction::AF0),
@@ -271,7 +275,9 @@ spi!(
     SPI2,
     spi2,
     apbenr1,
+    apbrstr1,
     spi2en,
+    spi2rst,
     sck: [
         (PA0<DefaultMode>, AltFunction::AF0),
         (PB8<DefaultMode>, AltFunction::AF1),
