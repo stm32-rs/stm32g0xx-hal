@@ -58,10 +58,10 @@ pub enum StopBits {
 }
 
 pub struct Config {
-    pub baudrate: Bps,
-    pub wordlength: WordLength,
-    pub parity: Parity,
-    pub stopbits: StopBits,
+    baudrate: Bps,
+    wordlength: WordLength,
+    parity: Parity,
+    stopbits: StopBits,
 }
 
 impl Config {

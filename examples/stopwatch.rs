@@ -11,7 +11,7 @@ extern crate panic_semihosting;
 extern crate stm32g0xx_hal as hal;
 
 use hal::prelude::*;
-use hal::rcc::{RccConfig, SysClkSource};
+use hal::rcc::{Config, SysClockSrc};
 use hal::stm32;
 use rt::entry;
 
@@ -44,7 +44,7 @@ fn main() -> ! {
     });
     println!("Calc @ 16MHz: {}us", elapsed_us.0);
 
-    let rcc = rcc.freeze(RccConfig::new(SysClkSource::PLL));
+    let rcc = rcc.freeze(Config::new(SysClockSrc::PLL));
     stopwatch.set_clock(rcc.clocks.apb_tim_clk);
 
     let elapsed_us = stopwatch.trace(|| {

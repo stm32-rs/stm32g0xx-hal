@@ -284,7 +284,7 @@ pwm_hal! {
     TIM1: (C6, cc6e, ccmr3_output, oc6pe, oc6m, ccr6, moe),
     TIM14: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
     TIM15: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-    // TODO: probably bug in SVD file
+    // TODO(dotcypress): patch SVD
     // TIM15: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, moe),
     TIM16: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
     TIM17: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),

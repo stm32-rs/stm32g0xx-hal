@@ -122,6 +122,8 @@ macro_rules! spi {
             PINS: Pins<$SPIX>,
             T: Into<Hertz>
             {
+                pins.setup();
+
                 // Enable clock for SPI
                 rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().set_bit());
                 rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().set_bit());
@@ -144,6 +146,10 @@ macro_rules! spi {
                     _ => 0b111,
                 };
 
+                // spi.cr2.write(|w| unsafe {
+                //     w.ds().bits(0b0111).frxth().set_bit()
+                // });
+
                 // mstr: master configuration
                 // lsbfirst: MSB first
                 // ssm: enable software slave management (NSS pin free for other uses)
@@ -151,7 +157,6 @@ macro_rules! spi {
                 // dff: 8 bit frames
                 // bidimode: 2-line unidirectional
                 // spe: enable the SPI bus
-                #[allow(unused)]
                 spi.cr1.write(|w| unsafe {
                     w.cpha()
                         .bit(mode.phase == Phase::CaptureOnSecondTransition)
@@ -173,9 +178,8 @@ macro_rules! spi {
                         .clear_bit()
                         .bidimode()
                         .set_bit()
-                        .spe()
-                        .set_bit()
                 });
+                spi.cr1.write(|w| w.spe().set_bit());
 
                 Spi { spi, pins }
             }

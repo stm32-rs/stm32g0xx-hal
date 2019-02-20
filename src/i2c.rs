@@ -1,11 +1,76 @@
 //! I2C
 use hal::blocking::i2c::{Read, Write, WriteRead};
 
+use core::cmp;
 use crate::gpio::{gpioa::*, gpiob::*};
 use crate::gpio::{AltFunction, OpenDrain, Output};
 use crate::rcc::Rcc;
 use crate::stm32::{I2C1, I2C2};
 use crate::time::Hertz;
+
+pub struct Config {
+    speed: Option<Hertz>,
+    timing: Option<u32>,
+    analog_filter: bool,
+    digital_filter: u8,
+}
+
+impl Config {
+    pub fn new<T>(speed: T) -> Self
+    where
+        T: Into<Hertz>,
+    {
+        Config {
+            speed: Some(speed.into()),
+            timing: None,
+            analog_filter: true,
+            digital_filter: 0,
+        }
+    }
+    
+    pub fn with_timing(timing: u32) -> Self {
+        Config {
+            timing: Some(timing),
+            speed: None,
+            analog_filter: true,
+            digital_filter: 0,
+        }
+    }
+
+    pub fn disable_analog_filter(mut self) -> Self {
+        self.analog_filter = false;
+        self
+    }
+
+    pub fn enable_digital_filter(mut self, cycles: u8) -> Self {
+        assert!(cycles <= 16);
+        self.digital_filter = cycles;
+        self
+    }
+
+    fn timing_bits(&self, i2c_clk: Hertz) -> u32 {
+        if let Some(timing) = self.timing {
+            return timing
+        }
+        let speed = self.speed.unwrap();
+        let (psc, scll, sclh, sdadel, scldel) = if speed.0 <= 100_000 {
+            let psc = 3;
+            let scll = cmp::max(((i2c_clk.0 >> (psc + 1)) / speed.0) - 1, 255);
+            let sclh = scll - 4;
+            let sdadel = 2;
+            let scldel = 4;
+            (psc, scll, sclh, sdadel, scldel)
+        } else {
+            let psc = 1;
+            let scll = cmp::max(((i2c_clk.0 >> (psc + 1)) / speed.0) - 1, 255);
+            let sclh = scll - 6;
+            let sdadel = 1;
+            let scldel = 3;
+            (psc, scll, sclh, sdadel, scldel)
+        };
+        psc << 28 | scldel << 20 | sdadel << 16 | sclh << 8 | scll
+    }
+}
 
 /// I2C abstraction
 pub struct I2c<I2C, SDA, SCL> {
@@ -35,11 +100,10 @@ pub enum Error {
 }
 
 pub trait I2cExt<I2C> {
-    fn i2c<SDA, SCL, T>(self, sda: SDA, scl: SCL, speed: T, rcc: &mut Rcc) -> I2c<I2C, SDA, SCL>
+    fn i2c<SDA, SCL>(self, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> I2c<I2C, SDA, SCL>
     where
         SDA: SDAPin<I2C>,
-        SCL: SCLPin<I2C>,
-        T: Into<Hertz>;
+        SCL: SCLPin<I2C>;
 }
 
 macro_rules! i2c {
@@ -64,29 +128,28 @@ macro_rules! i2c {
         )+
 
         impl I2cExt<$I2CX> for $I2CX {
-            fn i2c<SDA, SCL, T>(
+            fn i2c<SDA, SCL>(
                 self,
                 sda: SDA,
                 scl: SCL,
-                speed: T,
+                config: Config,
                 rcc: &mut Rcc,
             ) -> I2c<$I2CX, SDA, SCL>
             where
                 SDA: SDAPin<$I2CX>,
                 SCL: SCLPin<$I2CX>,
-                T: Into<Hertz>,
             {
-                I2c::$i2cx(self, sda, scl, speed.into(), rcc)
+                I2c::$i2cx(self, sda, scl, config, rcc)
             }
         }
 
         impl<SDA, SCL> I2c<$I2CX, SDA, SCL> {
-            pub fn $i2cx(i2c: $I2CX, sda: SDA, scl: SCL, speed: Hertz, rcc: &mut Rcc) -> Self
+            pub fn $i2cx(i2c: $I2CX, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> Self
             where
                 SDA: SDAPin<$I2CX>,
                 SCL: SCLPin<$I2CX>,
             {
-                assert!(speed.0 <= 1_000_000);
+
                 sda.setup();
                 scl.setup();
 
@@ -100,57 +163,19 @@ macro_rules! i2c {
                 // Make sure the I2C unit is disabled so we can configure it
                 i2c.cr1.modify(|_, w| w.pe().clear_bit());
 
-                let i2c_clk = rcc.clocks.apb_clk.0;
-                let ratio = i2c_clk / speed.0 - 4;
-                let (psc, scll, sclh, sdadel, scldel) = if speed.0 >= 100_000 {
-                    // fast-mode or fast-mode plus
-                    // here we pick SCLL + 1 = 2 * (SCLH + 1)
-                    let psc = ratio / 387;
-                    let sclh = ((ratio / (psc + 1)) - 3) / 3;
-                    let scll = 2 * (sclh + 1) - 1;
-
-                    let (sdadel, scldel) = if speed.0 > 400_000 {
-                        // fast-mode plus
-                        let sdadel = 0;
-                        let scldel = i2c_clk / 4_000_000 / (psc + 1) - 1;
-                        (sdadel, scldel)
-                    } else {
-                        // fast-mode
-                        let sdadel = i2c_clk / 8_000_000 / (psc + 1);
-                        let scldel = i2c_clk / 2_000_000 / (psc + 1) - 1;
-                        (sdadel, scldel)
-                    };
-                    (psc, scll, sclh, sdadel, scldel)
-                } else {
-                    // standard-mode
-                    // here we pick SCLL = SCLH
-                    let psc = ratio / 514;
-                    let sclh = ((ratio / (psc + 1)) - 2) / 2;
-                    let scll = sclh;
-                    let sdadel = i2c_clk / 2_000_000 / (psc + 1);
-                    let scldel = i2c_clk / 800_000 / (psc + 1) - 1;
-                    (psc, scll, sclh, sdadel, scldel)
-                };
-
-                assert!(psc < 16);
-                assert!(scldel < 16);
-                assert!(sdadel < 16);
-
-                i2c.timingr.write(|w| unsafe {
-                    w.presc()
-                        .bits(psc as u8)
-                        .sdadel()
-                        .bits(sdadel as u8)
-                        .scldel()
-                        .bits(scldel as u8)
-                        .sclh()
-                        .bits(sclh as u8)
-                        .scll()
-                        .bits(scll as u8)
-                });
+                // Setup protocol timings
+                let timing_bits = config.timing_bits(rcc.clocks.apb_clk);
+                i2c.timingr.write(|w| unsafe { w.bits(timing_bits) });
 
                 // Enable the I2C processing
-                i2c.cr1.modify(|_, w| w.pe().set_bit());
+                i2c.cr1.modify(|_, w| unsafe {
+                    w.pe()
+                        .set_bit()
+                        .dnf()
+                        .bits(config.digital_filter)
+                        .anfoff()
+                        .bit(!config.analog_filter)
+                });
 
                 I2c { i2c, sda, scl }
             }
@@ -217,7 +242,9 @@ macro_rules! i2c {
                         .nbytes()
                         .bits(bytes.len() as u8)
                         .sadd()
-                        .bits(addr as u16)
+                        .bits((addr << 1) as u16)
+                        .rd_wrn()
+                        .clear_bit()
                         .autoend()
                         .set_bit()
                 });
@@ -243,7 +270,7 @@ macro_rules! i2c {
                         .nbytes()
                         .bits(buffer.len() as u8)
                         .sadd()
-                        .bits(addr as u16)
+                        .bits((addr << 1) as u16)
                         .autoend()
                         .set_bit()
                 });

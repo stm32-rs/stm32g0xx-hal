@@ -10,7 +10,7 @@ extern crate panic_semihosting;
 extern crate stm32g0xx_hal as hal;
 
 use hal::prelude::*;
-use hal::rng::RngConfig;
+use hal::rng::Config;
 use hal::stm32;
 use rt::{entry, exception, ExceptionFrame};
 
@@ -26,7 +26,7 @@ fn main() -> ! {
     let gpioa = dp.GPIOA.split(&mut rcc);
     let mut led = gpioa.pa5.into_push_pull_output();
 
-    let mut rng = dp.RNG.enable(RngConfig::default(), &mut rcc);
+    let mut rng = dp.RNG.enable(Config::default(), &mut rcc);
     let mut random_bytes = [0u16; 3];
     match rng.fill(&mut random_bytes) {
         Ok(()) => println!("random bytes: {:?}", random_bytes),

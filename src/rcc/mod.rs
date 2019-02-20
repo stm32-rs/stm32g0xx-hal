@@ -1,117 +1,14 @@
-use crate::stm32::{FLASH, RCC};
+use crate::stm32::{FLASH, PWR, RCC};
 use crate::time::{Hertz, U32Ext};
+
+mod clockout;
+mod config;
+
+pub use clockout::*;
+pub use config::*;
 
 /// HSI speed
 pub const HSI_FREQ: u32 = 16_000_000;
-
-/// Prescaler
-#[derive(Clone, Copy)]
-pub enum Prescaler {
-    NotDivided,
-    Div2,
-    Div4,
-    Div8,
-    Div16,
-    Div32,
-    Div64,
-    Div128,
-    Div256,
-    Div512,
-}
-
-/// System clock mux source
-pub enum SysClkSource {
-    LSI,
-    PLL,
-    HSI(Prescaler),
-    HSE(Hertz),
-    HSE_BYPASS(Hertz),
-    LSE(Hertz),
-    LSE_BYPASS(Hertz),
-}
-
-/// PLL clock input source
-#[derive(Clone, Copy)]
-pub enum PLLSource {
-    HSI,
-    HSE(Hertz),
-    HSE_BYPASS(Hertz),
-}
-
-/// PLL divider
-pub type PLLDiv = u8;
-
-/// PLL multiplier
-pub type PLLMul = u8;
-
-/// PLL config
-#[derive(Clone, Copy)]
-pub struct PllConfig {
-    mux: PLLSource,
-    m: PLLDiv,
-    n: PLLMul,
-    r: PLLDiv,
-    q: Option<PLLDiv>,
-    p: Option<PLLDiv>,
-}
-
-impl Default for PllConfig {
-    fn default() -> PllConfig {
-        PllConfig {
-            mux: PLLSource::HSI,
-            m: 1,
-            n: 8,
-            r: 2,
-            q: None,
-            p: None,
-        }
-    }
-}
-
-/// Clocks configutation
-pub struct RccConfig {
-    sys_mux: SysClkSource,
-    pll_cfg: PllConfig,
-    ahb_psc: Prescaler,
-    apb_psc: Prescaler,
-}
-
-impl RccConfig {
-    pub fn new(mux: SysClkSource) -> Self {
-        RccConfig::default().clock_src(mux)
-    }
-
-    pub fn clock_src(mut self, mux: SysClkSource) -> Self {
-        self.sys_mux = mux;
-        self
-    }
-
-    pub fn pll_cfg(mut self, cfg: PllConfig) -> Self {
-        self.pll_cfg = cfg;
-        self
-    }
-
-    pub fn ahb_psc(mut self, psc: Prescaler) -> Self {
-        self.ahb_psc = psc;
-        self
-    }
-
-    pub fn apb_psc(mut self, psc: Prescaler) -> Self {
-        self.apb_psc = psc;
-        self
-    }
-}
-
-impl Default for RccConfig {
-    fn default() -> RccConfig {
-        RccConfig {
-            sys_mux: SysClkSource::HSI(Prescaler::NotDivided),
-            pll_cfg: PllConfig::default(),
-            ahb_psc: Prescaler::NotDivided,
-            apb_psc: Prescaler::NotDivided,
-        }
-    }
-}
 
 /// Clock frequencies
 #[derive(Clone, Copy)]
@@ -167,32 +64,32 @@ pub struct Rcc {
 
 impl Rcc {
     /// Apply clock configuration
-    pub fn freeze(self, rcc_cfg: RccConfig) -> Self {
+    pub fn freeze(self, rcc_cfg: Config) -> Self {
         let pll_clk = self.config_pll(rcc_cfg.pll_cfg);
 
         let (sys_clk, sw_bits) = match rcc_cfg.sys_mux {
-            SysClkSource::HSE(freq) => {
+            SysClockSrc::HSE(freq) => {
                 self.enable_hse(false);
                 (freq, 0b001)
             }
-            SysClkSource::HSE_BYPASS(freq) => {
+            SysClockSrc::HSE_BYPASS(freq) => {
                 self.enable_hse(true);
                 (freq, 0b001)
             }
-            SysClkSource::PLL => (pll_clk.r, 0b010),
-            SysClkSource::LSE(freq) => {
+            SysClockSrc::PLL => (pll_clk.r, 0b010),
+            SysClockSrc::LSE(freq) => {
                 self.enable_lse(false);
                 (freq, 0b100)
             }
-            SysClkSource::LSE_BYPASS(freq) => {
+            SysClockSrc::LSE_BYPASS(freq) => {
                 self.enable_lse(true);
                 (freq, 0b100)
             }
-            SysClkSource::LSI => {
+            SysClockSrc::LSI => {
                 self.enable_lsi();
                 (32_768.hz(), 0b011)
             }
-            SysClkSource::HSI(prs) => {
+            SysClockSrc::HSI(prs) => {
                 self.enable_hsi();
                 let (freq, div_bits) = match prs {
                     Prescaler::Div2 => (HSI_FREQ / 2, 0b001),
@@ -276,15 +173,15 @@ impl Rcc {
         while self.rb.cr.read().pllrdy().bit_is_set() {}
 
         let (freq, pll_sw_bits) = match pll_cfg.mux {
-            PLLSource::HSI => {
+            PLLSrc::HSI => {
                 self.enable_hsi();
                 (HSI_FREQ, 0b10)
             }
-            PLLSource::HSE(freq) => {
+            PLLSrc::HSE(freq) => {
                 self.enable_hse(false);
                 (freq.0, 0b11)
             }
-            PLLSource::HSE_BYPASS(freq) => {
+            PLLSrc::HSE_BYPASS(freq) => {
                 self.enable_hse(true);
                 (freq.0, 0b11)
             }
@@ -334,28 +231,34 @@ impl Rcc {
         PLLClocks { r, q, p }
     }
 
-    fn enable_hsi(&self) {
+    pub(crate) fn enable_hsi(&self) {
         self.rb.cr.write(|w| w.hsion().set_bit());
         while self.rb.cr.read().hsirdy().bit_is_clear() {}
     }
 
-    fn enable_hse(&self, bypass: bool) {
+    pub(crate) fn enable_hse(&self, bypass: bool) {
         self.rb
             .cr
             .write(|w| w.hseon().set_bit().hsebyp().bit(bypass));
         while self.rb.cr.read().hserdy().bit_is_clear() {}
     }
 
-    fn enable_lse(&self, bypass: bool) {
+    pub(crate) fn enable_lse(&self, bypass: bool) {
         self.rb
             .bdcr
             .write(|w| w.lseon().set_bit().lsebyp().bit(bypass));
         while self.rb.bdcr.read().lserdy().bit_is_clear() {}
     }
 
-    fn enable_lsi(&self) {
+    pub(crate) fn enable_lsi(&self) {
         self.rb.csr.write(|w| w.lsion().set_bit());
         while self.rb.csr.read().lsirdy().bit_is_clear() {}
+    }
+
+    pub(crate) fn unlock_rtc(&self) {
+        self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
+        let pwr = unsafe { &(*PWR::ptr()) };
+        pwr.cr1.modify(|_, w| w.dbp().set_bit());
     }
 }
 
@@ -364,7 +267,7 @@ pub trait RccExt {
     /// Constrains the `RCC` peripheral so it plays nicely with the other abstractions
     fn constrain(self) -> Rcc;
     /// Constrains the `RCC` peripheral and apply clock configuration
-    fn freeze(self, rcc_cfg: RccConfig) -> Rcc;
+    fn freeze(self, rcc_cfg: Config) -> Rcc;
 }
 
 impl RccExt for RCC {
@@ -375,7 +278,7 @@ impl RccExt for RCC {
         }
     }
 
-    fn freeze(self, rcc_cfg: RccConfig) -> Rcc {
+    fn freeze(self, rcc_cfg: Config) -> Rcc {
         self.constrain().freeze(rcc_cfg)
     }
 }

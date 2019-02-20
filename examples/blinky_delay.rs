@@ -9,7 +9,7 @@ extern crate panic_semihosting;
 extern crate stm32g0xx_hal as hal;
 
 use hal::prelude::*;
-use hal::rcc::{RccConfig, SysClkSource};
+use hal::rcc::Config;
 use hal::stm32;
 use rt::{entry, exception, ExceptionFrame};
 
@@ -18,7 +18,7 @@ fn main() -> ! {
     hal::debug::init();
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
-    let mut rcc = dp.RCC.freeze(RccConfig::new(SysClkSource::LSI));
+    let mut rcc = dp.RCC.freeze(Config::lsi());
 
     let gpioa = dp.GPIOA.split(&mut rcc);
     let mut led = gpioa.pa5.into_push_pull_output();

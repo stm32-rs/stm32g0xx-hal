@@ -5,29 +5,26 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
-extern crate nb;
+extern crate cortex_m_semihosting as sh;
 extern crate panic_semihosting;
 extern crate stm32g0xx_hal as hal;
 
 use hal::prelude::*;
+use hal::rcc::{Config, LSCOSrc, MCOSrc, Prescaler};
 use hal::stm32;
-use nb::block;
 use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
-    let mut rcc = dp.RCC.constrain();
-
+    let mut rcc = dp.RCC.freeze(Config::lsi());
     let gpioa = dp.GPIOA.split(&mut rcc);
-    let mut led = gpioa.pa5.into_push_pull_output();
 
-    let mut timer = dp.TIM17.timer(&mut rcc);
-    timer.start(500.ms());
+    let lsco = gpioa.pa2.lsco(LSCOSrc::LSI, &mut rcc);
+    let mco = gpioa.pa9.mco(MCOSrc::SysClk, Prescaler::Div2, &mut rcc);
 
-    loop {
-        led.toggle();
-        block!(timer.wait()).unwrap();
-    }
+    lsco.enable();
+    mco.enable();
+
+    loop {}
 }

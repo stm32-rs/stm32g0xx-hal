@@ -23,14 +23,12 @@ fn main() -> ! {
     let mut delay = cp.SYST.delay(&rcc.clocks);
 
     let gpioa = dp.GPIOA.split(&mut rcc);
-    let qei = dp.TIM1.qei((gpioa.pa8, gpioa.pa9), &mut rcc);
+    let switch = gpioa.pa2.into_pull_up_input();
+    let qei = dp.TIM2.qei((gpioa.pa0, gpioa.pa1), &mut rcc);
 
     loop {
-        let before = qei.count();
-        delay.delay(100.ms());
-        let after = qei.count();
-
-        let elapsed = after.wrapping_sub(before) as i16;
-        println!("Δ: {}", elapsed);
+        if switch.is_low() {
+            println!("{:?}", qei.count());
+        }
     }
 }

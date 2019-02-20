@@ -15,6 +15,8 @@ pub use crate::gpio::GpioExt as _stm32g0_hal_gpio_GpioExt;
 pub use crate::i2c::I2cExt as _stm32g0_hal_i2c_I2cExt;
 pub use crate::pwm::PwmExt as _stm32g0_hal_pwm_PwmExt;
 pub use crate::qei::QeiExt as _stm32g0_hal_qei_QeiExt;
+pub use crate::rcc::LSCOExt as _stm32g0_hal_rcc_LSCOExt;
+pub use crate::rcc::MCOExt as _stm32g0_hal_rcc_MCOExt;
 pub use crate::rcc::RccExt as _stm32g0_hal_rcc_RccExt;
 pub use crate::rng::RngCore as _stm32g0_hal_rng_RngCore;
 pub use crate::rng::RngExt as _stm32g0_hal_rng_RngExt;

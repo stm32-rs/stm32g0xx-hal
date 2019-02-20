@@ -47,7 +47,7 @@ macro_rules! qei {
         $(
             impl<PINS> Qei<$TIMX, PINS> where PINS: Pins<$TIMX> {
                 fn $tim(tim: $TIMX, pins: PINS, rcc: &mut Rcc) -> Self {
-
+                    pins.setup();
                     // enable and reset peripheral to a clean slate state
                     rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
                     rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
@@ -57,6 +57,9 @@ macro_rules! qei {
                     tim.ccmr1_output.write(|w| unsafe {
                         w.cc1s().bits(0b01).cc2s().bits(0b01)
                     });
+
+                    // Encoder mode, count up/down on both TI1FP1 and TI2FP2
+                    tim.smcr.write(|w| unsafe { w.sms().bits(0b011) });
 
                     // Enable and configure to capture on rising edge
                     tim.ccer.write(|w| {
@@ -74,11 +77,8 @@ macro_rules! qei {
                             .clear_bit()
                     });
 
-                    // Encoder mode, count up/down on both TI1FP1 and TI2FP2
-                    tim.smcr.write(|w| unsafe { w.sms().bits(0b011) });
                     tim.arr.write(|w| unsafe { w.$arr().bits(0xffff) });
                     tim.cr1.write(|w| w.cen().set_bit());
-                    pins.setup();
                     Qei { tim, pins }
                 }
 
