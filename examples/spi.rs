@@ -6,9 +6,9 @@
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate cortex_m_semihosting as sh;
+extern crate nb;
 extern crate panic_semihosting;
 extern crate stm32g0xx_hal as hal;
-extern crate nb;
 
 use hal::prelude::*;
 use hal::rcc::Config;

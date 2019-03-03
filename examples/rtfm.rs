@@ -44,22 +44,15 @@ const APP: () = {
         EXTI = device.EXTI;
     }
 
-    #[interrupt(resources = [TIMER, LED])]
-    fn TIM17() {
+    #[interrupt(binds = TIM17, resources = [TIMER, LED])]
+    fn on_timer_tick() {
         resources.LED.toggle();
         resources.TIMER.clear_irq();
     }
 
-    #[interrupt(resources = [EXTI])]
-    fn EXTI4_15() {
-        println!(
-            "F:{} R:{} A:{}",
-            resources
-                .EXTI
-                .is_pending(Event::GPIO13, SignalEdge::Falling),
-            resources.EXTI.is_pending(Event::GPIO13, SignalEdge::Rising),
-            resources.EXTI.is_pending(Event::GPIO13, SignalEdge::All),
-        );
+    #[interrupt(binds = EXTI4_15, resources = [EXTI])]
+    fn on_button_click() {
+        println!("{}", resources.EXTI.is_pending(Event::GPIO13, SignalEdge::Falling));
         resources.EXTI.unpend(Event::GPIO13);
     }
 };
