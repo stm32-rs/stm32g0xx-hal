@@ -5,11 +5,12 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
+#[macro_use]
 extern crate nb;
 extern crate panic_semihosting;
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
+use cortex_m_semihosting::hprintln;
 use hal::prelude::*;
 use hal::rcc::{Config, SysClockSrc};
 use hal::stm32;
@@ -17,8 +18,6 @@ use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
-
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
@@ -30,19 +29,19 @@ fn main() -> ! {
     let elapsed_us = stopwatch.trace(|| {
         delay.delay(10.us());
     });
-    println!("Delay: 10us -> {}us", elapsed_us.0);
+    hprintln!("Delay: 10us -> {}us", elapsed_us.0).unwrap();
 
     timer.start(10.us());
     let elapsed_us = stopwatch.trace(|| {
         block!(timer.wait()).unwrap();
     });
-    println!("Timer: 10us -> {}us", elapsed_us.0);
+    hprintln!("Timer: 10us -> {}us", elapsed_us.0).unwrap();
 
     let elapsed_us = stopwatch.trace(|| {
         let x = calc_something();
         assert!(x > 0);
     });
-    println!("Calc @ 16MHz: {}us", elapsed_us.0);
+    hprintln!("Calc @ 16MHz: {}us", elapsed_us.0).unwrap();
 
     let rcc = rcc.freeze(Config::new(SysClockSrc::PLL));
     stopwatch.set_clock(rcc.clocks.apb_tim_clk);
@@ -51,7 +50,7 @@ fn main() -> ! {
         let x = calc_something();
         assert!(x > 0);
     });
-    println!("Calc @ 64MHz: {}us", elapsed_us.0);
+    hprintln!("Calc @ 64MHz: {}us", elapsed_us.0).unwrap();
 
     loop {}
 }

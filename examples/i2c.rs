@@ -7,9 +7,9 @@ extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate cortex_m_semihosting as sh;
 extern crate panic_semihosting;
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
+use cortex_m_semihosting::hprintln;
 use hal::i2c::Config;
 use hal::prelude::*;
 use hal::stm32;
@@ -17,8 +17,6 @@ use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
-
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
     let gpiob = dp.GPIOB.split(&mut rcc);
@@ -33,8 +31,8 @@ fn main() -> ! {
     let mut buf: [u8; 1] = [0];
     loop {
         match i2c.write(0x3c, &mut buf) {
-            Ok(_) => println!("ok"),
-            Err(err) => println!("error: {:?}", err),
+            Ok(_) => hprintln!("ok").unwrap(),
+            Err(err) => hprintln!("error: {:?}", err).unwrap(),
         }
     }
 }

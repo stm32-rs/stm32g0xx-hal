@@ -7,24 +7,21 @@ extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate cortex_m_semihosting;
 extern crate panic_semihosting;
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
+use cortex_m_semihosting::hprintln;
 use hal::prelude::*;
 use hal::stm32;
 use rt::{entry, exception, ExceptionFrame};
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
-
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.constrain();
     let mut delay = cp.SYST.delay(&rcc.clocks);
-
-    println!("Starting watchdog");
+    hprintln!("Watchdog").unwrap();
 
     let mut watchdog = dp.WWDG.watchdog(&mut rcc);
     // let mut watchdog = dp.IWDG.watchdog();

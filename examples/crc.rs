@@ -6,9 +6,9 @@
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate panic_semihosting;
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
+use cortex_m_semihosting::hprintln;
 use hal::crc::*;
 use hal::prelude::*;
 use hal::stm32;
@@ -16,7 +16,6 @@ use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
 
@@ -27,18 +26,20 @@ fn main() -> ! {
     loop {
         crc.reset();
         let hash_sum = crc.digest("123456789");
-        println!(
+        hprintln!(
             "crc32: 0x{:x}, crc32b: 0x{:x}",
             hash_sum,
             hash_sum ^ 0xffffffff
-        );
+        )
+        .unwrap();
 
         crc.reset();
         let hash_sum = crc.digest("The quick brown fox jumps over the lazy dog");
-        println!(
+        hprintln!(
             "crc32: 0x{:x}, crc32b: 0x{:x}",
             hash_sum,
             hash_sum ^ 0xffffffff
-        );
+        )
+        .unwrap();
     }
 }

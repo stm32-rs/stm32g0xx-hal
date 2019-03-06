@@ -7,7 +7,6 @@ extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate nb;
 extern crate panic_semihosting;
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
 use core::fmt::Write;
@@ -19,8 +18,6 @@ use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
-
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
     let gpio = dp.GPIOC.split(&mut rcc);

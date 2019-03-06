@@ -6,15 +6,14 @@
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate panic_semihosting;
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
+use cortex_m_semihosting::hprintln;
 use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
-    println!("Hello, STM32G0!");
+    hprintln!("Hello, STM32G0!").unwrap();
 
     loop {}
 }

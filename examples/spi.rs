@@ -19,8 +19,6 @@ use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
-
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.freeze(Config::pll());
     let gpioa = dp.GPIOA.split(&mut rcc);

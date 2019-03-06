@@ -6,16 +6,15 @@
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate panic_semihosting;
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
+use cortex_m_semihosting::hprintln;
 use hal::prelude::*;
 use hal::stm32;
 use rt::entry;
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
@@ -28,7 +27,7 @@ fn main() -> ! {
 
     loop {
         if switch.is_low() {
-            println!("{:?}", qei.count());
+            hprintln!("{:?}", qei.count()).unwrap();
         }
     }
 }

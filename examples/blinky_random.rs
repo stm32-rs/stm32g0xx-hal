@@ -6,9 +6,9 @@
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate panic_semihosting;
-#[macro_use]
 extern crate stm32g0xx_hal as hal;
 
+use cortex_m_semihosting::hprintln;
 use hal::prelude::*;
 use hal::rng::Config;
 use hal::stm32;
@@ -16,8 +16,6 @@ use rt::{entry, exception, ExceptionFrame};
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
-
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
     let mut rcc = dp.RCC.constrain();
@@ -29,8 +27,8 @@ fn main() -> ! {
     let mut rng = dp.RNG.enable(Config::default(), &mut rcc);
     let mut random_bytes = [0u16; 3];
     match rng.fill(&mut random_bytes) {
-        Ok(()) => println!("random bytes: {:?}", random_bytes),
-        Err(err) => println!("RNG error: {:?}", err),
+        Ok(()) => hprintln!("random bytes: {:?}", random_bytes).unwrap(),
+        Err(err) => hprintln!("RNG error: {:?}", err).unwrap(),
     }
     loop {
         match rng.gen_range(20, 200) {
@@ -38,7 +36,7 @@ fn main() -> ! {
                 led.toggle();
                 delay.delay(period.ms());
             }
-            Err(err) => println!("RNG error: {:?}", err),
+            Err(err) => hprintln!("RNG error: {:?}", err).unwrap(),
         }
     }
 }

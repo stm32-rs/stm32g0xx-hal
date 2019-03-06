@@ -15,7 +15,6 @@ use rt::{entry, exception, ExceptionFrame};
 
 #[entry]
 fn main() -> ! {
-    hal::debug::init();
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
     let mut rcc = dp.RCC.freeze(Config::lsi());

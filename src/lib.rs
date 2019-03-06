@@ -25,9 +25,6 @@ pub use stm32g0::stm32g0x1 as stm32;
 #[cfg(feature = "rt")]
 pub use crate::stm32::interrupt;
 
-#[macro_use]
-pub mod debug;
-
 pub mod adc;
 pub mod crc;
 pub mod dac;
