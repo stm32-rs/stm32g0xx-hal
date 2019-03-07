@@ -20,10 +20,10 @@ fn main() -> ! {
     let mut led = gpioa.pa5.into_push_pull_output();
 
     loop {
-        for _ in 0..10_000 {
+        for _ in 0..1_000_000 {
             led.set_low();
         }
-        for _ in 0..10_000 {
+        for _ in 0..1_000_000 {
             led.set_high();
         }
     }
