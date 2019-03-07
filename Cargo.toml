@@ -18,7 +18,7 @@ license = "MIT/Apache-2.0"
 name = "stm32g0xx-hal"
 readme = "README.md"
 repository = "https://github.com/stm32-rs/stm32g0xx-hal"
-version = "0.0.1"
+version = "0.0.2"
 
 [dependencies]
 cortex-m = "0.5.8"
@@ -35,7 +35,7 @@ panic-semihosting = "0.5.1"
 cortex-m-rtfm = "0.4.2"
 
 [features]
-default = ["rt"]
+default = ["rt", "stm32g071"]
 rt = ["stm32g0/rt"]
 stm32g070 = ["stm32g0/stm32g0x0"]
 stm32g071 = ["stm32g0/stm32g0x1"]

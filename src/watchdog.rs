@@ -51,7 +51,7 @@ impl watchdog::WatchdogEnable for IndependedWatchdog {
 }
 
 pub trait IWDGExt {
-    fn watchdog(self) -> IndependedWatchdog;
+    fn constrain(self) -> IndependedWatchdog;
 }
 
 impl IndependedWatchdog {
@@ -61,7 +61,7 @@ impl IndependedWatchdog {
 }
 
 impl IWDGExt for IWDG {
-    fn watchdog(self) -> IndependedWatchdog {
+    fn constrain(self) -> IndependedWatchdog {
         IndependedWatchdog { iwdg: self }
     }
 }
@@ -126,11 +126,11 @@ impl watchdog::WatchdogEnable for WindowWatchdog {
 }
 
 pub trait WWDGExt {
-    fn watchdog(self, rcc: &mut Rcc) -> WindowWatchdog;
+    fn constrain(self, rcc: &mut Rcc) -> WindowWatchdog;
 }
 
 impl WWDGExt for WWDG {
-    fn watchdog(self, rcc: &mut Rcc) -> WindowWatchdog {
+    fn constrain(self, rcc: &mut Rcc) -> WindowWatchdog {
         rcc.rb.apbenr1.modify(|_, w| w.wwdgen().set_bit());
         let clk = rcc.clocks.apb_clk.0 / 4096;
         WindowWatchdog {

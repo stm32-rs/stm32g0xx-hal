@@ -5,13 +5,13 @@ peripheral access API for the STMicro STM32G0 series microcontrollers. The
 selection of the MCU is done by feature gates, typically specified by board
 support crates.
 
+*Warning*: API is not stabilized yet.
+
 ## Usage
 
 This crate will eventually contain support for multiple microcontrollers in the
 stm32g0 family. Which specific microcontroller you want to build for has to be
-specified with a feature, for example `stm32g071`.
-
-If no microcontroller is specified, the crate will not compile.
+specified with a feature, for example `stm32g070`.
 
 ### Building an Example
 
@@ -19,7 +19,7 @@ If you are compiling the crate on its own for development or running examples,
 specify your microcontroller on the command line. For example:
 
 ```
-cargo build --features stm32g071 --example blinky
+cargo build --example blinky
 ```
 
 ### Using as a Dependency
@@ -28,9 +28,8 @@ When using this crate as a dependency in your project, the microcontroller can
 be specified as part of the `Cargo.toml` definition.
 
 ```
-[dependencies.stm32g0xx-hal]
-version = "0.0.1"
-features = ["stm32g071"]
+[dependencies]
+stm32g0xx-hal = "0.0.2"
 ```
 
 ## Documentation

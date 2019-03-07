@@ -20,7 +20,7 @@ fn main() -> ! {
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);
 
-    let mut adc = dp.ADC.adc(&mut rcc);
+    let mut adc = dp.ADC.constrain(&mut rcc);
     adc.set_sample_time(SampleTime::T_160);
 
     let mut adc_pin = gpioa.pa0.into_analog();

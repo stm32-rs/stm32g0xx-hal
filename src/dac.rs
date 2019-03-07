@@ -92,13 +92,13 @@ macro_rules! dac {
 }
 
 pub trait DacExt {
-    fn dac<PINS>(self, pins: PINS, rcc: &mut Rcc) -> PINS::Output
+    fn constrain<PINS>(self, pins: PINS, rcc: &mut Rcc) -> PINS::Output
     where
         PINS: Pins<DAC>;
 }
 
 impl DacExt for DAC {
-    fn dac<PINS>(self, pins: PINS, rcc: &mut Rcc) -> PINS::Output
+    fn constrain<PINS>(self, pins: PINS, rcc: &mut Rcc) -> PINS::Output
     where
         PINS: Pins<DAC>,
     {

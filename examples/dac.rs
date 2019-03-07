@@ -22,7 +22,7 @@ fn main() -> ! {
     let mut delay = cp.SYST.delay(&rcc.clocks);
 
     let gpioa = dp.GPIOA.split(&mut rcc);
-    let mut dac = dp.DAC.dac(gpioa.pa4, &mut rcc);
+    let mut dac = dp.DAC.constrain(gpioa.pa4, &mut rcc);
 
     dac.calibrate(&mut delay);
     dac.enable();

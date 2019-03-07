@@ -24,7 +24,7 @@ fn main() -> ! {
     let gpioa = dp.GPIOA.split(&mut rcc);
     let mut led = gpioa.pa5.into_push_pull_output();
 
-    let mut rng = dp.RNG.enable(Config::default(), &mut rcc);
+    let mut rng = dp.RNG.constrain(Config::default(), &mut rcc);
     let mut random_bytes = [0u16; 3];
     match rng.fill(&mut random_bytes) {
         Ok(()) => hprintln!("random bytes: {:?}", random_bytes).unwrap(),

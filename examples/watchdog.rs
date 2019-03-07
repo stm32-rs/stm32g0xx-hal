@@ -23,8 +23,8 @@ fn main() -> ! {
     let mut delay = cp.SYST.delay(&rcc.clocks);
     hprintln!("Watchdog").unwrap();
 
-    let mut watchdog = dp.WWDG.watchdog(&mut rcc);
-    // let mut watchdog = dp.IWDG.watchdog();
+    let mut watchdog = dp.WWDG.constrain(&mut rcc);
+    // let mut watchdog = dp.IWDG.constrain();
 
     watchdog.start(100.ms());
 

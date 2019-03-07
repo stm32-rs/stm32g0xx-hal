@@ -55,7 +55,7 @@ pub struct Adc {
 }
 
 impl Adc {
-    pub fn constrain(adc: ADC, rcc: &mut Rcc) -> Self {
+    pub fn new(adc: ADC, rcc: &mut Rcc) -> Self {
         // Enable ADC clocks
         rcc.rb.apbenr2.modify(|_, w| w.adcen().set_bit());
         adc.cr.modify(|_, w| w.advregen().set_bit());
@@ -101,12 +101,12 @@ impl Adc {
 }
 
 pub trait AdcExt {
-    fn adc(self, rcc: &mut Rcc) -> Adc;
+    fn constrain(self, rcc: &mut Rcc) -> Adc;
 }
 
 impl AdcExt for ADC {
-    fn adc(self, rcc: &mut Rcc) -> Adc {
-        Adc::constrain(self, rcc)
+    fn constrain(self, rcc: &mut Rcc) -> Adc {
+        Adc::new(self, rcc)
     }
 }
 

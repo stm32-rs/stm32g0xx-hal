@@ -19,7 +19,7 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
 
-    let mut crc = dp.CRC.enable(&mut rcc);
+    let mut crc = dp.CRC.constrain(&mut rcc);
     crc.reverse_input(InputReverse::Word);
     crc.reverse_output(true);
 

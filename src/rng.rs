@@ -57,11 +57,11 @@ pub enum ErrorKind {
 }
 
 pub trait RngExt {
-    fn enable(self, cfg: Config, rcc: &mut Rcc) -> Rng;
+    fn constrain(self, cfg: Config, rcc: &mut Rcc) -> Rng;
 }
 
 impl RngExt for RNG {
-    fn enable(self, cfg: Config, rcc: &mut Rcc) -> Rng {
+    fn constrain(self, cfg: Config, rcc: &mut Rcc) -> Rng {
         rcc.rb.ahbenr.modify(|_, w| w.rngen().set_bit());
         rcc.rb.ahbrstr.modify(|_, w| w.rngrst().set_bit());
         rcc.rb.ahbrstr.modify(|_, w| w.rngrst().clear_bit());

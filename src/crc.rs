@@ -104,11 +104,11 @@ impl Digest<&str> for Crc {
 }
 
 pub trait CrcExt {
-    fn enable(self, rcc: &mut Rcc) -> Crc;
+    fn constrain(self, rcc: &mut Rcc) -> Crc;
 }
 
 impl CrcExt for CRC {
-    fn enable(self, rcc: &mut Rcc) -> Crc {
+    fn constrain(self, rcc: &mut Rcc) -> Crc {
         rcc.rb.ahbenr.modify(|_, w| w.crcen().set_bit());
         rcc.rb.ahbrstr.modify(|_, w| w.crcrst().set_bit());
         rcc.rb.ahbrstr.modify(|_, w| w.crcrst().clear_bit());
