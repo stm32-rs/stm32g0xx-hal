@@ -21,12 +21,12 @@ repository = "https://github.com/stm32-rs/stm32g0xx-hal"
 version = "0.0.2"
 
 [dependencies]
-cortex-m = "0.5.8"
+cortex-m = "0.6.0"
 cortex-m-semihosting = "0.3.2"
 nb = "0.1.1"
-stm32g0 = "0.6.0"
+stm32g0 = "0.7.1"
 bare-metal = { version = "0.2.4", features = ["const-fn"] }
-embedded-hal = { version = "0.2.2", features = ["unproven"] }
+embedded-hal = { version = "0.2.3", features = ["unproven"] }
 void = { version = "1.0.2", default-features = false }
 
 [dev-dependencies]
@@ -44,6 +44,7 @@ stm32g081 = ["stm32g0/stm32g0x1"]
 [profile.dev]
 codegen-units = 1
 incremental = false
+lto = false
 
 [profile.release]
 incremental = false

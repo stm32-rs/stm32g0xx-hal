@@ -2,9 +2,7 @@
 #![allow(non_camel_case_types)]
 
 #[cfg(not(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081")))]
-compile_error!(
-    "This crate requires one of the following features enabled: stm32g070, stm32g071 or stm32g081"
-);
+compile_error!("This crate requires one of the following features enabled: stm32g070, stm32g071 or stm32g081");
 
 extern crate bare_metal;
 extern crate void;

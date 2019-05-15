@@ -42,7 +42,7 @@ const APP: () = {
 
     #[interrupt(binds = TIM17, resources = [TIMER, LED])]
     fn on_timer_tick() {
-        resources.LED.toggle();
+        resources.LED.toggle().unwrap();
         resources.TIMER.clear_irq();
     }
 

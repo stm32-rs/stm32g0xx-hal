@@ -25,7 +25,7 @@ fn main() -> ! {
     let mut delay = cp.SYST.delay(&rcc.clocks);
 
     loop {
-        led.toggle();
+        led.toggle().unwrap();
         delay.delay(500.ms());
     }
 }

@@ -21,10 +21,10 @@ fn main() -> ! {
 
     loop {
         for _ in 0..1_000_000 {
-            led.set_low();
+            led.set_low().unwrap();
         }
         for _ in 0..1_000_000 {
-            led.set_high();
+            led.set_high().unwrap();
         }
     }
 }

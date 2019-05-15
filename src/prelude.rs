@@ -1,4 +1,5 @@
 pub use hal::prelude::*;
+pub use hal::digital::v2::*;
 
 pub use hal::adc::OneShot as _;
 pub use hal::watchdog::Watchdog as _;

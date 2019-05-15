@@ -27,8 +27,12 @@ fn main() -> ! {
     let mut led = gpioa.pa5.into_push_pull_output();
 
     loop {
-        let wait = if button.is_high() { 300.ms() } else { 100.ms() };
+        let wait =  match button.is_high() {
+            Ok(true) => 300.ms(),
+            Ok(false) => 100.ms(),
+            _ => unreachable!(),
+        };
         delay.delay(wait);
-        led.toggle();
+        led.toggle().unwrap();
     }
 }

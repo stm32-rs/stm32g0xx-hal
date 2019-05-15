@@ -26,7 +26,7 @@ fn main() -> ! {
     timer.start(500.ms());
 
     loop {
-        led.toggle();
+        led.toggle().unwrap();
         block!(timer.wait()).unwrap();
     }
 }
