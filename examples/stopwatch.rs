@@ -7,7 +7,7 @@ extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 #[macro_use]
 extern crate nb;
-extern crate panic_semihosting;
+extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
 use cortex_m_semihosting::hprintln;

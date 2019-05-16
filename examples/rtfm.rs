@@ -4,7 +4,7 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
-extern crate panic_semihosting;
+extern crate panic_halt;
 extern crate rtfm;
 extern crate stm32g0xx_hal as hal;
 

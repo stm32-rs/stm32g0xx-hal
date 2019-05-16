@@ -5,14 +5,14 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
-extern crate panic_semihosting;
+extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
 use cortex_m_semihosting::hprintln;
 use hal::prelude::*;
 use hal::rng::Config;
 use hal::stm32;
-use rt::{entry, exception, ExceptionFrame};
+use rt::entry;
 
 #[entry]
 fn main() -> ! {
@@ -39,14 +39,4 @@ fn main() -> ! {
             Err(err) => hprintln!("RNG error: {:?}", err).unwrap(),
         }
     }
-}
-
-#[exception]
-fn HardFault(ef: &ExceptionFrame) -> ! {
-    panic!("Hard fault {:#?}", ef);
-}
-
-#[exception]
-fn DefaultHandler(irqn: i16) {
-    panic!("Unhandled exception (IRQn = {})", irqn);
 }

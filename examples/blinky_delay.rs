@@ -5,13 +5,13 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
-extern crate panic_semihosting;
+extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
 use hal::prelude::*;
 use hal::rcc::Config;
 use hal::stm32;
-use rt::{entry, exception, ExceptionFrame};
+use rt::entry;
 
 #[entry]
 fn main() -> ! {
@@ -28,14 +28,4 @@ fn main() -> ! {
         led.toggle().unwrap();
         delay.delay(500.ms());
     }
-}
-
-#[exception]
-fn HardFault(ef: &ExceptionFrame) -> ! {
-    panic!("Hard fault {:#?}", ef);
-}
-
-#[exception]
-fn DefaultHandler(irqn: i16) {
-    panic!("Unhandled exception (IRQn = {})", irqn);
 }
