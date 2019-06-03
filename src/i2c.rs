@@ -1,12 +1,12 @@
 //! I2C
 use hal::blocking::i2c::{Read, Write, WriteRead};
 
-use core::cmp;
 use crate::gpio::{gpioa::*, gpiob::*};
 use crate::gpio::{AltFunction, OpenDrain, Output};
 use crate::rcc::Rcc;
 use crate::stm32::{I2C1, I2C2};
 use crate::time::Hertz;
+use core::cmp;
 
 pub struct Config {
     speed: Option<Hertz>,
@@ -27,7 +27,7 @@ impl Config {
             digital_filter: 0,
         }
     }
-    
+
     pub fn with_timing(timing: u32) -> Self {
         Config {
             timing: Some(timing),
@@ -50,7 +50,7 @@ impl Config {
 
     fn timing_bits(&self, i2c_clk: Hertz) -> u32 {
         if let Some(timing) = self.timing {
-            return timing
+            return timing;
         }
         let speed = self.speed.unwrap();
         let (psc, scll, sclh, sdadel, scldel) = if speed.0 <= 100_000 {

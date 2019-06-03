@@ -1,5 +1,11 @@
 use core::fmt;
+use core::marker::PhantomData;
+use core::ops;
+use core::pin::Pin;
 
+use as_slice::AsMutSlice;
+
+use crate::dma::{ReadDma, Transfer, WriteDma};
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
 use crate::gpio::{AltFunction, DefaultMode};
 use crate::prelude::*;
@@ -116,11 +122,32 @@ impl Default for Config {
     }
 }
 
+/// Serial receiver
+pub struct Rx<USART> {
+    _usart: PhantomData<USART>,
+}
+
+/// Serial transmitter
+pub struct Tx<USART> {
+    _usart: PhantomData<USART>,
+}
+
+/// Serial DMA receiver
+pub struct DmaRx<USART, CHANNEL> {
+    _usart: PhantomData<USART>,
+    channel: CHANNEL,
+}
+
+/// Serial DMA transmitter
+pub struct DmaTx<USART, CHANNEL> {
+    _usart: PhantomData<USART>,
+    channel: CHANNEL,
+}
+
 /// Serial abstraction
-pub struct Serial<USART, TX, RX> {
-    usart: USART,
-    tx: TX,
-    rx: RX,
+pub struct Serial<USART> {
+    _tx: Tx<USART>,
+    _rx: Rx<USART>,
 }
 
 pub trait SerialExt<USART> {
@@ -130,7 +157,7 @@ pub trait SerialExt<USART> {
         rx: RX,
         config: Config,
         rcc: &mut Rcc,
-    ) -> Result<Serial<USART, TX, RX>, InvalidConfig>
+    ) -> Result<Serial<USART>, InvalidConfig>
     where
         TX: TxPin<USART>,
         RX: RxPin<USART>;
@@ -146,9 +173,9 @@ pub trait RxPin<USART> {
     fn setup(&self);
 }
 
-impl<USART, TX, RX> fmt::Write for Serial<USART, TX, RX>
+impl<USART> fmt::Write for Serial<USART>
 where
-    Serial<USART, TX, RX>: hal::serial::Write<u8>,
+    Serial<USART>: hal::serial::Write<u8>,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         let _ = s
@@ -188,7 +215,7 @@ macro_rules! uart {
                 tx: TX,
                 rx: RX,
                 config: Config,
-                rcc: &mut Rcc) -> Result<Serial<$USARTX, TX, RX>, InvalidConfig>
+                rcc: &mut Rcc) -> Result<Serial<$USARTX>, InvalidConfig>
             where
                 TX: TxPin<$USARTX>,
                 RX: RxPin<$USARTX>,
@@ -197,8 +224,8 @@ macro_rules! uart {
             }
         }
 
-        impl<TX, RX> Serial<$USARTX, TX, RX> {
-            pub fn $usartX(
+        impl Serial<$USARTX> {
+            pub fn $usartX<TX, RX>(
                 usart: $USARTX,
                 tx: TX,
                 rx: RX,
@@ -249,36 +276,89 @@ macro_rules! uart {
                     })
                 });
                 Ok(Serial {
-                    usart,
-                    tx,
-                    rx,
+                    _tx: Tx { _usart: PhantomData },
+                    _rx: Rx { _usart: PhantomData },
                 })
             }
 
             /// Starts listening for an interrupt event
             pub fn listen(&mut self, event: Event) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+
                 match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
+                    Event::Rxne => usart.cr1.modify(|_, w| w.rxneie().set_bit()),
+                    Event::Txe => usart.cr1.modify(|_, w| w.txeie().set_bit()),
+                    Event::Idle => usart.cr1.modify(|_, w| w.idleie().set_bit()),
                 }
             }
 
             /// Stop listening for an interrupt event
             pub fn unlisten(&mut self, event: Event) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+
                 match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
+                    Event::Rxne => usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
+                    Event::Txe => usart.cr1.modify(|_, w| w.txeie().clear_bit()),
+                    Event::Idle => usart.cr1.modify(|_, w| w.idleie().clear_bit()),
                 }
             }
 
-            pub fn release(self) -> ($USARTX, TX, RX) {
-                (self.usart, self.tx, self.rx)
+            /// Separates the serial struct into separate channel objects for sending (Tx) and
+            /// receiving (Rx)
+            pub fn split(self) -> (Tx<$USARTX>, Rx<$USARTX>) {
+                (self._tx, self._rx)
             }
         }
 
-        impl<TX, RX> hal::serial::Read<u8> for Serial<$USARTX, TX, RX> {
+        impl Tx<$USARTX> {
+            pub fn with_dma<CHANNEL>(self, channel: CHANNEL) -> DmaTx<$USARTX, CHANNEL> {
+                DmaTx {
+                    _usart: PhantomData,
+                    channel,
+                }
+            }
+        }
+
+        impl Rx<$USARTX> {
+            pub fn with_dma<CHANNEL>(self, channel: CHANNEL) -> DmaRx<$USARTX, CHANNEL> {
+                DmaRx {
+                    _usart: PhantomData,
+                    channel,
+                }
+            }
+        }
+
+        impl<CHANNEL, B> ReadDma<B> for DmaRx<$USARTX, CHANNEL>
+        where
+            B: ops::DerefMut + 'static,
+            B::Target: AsMutSlice<Element = u8> + Unpin,
+            Self: core::marker::Sized,
+        {
+            fn read(self, buffer: Pin<B>) -> Transfer<Self, Pin<B>> {
+
+                Transfer {
+                    buffer,
+                    channel: self,
+                }
+            }
+        }
+
+        impl<CHANNEL, B> WriteDma<B> for DmaRx<$USARTX, CHANNEL>
+        where
+            B: ops::DerefMut + 'static,
+            B::Target: AsMutSlice<Element = u8> + Unpin,
+            Self: core::marker::Sized,
+        {
+            fn write(self, buffer: Pin<B>) -> Transfer<Self, Pin<B>> {
+
+                Transfer {
+                    buffer,
+                    channel: self,
+                }
+            }
+        }
+
+        impl hal::serial::Read<u8> for Tx<$USARTX> {
             type Error = Error;
 
             fn read(&mut self) -> nb::Result<u8, Error> {
@@ -306,7 +386,15 @@ macro_rules! uart {
             }
         }
 
-        impl<TX, RX> hal::serial::Write<u8> for Serial<$USARTX, TX, RX> {
+        impl hal::serial::Read<u8> for Serial<$USARTX> {
+            type Error = Error;
+
+            fn read(&mut self) -> nb::Result<u8, Error> {
+                self._tx.read()
+            }
+        }
+
+        impl hal::serial::Write<u8> for Rx<$USARTX> {
             type Error = Error;
 
             fn flush(&mut self) -> nb::Result<(), Self::Error> {
@@ -326,6 +414,18 @@ macro_rules! uart {
                 } else {
                     Err(nb::Error::WouldBlock)
                 }
+            }
+        }
+
+        impl hal::serial::Write<u8> for Serial<$USARTX> {
+            type Error = Error;
+
+            fn flush(&mut self) -> nb::Result<(), Self::Error> {
+                self._rx.flush()
+            }
+
+            fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
+                self._rx.write(byte)
             }
         }
     }

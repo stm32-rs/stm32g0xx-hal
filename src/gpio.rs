@@ -143,7 +143,7 @@ macro_rules! gpio {
 
             impl<MODE> InputPin for $PXx<Output<MODE>> {
                 type Error = ();
-                
+
                 fn is_high(&self) -> Result<bool, ()> {
                     let is_high = !self.is_low()?;
                     Ok(is_high)
@@ -318,16 +318,16 @@ macro_rules! gpio {
                         let mask = $Pxn << offset;
                         let reset = !(0xff << offset);
                         match $i as u8 {
-                            0...4   => exti.exticr1.modify(|r, w| unsafe {
+                            0..=3   => exti.exticr1.modify(|r, w| unsafe {
                                 w.bits(r.bits() & reset | mask)
                             }),
-                            4...8  => exti.exticr2.modify(|r, w| unsafe {
+                            4..=7  => exti.exticr2.modify(|r, w| unsafe {
                                 w.bits(r.bits() & reset | mask)
                             }),
-                            8...12 => exti.exticr3.modify(|r, w| unsafe {
+                            8..=11 => exti.exticr3.modify(|r, w| unsafe {
                                 w.bits(r.bits() & reset | mask)
                             }),
-                            12...16 => exti.exticr4.modify(|r, w| unsafe {
+                            12..=16 => exti.exticr4.modify(|r, w| unsafe {
                                 w.bits(r.bits() & reset | mask)
                             }),
                             _ => unreachable!(),

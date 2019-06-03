@@ -16,7 +16,7 @@ use rt::entry;
 #[entry]
 fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
-    
+
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);
     let switch = gpioa.pa2.into_pull_up_input();

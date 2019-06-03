@@ -11,10 +11,10 @@ extern crate stm32g0xx_hal as hal;
 
 use core::fmt::Write;
 
-use nb::block;
 use hal::prelude::*;
 use hal::serial::Config;
 use hal::stm32;
+use nb::block;
 use rt::entry;
 
 #[entry]

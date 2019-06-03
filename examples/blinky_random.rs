@@ -12,7 +12,7 @@ use cortex_m_semihosting::hprintln;
 use hal::prelude::*;
 use hal::rng::Config;
 use hal::stm32;
-use rt::entry;
+use rt::{entry, exception, ExceptionFrame};
 
 #[entry]
 fn main() -> ! {
@@ -39,4 +39,10 @@ fn main() -> ! {
             Err(err) => hprintln!("RNG error: {:?}", err).unwrap(),
         }
     }
+}
+
+#[exception]
+fn HardFault(ef: &ExceptionFrame) -> ! {
+    hprintln!("Hard fault {:#?}", ef).unwrap();
+    loop {}
 }
