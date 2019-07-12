@@ -1,5 +1,5 @@
 //! DAC
-use core::mem;
+use core::mem::MaybeUninit;
 
 use crate::delay::Delay;
 use crate::gpio::gpioa::{PA4, PA5};
@@ -48,7 +48,7 @@ where
     rcc.rb.apbrstr1.modify(|_, w| w.dac1rst().set_bit());
     rcc.rb.apbrstr1.modify(|_, w| w.dac1rst().clear_bit());
 
-    unsafe { mem::uninitialized() }
+    unsafe { MaybeUninit::uninit().assume_init() }
 }
 
 macro_rules! dac {

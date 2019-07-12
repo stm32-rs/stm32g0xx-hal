@@ -135,13 +135,13 @@ pub struct Tx<USART> {
 /// Serial DMA receiver
 pub struct DmaRx<USART, CHANNEL> {
     _usart: PhantomData<USART>,
-    channel: CHANNEL,
+    _channel: CHANNEL,
 }
 
 /// Serial DMA transmitter
 pub struct DmaTx<USART, CHANNEL> {
     _usart: PhantomData<USART>,
-    channel: CHANNEL,
+    _channel: CHANNEL,
 }
 
 /// Serial abstraction
@@ -314,7 +314,7 @@ macro_rules! uart {
             pub fn with_dma<CHANNEL>(self, channel: CHANNEL) -> DmaTx<$USARTX, CHANNEL> {
                 DmaTx {
                     _usart: PhantomData,
-                    channel,
+                    _channel: channel,
                 }
             }
         }
@@ -323,7 +323,7 @@ macro_rules! uart {
             pub fn with_dma<CHANNEL>(self, channel: CHANNEL) -> DmaRx<$USARTX, CHANNEL> {
                 DmaRx {
                     _usart: PhantomData,
-                    channel,
+                    _channel: channel,
                 }
             }
         }

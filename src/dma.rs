@@ -40,8 +40,8 @@ pub enum Priority {
 }
 
 pub struct Transfer<CHANNEL, BUFFER> {
-    pub(crate) channel: CHANNEL,
-    pub(crate) buffer: BUFFER,
+    pub channel: CHANNEL,
+    pub buffer: BUFFER,
 }
 
 pub trait ReadDma<B>

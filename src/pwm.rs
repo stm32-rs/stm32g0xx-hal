@@ -1,7 +1,7 @@
 //! # Pulse Width Modulation
 
 use core::marker::PhantomData;
-use core::mem;
+use core::mem::MaybeUninit;
 
 use crate::gpio::gpioa::*;
 use crate::gpio::gpiob::*;
@@ -204,7 +204,7 @@ macro_rules! pwm {
                     tim.arr.modify(|_, w| unsafe { w.$arr_h().bits((arr >> 16) as u16) });
                 )*
                 tim.cr1.write(|w| w.cen().set_bit());
-                unsafe { mem::uninitialized() }
+                unsafe { MaybeUninit::uninit().assume_init() }
             }
         )+
     }
