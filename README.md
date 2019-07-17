@@ -29,7 +29,7 @@ be specified as part of the `Cargo.toml` definition.
 
 ```
 [dependencies]
-stm32g0xx-hal = "0.0.2"
+stm32g0xx-hal = "0.0.3"
 ```
 
 ## Documentation
