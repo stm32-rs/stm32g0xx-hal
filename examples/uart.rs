@@ -27,12 +27,12 @@ fn main() -> ! {
         .usart(gpio.pc4, gpio.pc5, Config::default(), &mut rcc)
         .unwrap();
 
-    write!(usart, "Hello\r\n").unwrap();
+    writeln!(usart, "Hello\r").unwrap();
 
     let mut cnt = 0;
     loop {
         let byte = block!(usart.read()).unwrap();
-        write!(usart, "{}: {}\r\n", cnt, byte).unwrap();
+        writeln!(usart, "{}: {}\r", cnt, byte).unwrap();
         cnt += 1;
     }
 }

@@ -127,14 +127,14 @@ macro_rules! gpio {
 
             impl<MODE> StatefulOutputPin for $PXx<Output<MODE>> {
                 fn is_set_high(&self) -> Result<bool, ()> {
-                    let is_high = self.is_set_low()?;
-                    Ok(is_high)
+                    let is_set_high = !self.is_set_low()?;
+                    Ok(is_set_high)
                 }
 
                 fn is_set_low(&self) -> Result<bool, ()> {
                     // NOTE(unsafe) atomic read with no side effects
-                    let is_low = unsafe { (*$GPIOX::ptr()).odr.read().bits() & (1 << self.i) == 0 };
-                    Ok(is_low)
+                    let is_set_low = unsafe { (*$GPIOX::ptr()).odr.read().bits() & (1 << self.i) == 0 };
+                    Ok(is_set_low)
                 }
             }
 

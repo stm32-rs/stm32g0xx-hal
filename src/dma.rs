@@ -76,7 +76,7 @@ where
     T::Target: AsMutSlice<Element = u8> + Unpin,
     Self: core::marker::Sized,
 {
-    /// Copy data between bufferss
+    /// Copy data between buffers
     ///
     /// Returns a value that represents the in-progress DMA transfer
     fn copy(self, from: Pin<F>, to: Pin<T>) -> Transfer<Self, (Pin<F>, Pin<T>)>;

@@ -58,8 +58,8 @@ macro_rules! qei {
                         w.cc1s().bits(0b01).cc2s().bits(0b01)
                     });
 
-                    // Encoder mode, count up/down on both TI1FP1 and TI2FP2
-                    tim.smcr.write(|w| unsafe { w.sms().bits(0b011) });
+                    // Encoder mode 2.
+                    tim.smcr.write(|w| unsafe { w.sms().bits(0b010) });
 
                     // Enable and configure to capture on rising edge
                     tim.ccer.write(|w| {
@@ -77,7 +77,6 @@ macro_rules! qei {
                             .clear_bit()
                     });
 
-                    tim.arr.write(|w| unsafe { w.$arr().bits(0xffff) });
                     tim.cr1.write(|w| w.cen().set_bit());
                     Qei { tim, pins }
                 }

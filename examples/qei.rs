@@ -19,12 +19,15 @@ fn main() -> ! {
 
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);
-    let switch = gpioa.pa2.into_pull_up_input();
+    let gpioc = dp.GPIOC.split(&mut rcc);
+
+    let switch = gpioc.pc5.into_pull_up_input();
     let qei = dp.TIM2.qei((gpioa.pa0, gpioa.pa1), &mut rcc);
 
     loop {
+        let count = qei.count();
         if switch.is_low().unwrap() {
-            hprintln!("{:?}", qei.count()).unwrap();
+            hprintln!("Counter: {}", count).unwrap();
         }
     }
 }
