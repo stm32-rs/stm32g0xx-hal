@@ -131,7 +131,7 @@ where
             .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
 
         self.rb
-            .chselr
+            .chselr()
             .modify(|_, w| unsafe { w.chsel().bits(1 << PIN::channel()) });
 
         self.rb.isr.modify(|_, w| w.eos().set_bit());

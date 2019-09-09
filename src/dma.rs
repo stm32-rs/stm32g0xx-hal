@@ -244,7 +244,5 @@ dma! {
         C3: ( ccr3, cndtr3, cpar3, cmar3, cgif3 ),
         C4: ( ccr4, cndtr4, cpar4, cmar4, cgif4 ),
         C5: ( ccr5, cndtr5, cpar5, cmar5, cgif5 ),
-        C6: ( ccr6, cndtr6, cpar6, cmar6, cgif6 ),
-        C7: ( ccr7, cndtr7, cpar7, cmar7, cgif7 ),
     }),
 }

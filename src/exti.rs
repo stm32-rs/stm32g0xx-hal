@@ -63,11 +63,13 @@ impl Event {
 }
 
 pub trait ExtiExt {
+    #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
     fn wakeup(&self, ev: Event);
     fn listen(&self, ev: Event, edge: SignalEdge);
+    #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+    fn unlisten(&self, ev: Event);
     fn is_pending(&self, ev: Event, edge: SignalEdge) -> bool;
     fn unpend(&self, ev: Event);
-    fn unlisten(&self, ev: Event);
 }
 
 impl ExtiExt for EXTI {
@@ -87,13 +89,15 @@ impl ExtiExt for EXTI {
                 self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() | mask) });
             }
         }
+        #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
         self.wakeup(ev);
     }
 
+    #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
     fn wakeup(&self, ev: Event) {
         match ev as u8 {
             line if line < 32 => self
-                .imr1
+                .imr1()
                 .modify(|r, w| unsafe { w.bits(r.bits() | 1 << line) }),
             line => self
                 .imr2
@@ -101,12 +105,13 @@ impl ExtiExt for EXTI {
         }
     }
 
+    #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
     fn unlisten(&self, ev: Event) {
         self.unpend(ev);
         match ev as u8 {
             line if line < 32 => {
                 let mask = !(1 << line);
-                self.imr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+                self.imr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
                 if line <= 18 {
                     self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
                     self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });

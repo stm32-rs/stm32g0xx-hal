@@ -7,8 +7,11 @@ pub use hal::watchdog::WatchdogEnable as _;
 
 pub use crate::adc::AdcExt as _;
 pub use crate::crc::CrcExt as _;
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::dac::DacExt as _;
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::dac::DacOut as _;
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::dac::DacPin as _;
 pub use crate::dma::CopyDma as _;
 pub use crate::dma::ReadDma as _;

@@ -10,7 +10,7 @@ use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
 use crate::gpio::{AltFunction, DefaultMode};
 use crate::prelude::*;
 use crate::rcc::Rcc;
-use crate::stm32::{LPUART, USART1, USART2, USART3, USART4};
+use crate::stm32::*;
 use crate::time::Bps;
 use hal;
 use nb::block;
@@ -473,6 +473,7 @@ uart!(
     ],
 );
 
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 uart!(
     USART3, usart3, apbenr1, usart3en, 1,
     tx: [
@@ -494,6 +495,7 @@ uart!(
     ],
 );
 
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 uart!(
     USART4, usart4, apbenr1, usart4en, 1,
     tx: [

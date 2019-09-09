@@ -1,9 +1,9 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 
-#[cfg(not(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081")))]
+#[cfg(not(any(feature = "stm32g07x", feature = "stm32g030", feature = "stm32g031", feature = "stm32g041", feature = "stm32g081")))]
 compile_error!(
-    "This crate requires one of the following features enabled: stm32g070, stm32g071 or stm32g081"
+    "This crate requires one of the following features enabled: stm32g07x, stm32g030, stm32g031, stm32g041, stm32g081"
 );
 
 extern crate bare_metal;
@@ -16,17 +16,27 @@ pub extern crate stm32g0;
 
 pub use nb::block;
 
-#[cfg(feature = "stm32g070")]
-pub use stm32g0::stm32g0x0 as stm32;
+#[cfg(feature = "stm32g07x")]
+pub use stm32g0::stm32g07x as stm32;
 
-#[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
-pub use stm32g0::stm32g0x1 as stm32;
+#[cfg(feature = "stm32g030")]
+pub use stm32g0::stm32g030 as stm32;
+
+#[cfg(feature = "stm32g031")]
+pub use stm32g0::stm32g031 as stm32;
+
+#[cfg(feature = "stm32g041")]
+pub use stm32g0::stm32g041 as stm32;
+
+#[cfg(feature = "stm32g081")]
+pub use stm32g0::stm32g081 as stm32;
 
 #[cfg(feature = "rt")]
 pub use crate::stm32::interrupt;
 
 pub mod adc;
 pub mod crc;
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub mod dac;
 pub mod delay;
 pub mod dma;

@@ -100,7 +100,7 @@ macro_rules! pwm_hal {
                 fn enable(&mut self) {
                     unsafe {
                         let tim = &*$TIMX::ptr();
-                        tim.$ccmrx_output.modify(|_, w| w.$ocxpe().set_bit().$ocxm().bits(6));
+                        tim.$ccmrx_output().modify(|_, w| w.$ocxpe().set_bit().$ocxm().bits(6));
                         tim.ccer.modify(|_, w| w.$ccxe().set_bit());
                     }
                 }
@@ -136,7 +136,7 @@ macro_rules! pwm_hal {
                 fn enable(&mut self) {
                     unsafe {
                         let tim = &*$TIMX::ptr();
-                        tim.$ccmrx_output.modify(|_, w| w.$ocxpe().set_bit().$ocxm().bits(6));
+                        tim.$ccmrx_output().modify(|_, w| w.$ocxpe().set_bit().$ocxm().bits(6));
                         tim.ccer.modify(|_, w| w.$ccxe().set_bit());
                         $(
                             tim.bdtr.modify(|_, w| w.$moe().set_bit());
@@ -259,6 +259,7 @@ pwm_pins!(TIM14, [
     (C1, PF0<DefaultMode>, AltFunction::AF2),
 ]);
 
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pwm_pins!(TIM15, [
     (C1, PA2<DefaultMode>, AltFunction::AF5),
     (C1, PB14<DefaultMode>, AltFunction::AF5),
@@ -282,14 +283,18 @@ pwm_hal! {
     TIM1: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, moe),
     TIM1: (C3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, moe),
     TIM1: (C4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, moe),
-    TIM1: (C5, cc5e, ccmr3_output, oc5pe, oc5m, ccr5, moe),
-    TIM1: (C6, cc6e, ccmr3_output, oc6pe, oc6m, ccr6, moe),
     TIM14: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
+    TIM16: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+    TIM17: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+}
+
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+pwm_hal! {
+    // TIM1: (C5, cc5e, ccmr3_output, oc5pe, oc5m, ccr5, moe),
+    // TIM1: (C6, cc6e, ccmr3_output, oc6pe, oc6m, ccr6, moe),
     TIM15: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
     // TODO(dotcypress): patch SVD
     // TIM15: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, moe),
-    TIM16: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-    TIM17: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
 pwm_hal! {
@@ -308,7 +313,11 @@ pwm! {
     TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst, arr_l, arr_h),
     TIM3: (apbenr1, apbrstr1, tim3, tim3en, tim3rst, arr_l, arr_h),
     TIM14: (apbenr2, apbrstr2, tim14, tim14en, tim14rst, arr),
-    TIM15: (apbenr2, apbrstr2, tim15, tim15en, tim15rst, arr),
     TIM16: (apbenr2, apbrstr2, tim16, tim16en, tim16rst, arr),
     TIM17: (apbenr2, apbrstr2, tim17, tim17en, tim17rst, arr),
+}
+
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+pwm! {
+    TIM15: (apbenr2, apbrstr2, tim15, tim15en, tim15rst, arr),
 }

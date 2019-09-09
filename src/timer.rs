@@ -5,8 +5,8 @@ use hal::timer::{CountDown, Periodic};
 use nb;
 use void::Void;
 
+use crate::stm32::*;
 use crate::rcc::Rcc;
-use crate::stm32::{TIM1, TIM14, TIM15, TIM16, TIM17, TIM2, TIM3, TIM6, TIM7};
 use crate::time::{Hertz, MicroSecond};
 
 /// Hardware timers
@@ -156,10 +156,14 @@ timers! {
     TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2),
     TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1),
     TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1),
-    TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1),
-    TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1),
     TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2),
-    TIM15: (tim15, tim15en, tim15rst, apbenr2, apbrstr2),
     TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2),
     TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2),
+}
+
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+timers! {
+    TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1),
+    TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1),
+    TIM15: (tim15, tim15en, tim15rst, apbenr2, apbrstr2),
 }
