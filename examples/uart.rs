@@ -21,10 +21,10 @@ use rt::entry;
 fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
-    let gpio = dp.GPIOC.split(&mut rcc);
+    let gpioa = dp.GPIOA.split(&mut rcc);
     let mut usart = dp
-        .USART1
-        .usart(gpio.pc4, gpio.pc5, Config::default(), &mut rcc)
+        .USART2
+        .usart(gpioa.pa2, gpioa.pa3, Config::default(), &mut rcc)
         .unwrap();
 
     writeln!(usart, "Hello\r").unwrap();
