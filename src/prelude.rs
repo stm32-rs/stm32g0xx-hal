@@ -6,6 +6,8 @@ pub use hal::watchdog::Watchdog as _;
 pub use hal::watchdog::WatchdogEnable as _;
 
 pub use crate::adc::AdcExt as _;
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+pub use crate::comparator::ComparatorExt as _;
 pub use crate::crc::CrcExt as _;
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::dac::DacExt as _;
@@ -13,10 +15,10 @@ pub use crate::dac::DacExt as _;
 pub use crate::dac::DacOut as _;
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::dac::DacPin as _;
+pub use crate::delay::DelayExt as _;
 pub use crate::dma::CopyDma as _;
 pub use crate::dma::ReadDma as _;
 pub use crate::dma::WriteDma as _;
-pub use crate::delay::DelayExt as _;
 pub use crate::exti::ExtiExt as _;
 pub use crate::gpio::GpioExt as _;
 pub use crate::i2c::I2cExt as _;

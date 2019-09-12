@@ -5,8 +5,8 @@ use hal::timer::{CountDown, Periodic};
 use nb;
 use void::Void;
 
-use crate::stm32::*;
 use crate::rcc::Rcc;
+use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
 
 /// Hardware timers

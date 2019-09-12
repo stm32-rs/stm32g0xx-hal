@@ -9,7 +9,7 @@ extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
 use cortex_m_semihosting::hprintln;
-use hal::adc::{SampleTime, Precision, VTemp};
+use hal::adc::{Precision, SampleTime, VTemp};
 use hal::prelude::*;
 use hal::stm32;
 use rt::entry;

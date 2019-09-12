@@ -111,7 +111,8 @@ impl ExtiExt for EXTI {
         match ev as u8 {
             line if line < 32 => {
                 let mask = !(1 << line);
-                self.imr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+                self.imr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
                 if line <= 18 {
                     self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
                     self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
