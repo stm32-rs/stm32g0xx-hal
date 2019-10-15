@@ -28,8 +28,8 @@ const APP: () = {
         let mut rcc = device.RCC.freeze(Config::new(SysClockSrc::PLL));
 
         let gpioa = device.GPIOA.split(&mut rcc);
-        let mut opm = device.TIM14.opm(gpioa.pa4, &mut rcc);
-        opm.config(50.ms(), Some(10.ms()));
+        let mut opm = device.TIM14.opm(gpioa.pa4, 50.ms(), &mut rcc);
+        opm.enable();
 
         let gpioc = device.GPIOC.split(&mut rcc);
         gpioc.pc13.listen(SignalEdge::Falling, &mut device.EXTI);

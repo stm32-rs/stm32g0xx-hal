@@ -25,14 +25,16 @@ pub trait OpmPin<TIM> {
 }
 
 pub trait OpmExt: Sized {
-    fn opm<PIN>(self, _: PIN, rcc: &mut Rcc) -> Opm<Self, PIN::Channel>
+    fn opm<PIN>(self, _: PIN, pulse_width: MicroSecond, rcc: &mut Rcc) -> Opm<Self, PIN::Channel>
     where
         PIN: OpmPin<Self>;
 }
 
 pub struct Opm<TIM, CHANNEL> {
-    tim: TIM,
+    rb: TIM,
     clk: Hertz,
+    pulse_width: MicroSecond,
+    delay: MicroSecond,
     _channel: PhantomData<CHANNEL>,
 }
 
@@ -56,31 +58,51 @@ macro_rules! opm_hal {
     ) => {
         $(
             impl Opm<$TIMX, $CH> {
-                pub fn config(&mut self, pulse_width: MicroSecond, delay: Option<MicroSecond>) {
-                    let delay = delay.unwrap_or(0.us());
+                pub fn enable (&mut self) {
+                    self.rb.ccer.modify(|_, w| w.$ccxe().set_bit());
+                    self.setup();
+                }
 
-                    let period = pulse_width + delay;
+                pub fn disable (&mut self) {
+                    self.rb.ccer.modify(|_, w| w.$ccxe().clear_bit());
+                }
+
+                pub fn set_pulse_width (&mut self, pulse_width: MicroSecond) {
+                    self.pulse_width = pulse_width;
+                    self.setup();
+                }
+
+                pub fn set_delay (&mut self, delay: MicroSecond) {
+                    self.delay = delay;
+                    self.setup();
+                }
+
+                fn setup (&mut self) {
+                    let period = self.pulse_width + self.delay;
 
                     let cycles_per_period = self.clk / period.into();
                     let psc = (cycles_per_period - 1) / 0xffff;
 
-                    self.tim.ccer.modify(|_, w| w.$ccxe().set_bit());
-                    self.tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
+                    self.rb.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
                     let freq = (self.clk.0 / (psc + 1)).hz();
                     let reload = cycles_per_period / (psc + 1);
-                    let compare = if delay.0 == 0 { 1 } else { delay.cycles(freq) };
+                    let compare = if self.delay.0 > 0 {
+                        self.delay.cycles(freq)
+                    } else {
+                        1
+                    };
                     unsafe {
-                        self.tim.arr.write(|w| w.$arr().bits(reload as u16));
-                        self.tim.$ccrx.write(|w| w.bits(compare));
+                        self.rb.arr.write(|w| w.$arr().bits(reload as u16));
+                        self.rb.$ccrx.write(|w| w.bits(compare));
                         $(
-                            self.tim.arr.modify(|_, w| w.$arr_h().bits((reload >> 16) as u16));
+                            self.rb.arr.modify(|_, w| w.$arr_h().bits((reload >> 16) as u16));
                         )*
-                        self.tim.$ccmrx_output().modify(|_, w| w.$ocxm().bits(7).$ocxfe().set_bit());
+                        self.rb.$ccmrx_output().modify(|_, w| w.$ocxm().bits(7).$ocxfe().set_bit());
                     }
                 }
 
                 pub fn generate(&mut self) {
-                    self.tim.cr1.write(|w| w.opm().set_bit().cen().set_bit());
+                    self.rb.cr1.write(|w| w.opm().set_bit().cen().set_bit());
                 }
             }
         )+
@@ -91,14 +113,14 @@ macro_rules! opm {
     ($($TIMX:ident: ($apbXenr:ident, $apbXrstr:ident, $timX:ident, $timXen:ident, $timXrst:ident),)+) => {
         $(
             impl OpmExt for $TIMX {
-                fn opm<PIN>(self, pin: PIN, rcc: &mut Rcc) -> Opm<Self, PIN::Channel>
+                fn opm<PIN>(self, pin: PIN, pulse_width: MicroSecond, rcc: &mut Rcc) -> Opm<Self, PIN::Channel>
                 where PIN: OpmPin<Self>
                 {
-                    $timX(self, pin, rcc)
+                    $timX(self, pin, pulse_width, rcc)
                 }
             }
 
-            fn $timX<PIN>(tim: $TIMX, pin: PIN, rcc: &mut Rcc) -> Opm<$TIMX, PIN::Channel>
+            fn $timX<PIN>(tim: $TIMX, pin: PIN, pulse_width: MicroSecond, rcc: &mut Rcc) -> Opm<$TIMX, PIN::Channel>
             where
                 PIN: OpmPin<$TIMX>,
             {
@@ -107,8 +129,10 @@ macro_rules! opm {
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().set_bit());
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
                 Opm {
-                    tim,
+                    rb: tim,
                     clk: rcc.clocks.apb_tim_clk,
+                    pulse_width,
+                    delay: 0.us(),
                     _channel: PhantomData,
                 }
             }
