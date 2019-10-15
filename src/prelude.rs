@@ -34,5 +34,6 @@ pub use crate::spi::SpiExt as _;
 pub use crate::stopwatch::StopwatchExt as _;
 pub use crate::time::U32Ext as _;
 pub use crate::timer::TimerExt as _;
+pub use crate::opm::OpmExt as _;
 pub use crate::watchdog::IWDGExt as _;
 pub use crate::watchdog::WWDGExt as _;

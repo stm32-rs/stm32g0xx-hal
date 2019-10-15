@@ -1,3 +1,5 @@
+use core::ops::{Add, Div};
+
 /// A measurement of a monotonically nondecreasing clock
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub struct Instant(pub u32);
@@ -69,6 +71,22 @@ impl Hertz {
     }
 }
 
+impl Add for Hertz {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self(self.0 + other.0)
+    }
+}
+
+impl Div for Hertz {
+    type Output = u32;
+
+    fn div(self, other: Self) -> Self::Output {
+        self.0 / other.0
+    }
+}
+
 impl MicroSecond {
     pub fn cycles(&self, clk: Hertz) -> u32 {
         assert!(self.0 > 0);
@@ -76,6 +94,14 @@ impl MicroSecond {
         let period = self.0 as u64;
         let cycles = clk.saturating_mul(period) / 1_000_000_u64;
         cycles as u32
+    }
+}
+
+impl Add for MicroSecond {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self(self.0 + other.0)
     }
 }
 

@@ -195,9 +195,9 @@ macro_rules! pwm {
                 rcc.rb.$apbXenr.modify(|_, w| w.$timXen().set_bit());
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().set_bit());
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
-                let reload = rcc.clocks.apb_tim_clk.0 / freq.0;
-                let psc = (reload - 1) / 0xffff;
-                let arr = reload / (psc + 1);
+                let ratio = rcc.clocks.apb_tim_clk / freq;
+                let psc = (ratio - 1) / 0xffff;
+                let arr = ratio / (psc + 1);
                 tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
                 tim.arr.write(|w| unsafe { w.$arr().bits(arr as u16) });
                 $(
@@ -288,15 +288,6 @@ pwm_hal! {
     TIM17: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
-pwm_hal! {
-    // TIM1: (C5, cc5e, ccmr3_output, oc5pe, oc5m, ccr5, moe),
-    // TIM1: (C6, cc6e, ccmr3_output, oc6pe, oc6m, ccr6, moe),
-    TIM15: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-    // TODO(dotcypress): patch SVD
-    // TIM15: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, moe),
-}
-
 pwm_hal! {
     TIM2: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
     TIM2: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
@@ -306,6 +297,11 @@ pwm_hal! {
     TIM3: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM3: (C3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
     TIM3: (C4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+}
+
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+pwm_hal! {
+    TIM15: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
 pwm! {

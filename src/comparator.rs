@@ -5,10 +5,10 @@ use crate::stm32::COMP;
 pub struct Config;
 
 pub struct Comparator {
-    rb: COMP,
+    _rb: COMP,
 }
 
-pub fn comparator(comp: COMP, cfg: Config, rcc: &mut Rcc) -> Comparator {
+pub fn comparator(comp: COMP, _cfg: Config, rcc: &mut Rcc) -> Comparator {
     // Enable COMP clocks
     rcc.rb.apbenr2.modify(|_, w| w.syscfgen().set_bit());
 
@@ -16,7 +16,7 @@ pub fn comparator(comp: COMP, cfg: Config, rcc: &mut Rcc) -> Comparator {
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().set_bit());
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().clear_bit());
 
-    Comparator { rb: comp }
+    Comparator { _rb: comp }
 }
 
 pub trait ComparatorExt {
