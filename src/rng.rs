@@ -152,6 +152,7 @@ macro_rules! rng_core {
                     Ok(val as $type)
                 }
 
+                // TODO: fix modulo bias
                 fn gen_range(&mut self, low: $type, high: $type) -> Result<$type, ErrorKind> {
                     assert!(high > low);
                     let range = high - low;

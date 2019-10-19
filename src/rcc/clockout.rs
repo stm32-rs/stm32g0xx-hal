@@ -91,7 +91,6 @@ macro_rules! mco {
                         _ => 0b111,
                     };
                     rcc.rb.cfgr.modify(|r, w| unsafe {
-                        //TODO(dotcypress): patch SVD
                         w.bits((r.bits() & !(0b111 << 28)) | (psc_bits << 28))
                     });
 

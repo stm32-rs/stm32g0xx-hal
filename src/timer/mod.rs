@@ -9,6 +9,11 @@ use crate::rcc::Rcc;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
 
+pub mod opm;
+pub mod pwm;
+pub mod qei;
+pub mod stopwatch;
+
 /// Hardware timers
 pub struct Timer<TIM> {
     clk: Hertz,

@@ -180,7 +180,7 @@ macro_rules! int_adc {
     };
 }
 
-macro_rules! adc_pins {
+macro_rules! adc_pin {
     ($($Chan:ty: ($pin:ty, $chan:expr)),+ $(,)*) => {
         $(
             impl Channel<Adc> for $pin {
@@ -198,7 +198,7 @@ int_adc! {
     VBat: (14, vbaten),
 }
 
-adc_pins! {
+adc_pin! {
     Channel0: (gpioa::PA0<Analog>, 0u8),
     Channel1: (gpioa::PA1<Analog>, 1u8),
     Channel2: (gpioa::PA2<Analog>, 2u8),

@@ -11,16 +11,16 @@ extern crate stm32g0xx_hal as hal;
 use hal::exti::Event;
 use hal::gpio::gpioa::PA5;
 use hal::gpio::{Output, PushPull, SignalEdge};
+use hal::opm::{Channel1, Opm};
 use hal::prelude::*;
 use hal::rcc::{Config, SysClockSrc};
 use hal::stm32;
-use hal::opm::{Opm, C1};
 use rtfm::app;
 
 #[app(device = hal::stm32)]
 const APP: () = {
     static mut EXTI: stm32::EXTI = ();
-    static mut OPM: Opm<stm32::TIM14, C1> = ();
+    static mut OPM: Opm<stm32::TIM14, Channel1> = ();
     static mut LED: PA5<Output<PushPull>> = ();
 
     #[init]

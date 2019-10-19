@@ -67,6 +67,10 @@ macro_rules! opm_hal {
                     self.rb.ccer.modify(|_, w| w.$ccxe().clear_bit());
                 }
 
+                pub fn generate(&mut self) {
+                    self.rb.cr1.write(|w| w.opm().set_bit().cen().set_bit());
+                }
+
                 pub fn set_pulse_width (&mut self, pulse_width: MicroSecond) {
                     self.pulse_width = pulse_width;
                     self.setup();
@@ -99,10 +103,6 @@ macro_rules! opm_hal {
                         )*
                         self.rb.$ccmrx_output().modify(|_, w| w.$ocxm().bits(7).$ocxfe().set_bit());
                     }
-                }
-
-                pub fn generate(&mut self) {
-                    self.rb.cr1.write(|w| w.opm().set_bit().cen().set_bit());
                 }
             }
         )+
