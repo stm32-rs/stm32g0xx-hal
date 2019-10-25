@@ -14,12 +14,12 @@ use crate::stm32::*;
 use crate::time::Hertz;
 use hal;
 
-pub struct C1;
-pub struct C2;
-pub struct C3;
-pub struct C4;
-pub struct C5;
-pub struct C6;
+pub struct Channel1;
+pub struct Channel2;
+pub struct Channel3;
+pub struct Channel4;
+pub struct Channel5;
+pub struct Channel6;
 
 pub trait Pins<TIM> {
     type Channel;
@@ -31,7 +31,7 @@ where
     CH1: Pins<TIM>,
     CH2: Pins<TIM>,
 {
-    type Channel = (Pwm<TIM, C1>, Pwm<TIM, C2>);
+    type Channel = (Pwm<TIM, Channel1>, Pwm<TIM, Channel2>);
 
     fn setup(&self) {
         self.0.setup();
@@ -45,7 +45,7 @@ where
     CH2: Pins<TIM>,
     CH3: Pins<TIM>,
 {
-    type Channel = (Pwm<TIM, C1>, Pwm<TIM, C2>, Pwm<TIM, C3>);
+    type Channel = (Pwm<TIM, Channel1>, Pwm<TIM, Channel2>, Pwm<TIM, Channel3>);
 
     fn setup(&self) {
         self.0.setup();
@@ -61,7 +61,7 @@ where
     CH3: Pins<TIM>,
     CH4: Pins<TIM>,
 {
-    type Channel = (Pwm<TIM, C1>, Pwm<TIM, C2>, Pwm<TIM, C3>, Pwm<TIM, C4>);
+    type Channel = (Pwm<TIM, Channel1>, Pwm<TIM, Channel2>, Pwm<TIM, Channel3>, Pwm<TIM, Channel4>);
 
     fn setup(&self) {
         self.0.setup();
@@ -211,97 +211,97 @@ macro_rules! pwm {
 }
 
 pwm_pins!(TIM1, [
-    (C1, PA8<DefaultMode>, AltFunction::AF2),
-    (C1, PC8<DefaultMode>, AltFunction::AF2),
-    (C2, PA9<DefaultMode>, AltFunction::AF2),
-    (C2, PB3<DefaultMode>, AltFunction::AF1),
-    (C2, PC9<DefaultMode>, AltFunction::AF2),
-    (C3, PA10<DefaultMode>, AltFunction::AF2),
-    (C3, PB6<DefaultMode>, AltFunction::AF1),
-    (C3, PC10<DefaultMode>, AltFunction::AF2),
-    (C4, PA11<DefaultMode>, AltFunction::AF2),
-    (C4, PC11<DefaultMode>, AltFunction::AF2),
+    (Channel1, PA8<DefaultMode>, AltFunction::AF2),
+    (Channel1, PC8<DefaultMode>, AltFunction::AF2),
+    (Channel2, PA9<DefaultMode>, AltFunction::AF2),
+    (Channel2, PB3<DefaultMode>, AltFunction::AF1),
+    (Channel2, PC9<DefaultMode>, AltFunction::AF2),
+    (Channel3, PA10<DefaultMode>, AltFunction::AF2),
+    (Channel3, PB6<DefaultMode>, AltFunction::AF1),
+    (Channel3, PC10<DefaultMode>, AltFunction::AF2),
+    (Channel4, PA11<DefaultMode>, AltFunction::AF2),
+    (Channel4, PC11<DefaultMode>, AltFunction::AF2),
 ]);
 
 pwm_pins!(TIM2, [
-    (C1, PA0<DefaultMode>, AltFunction::AF2),
-    (C1, PA5<DefaultMode>, AltFunction::AF2),
-    (C1, PA15<DefaultMode>, AltFunction::AF2),
-    (C1, PC4<DefaultMode>, AltFunction::AF2),
-    (C2, PA1<DefaultMode>, AltFunction::AF2),
-    (C2, PB3<DefaultMode>, AltFunction::AF2),
-    (C2, PC5<DefaultMode>, AltFunction::AF2),
-    (C3, PA2<DefaultMode>, AltFunction::AF2),
-    (C3, PB10<DefaultMode>, AltFunction::AF2),
-    (C4, PA3<DefaultMode>, AltFunction::AF2),
-    (C4, PB11<DefaultMode>, AltFunction::AF2),
-    (C4, PC7<DefaultMode>, AltFunction::AF2),
+    (Channel1, PA0<DefaultMode>, AltFunction::AF2),
+    (Channel1, PA5<DefaultMode>, AltFunction::AF2),
+    (Channel1, PA15<DefaultMode>, AltFunction::AF2),
+    (Channel1, PC4<DefaultMode>, AltFunction::AF2),
+    (Channel2, PA1<DefaultMode>, AltFunction::AF2),
+    (Channel2, PB3<DefaultMode>, AltFunction::AF2),
+    (Channel2, PC5<DefaultMode>, AltFunction::AF2),
+    (Channel3, PA2<DefaultMode>, AltFunction::AF2),
+    (Channel3, PB10<DefaultMode>, AltFunction::AF2),
+    (Channel4, PA3<DefaultMode>, AltFunction::AF2),
+    (Channel4, PB11<DefaultMode>, AltFunction::AF2),
+    (Channel4, PC7<DefaultMode>, AltFunction::AF2),
 ]);
 
 pwm_pins!(TIM3, [
-    (C1, PA6<DefaultMode>, AltFunction::AF1),
-    (C1, PB4<DefaultMode>, AltFunction::AF1),
-    (C1, PC6<DefaultMode>, AltFunction::AF1),
-    (C2, PA7<DefaultMode>, AltFunction::AF1),
-    (C2, PB5<DefaultMode>, AltFunction::AF1),
-    (C2, PC7<DefaultMode>, AltFunction::AF1),
-    (C3, PB0<DefaultMode>, AltFunction::AF1),
-    (C3, PC8<DefaultMode>, AltFunction::AF1),
-    (C4, PB1<DefaultMode>, AltFunction::AF1),
-    (C4, PC9<DefaultMode>, AltFunction::AF1),
+    (Channel1, PA6<DefaultMode>, AltFunction::AF1),
+    (Channel1, PB4<DefaultMode>, AltFunction::AF1),
+    (Channel1, PC6<DefaultMode>, AltFunction::AF1),
+    (Channel2, PA7<DefaultMode>, AltFunction::AF1),
+    (Channel2, PB5<DefaultMode>, AltFunction::AF1),
+    (Channel2, PC7<DefaultMode>, AltFunction::AF1),
+    (Channel3, PB0<DefaultMode>, AltFunction::AF1),
+    (Channel3, PC8<DefaultMode>, AltFunction::AF1),
+    (Channel4, PB1<DefaultMode>, AltFunction::AF1),
+    (Channel4, PC9<DefaultMode>, AltFunction::AF1),
 ]);
 
 pwm_pins!(TIM14, [
-    (C1, PA4<DefaultMode>, AltFunction::AF4),
-    (C1, PA7<DefaultMode>, AltFunction::AF4),
-    (C1, PB1<DefaultMode>, AltFunction::AF0),
-    (C1, PC12<DefaultMode>, AltFunction::AF2),
-    (C1, PF0<DefaultMode>, AltFunction::AF2),
+    (Channel1, PA4<DefaultMode>, AltFunction::AF4),
+    (Channel1, PA7<DefaultMode>, AltFunction::AF4),
+    (Channel1, PB1<DefaultMode>, AltFunction::AF0),
+    (Channel1, PC12<DefaultMode>, AltFunction::AF2),
+    (Channel1, PF0<DefaultMode>, AltFunction::AF2),
 ]);
 
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pwm_pins!(TIM15, [
-    (C1, PA2<DefaultMode>, AltFunction::AF5),
-    (C1, PB14<DefaultMode>, AltFunction::AF5),
-    (C1, PC1<DefaultMode>, AltFunction::AF2),
+    (Channel1, PA2<DefaultMode>, AltFunction::AF5),
+    (Channel1, PB14<DefaultMode>, AltFunction::AF5),
+    (Channel1, PC1<DefaultMode>, AltFunction::AF2),
 ]);
 
 pwm_pins!(TIM16, [
-    (C1, PA6<DefaultMode>, AltFunction::AF5),
-    (C1, PB8<DefaultMode>, AltFunction::AF2),
-    (C1, PD0<DefaultMode>, AltFunction::AF2),
+    (Channel1, PA6<DefaultMode>, AltFunction::AF5),
+    (Channel1, PB8<DefaultMode>, AltFunction::AF2),
+    (Channel1, PD0<DefaultMode>, AltFunction::AF2),
 ]);
 
 pwm_pins!(TIM17, [
-    (C1, PA7<DefaultMode>, AltFunction::AF6),
-    (C1, PB9<DefaultMode>, AltFunction::AF2),
-    (C1, PD1<DefaultMode>, AltFunction::AF2),
+    (Channel1, PA7<DefaultMode>, AltFunction::AF6),
+    (Channel1, PB9<DefaultMode>, AltFunction::AF2),
+    (Channel1, PD1<DefaultMode>, AltFunction::AF2),
 ]);
 
 pwm_hal! {
-    TIM1: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-    TIM1: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, moe),
-    TIM1: (C3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, moe),
-    TIM1: (C4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, moe),
-    TIM14: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
-    TIM16: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-    TIM17: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+    TIM1:  (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+    TIM1:  (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, moe),
+    TIM1:  (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, moe),
+    TIM1:  (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, moe),
+    TIM14: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
+    TIM16: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+    TIM17: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
 pwm_hal! {
-    TIM2: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
-    TIM2: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
-    TIM2: (C3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
-    TIM2: (C4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
-    TIM3: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
-    TIM3: (C2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
-    TIM3: (C3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
-    TIM3: (C4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+    TIM2: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
+    TIM2: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
+    TIM2: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
+    TIM2: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
 }
 
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pwm_hal! {
-    TIM15: (C1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+    TIM15: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
 pwm! {

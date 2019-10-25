@@ -9,7 +9,7 @@ extern crate cortex_m_semihosting as sh;
 extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
-use cortex_m_semihosting::hprintln;
+use sh::hprintln;
 use hal::i2c::Config;
 use hal::prelude::*;
 use hal::stm32;

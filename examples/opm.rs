@@ -11,7 +11,7 @@ extern crate stm32g0xx_hal as hal;
 use hal::exti::Event;
 use hal::gpio::gpioa::PA5;
 use hal::gpio::{Output, PushPull, SignalEdge};
-use hal::opm::{Channel1, Opm};
+use hal::timer::opm::{Channel1, Opm};
 use hal::prelude::*;
 use hal::rcc::{Config, SysClockSrc};
 use hal::stm32;
@@ -28,7 +28,7 @@ const APP: () = {
         let mut rcc = device.RCC.freeze(Config::new(SysClockSrc::PLL));
 
         let gpioa = device.GPIOA.split(&mut rcc);
-        let mut opm = device.TIM14.opm(gpioa.pa4, 50.ms(), &mut rcc);
+        let mut opm = device.TIM14.opm(gpioa.pa4, 5.ms(), &mut rcc);
         opm.enable();
 
         let gpioc = device.GPIOC.split(&mut rcc);
