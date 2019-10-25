@@ -49,8 +49,8 @@ impl Config {
     }
 
     fn timing_bits(&self, i2c_clk: Hertz) -> u32 {
-        if let Some(timing) = self.timing {
-            return timing;
+        if let Some(bits) = self.timing {
+            return bits;
         }
         let speed = self.speed.unwrap();
         let (psc, scll, sclh, sdadel, scldel) = if speed.0 <= 100_000 {
@@ -104,6 +104,43 @@ pub trait I2cExt<I2C> {
     where
         SDA: SDAPin<I2C>,
         SCL: SCLPin<I2C>;
+}
+
+macro_rules! busy_wait {
+    ($i2c:expr, $flag:ident) => {
+        loop {
+            let isr = $i2c.isr.read();
+            if isr.berr().bit_is_set() {
+                $i2c.icr.write(|w| w.berrcf().set_bit());
+                return Err(Error::BusError);
+            } else if isr.arlo().bit_is_set() {
+                $i2c.icr.write(|w| w.arlocf().set_bit());
+                return Err(Error::ArbitrationLost);
+            } else if isr.nackf().bit_is_set() {
+                $i2c.icr.write(|w| w.nackcf().set_bit());
+                return Err(Error::Nack);
+            } else if isr.$flag().bit_is_set() {
+                break;
+            }
+        }
+    };
+    ($i2c:expr, $flag:ident, $flag_alt:ident) => {
+        loop {
+            let isr = $i2c.isr.read();
+            if isr.berr().bit_is_set() {
+                $i2c.icr.write(|w| w.berrcf().set_bit());
+                return Err(Error::BusError);
+            } else if isr.arlo().bit_is_set() {
+                $i2c.icr.write(|w| w.arlocf().set_bit());
+                return Err(Error::ArbitrationLost);
+            } else if isr.nackf().bit_is_set() {
+                $i2c.icr.write(|w| w.nackcf().set_bit());
+                return Err(Error::Nack);
+            } else if isr.$flag().bit_is_set() || isr.$flag_alt().bit_is_set() {
+                break;
+            }
+        }
+    };
 }
 
 macro_rules! i2c {
@@ -184,35 +221,9 @@ macro_rules! i2c {
                 (self.i2c, self.sda, self.scl)
             }
 
-            fn send_byte(&self, byte: u8) -> Result<(), Error> {
-                // Wait until we're ready for sending
-                while self.i2c.isr.read().txe().bit_is_clear() {}
-
-                // Push out a byte of data
-                self.i2c.txdr.write(|w| unsafe { w.txdata().bits(byte) });
-
-                // While until byte is transferred
-                loop {
-                    let isr = self.i2c.isr.read();
-                    if isr.berr().bit_is_set() {
-                        self.i2c.icr.write(|w| w.berrcf().set_bit());
-                        return Err(Error::BusError);
-                    } else if isr.arlo().bit_is_set() {
-                        self.i2c.icr.write(|w| w.arlocf().set_bit());
-                        return Err(Error::ArbitrationLost);
-                    } else if isr.nackf().bit_is_set() {
-                        self.i2c.icr.write(|w| w.nackcf().set_bit());
-                        return Err(Error::Nack);
-                    }
-                    return Ok(())
-                }
-            }
-
             fn recv_byte(&self) -> Result<u8, Error> {
-                while self.i2c.isr.read().rxne().bit_is_clear() {}
-
-                let value = self.i2c.rxdr.read().rxdata().bits();
-                Ok(value)
+                busy_wait!(self.i2c, rxne);
+                Ok(self.i2c.rxdr.read().rxdata().bits())
             }
         }
 
@@ -236,6 +247,8 @@ macro_rules! i2c {
             type Error = Error;
 
             fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Self::Error> {
+                assert!(bytes.len() < 256 && bytes.len() > 0);
+
                 self.i2c.cr2.modify(|_, w| unsafe {
                     w.start()
                         .set_bit()
@@ -249,12 +262,19 @@ macro_rules! i2c {
                         .set_bit()
                 });
 
-                while self.i2c.isr.read().busy().bit_is_clear() {}
+                busy_wait!(self.i2c, busy);
 
                 // Send bytes
-                for c in bytes {
-                    self.send_byte(*c)?;
+                for byte in bytes {
+                    // Wait until we're ready for sending or until stop condition
+                    busy_wait!(self.i2c, txe, stopf);
+
+                    // Push out a byte of data
+                    self.i2c.txdr.write(|w| unsafe { w.txdata().bits(*byte) });
                 }
+
+                // Wait until stop condition
+                busy_wait!(self.i2c, stopf);
 
                 Ok(())
             }
@@ -263,23 +283,27 @@ macro_rules! i2c {
         impl<SDA, SCL> Read for I2c<$I2CX, SDA, SCL> {
             type Error = Error;
 
-            fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
+            fn read(&mut self, addr: u8, bytes: &mut [u8]) -> Result<(), Self::Error> {
+                assert!(bytes.len() < 256 && bytes.len() > 0);
+
                 self.i2c.cr2.modify(|_, w| unsafe {
                     w.start()
                         .set_bit()
                         .nbytes()
-                        .bits(buffer.len() as u8)
+                        .bits(bytes.len() as u8)
                         .sadd()
                         .bits((addr << 1) as u16)
+                        .rd_wrn()
+                        .set_bit()
                         .autoend()
                         .set_bit()
                 });
 
                 // Wait until address was sent
-                while self.i2c.isr.read().busy().bit_is_clear() {}
+                busy_wait!(self.i2c, busy);
 
                 // Receive bytes into buffer
-                for c in buffer {
+                for c in bytes {
                     *c = self.recv_byte()?;
                 }
                 Ok(())
