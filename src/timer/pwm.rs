@@ -61,7 +61,12 @@ where
     CH3: Pins<TIM>,
     CH4: Pins<TIM>,
 {
-    type Channel = (Pwm<TIM, Channel1>, Pwm<TIM, Channel2>, Pwm<TIM, Channel3>, Pwm<TIM, Channel4>);
+    type Channel = (
+        Pwm<TIM, Channel1>,
+        Pwm<TIM, Channel2>,
+        Pwm<TIM, Channel3>,
+        Pwm<TIM, Channel4>,
+    );
 
     fn setup(&self) {
         self.0.setup();

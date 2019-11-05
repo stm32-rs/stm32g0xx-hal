@@ -11,10 +11,10 @@ extern crate stm32g0xx_hal as hal;
 use hal::exti::Event;
 use hal::gpio::gpioa::PA5;
 use hal::gpio::{Output, PushPull, SignalEdge};
-use hal::timer::opm::{Channel1, Opm};
 use hal::prelude::*;
 use hal::rcc::{Config, SysClockSrc};
 use hal::stm32;
+use hal::timer::opm::{Channel1, Opm};
 use rtfm::app;
 
 #[app(device = hal::stm32)]
