@@ -6,6 +6,8 @@ pub use hal::watchdog::Watchdog as _;
 pub use hal::watchdog::WatchdogEnable as _;
 
 pub use crate::analog::adc::AdcExt as _;
+
+#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::analog::dac::DacExt as _;
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::analog::dac::DacOut as _;
