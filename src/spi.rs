@@ -145,18 +145,6 @@ macro_rules! spi {
                     96..=191 => 0b110,
                     _ => 0b111,
                 };
-
-                // spi.cr2.write(|w| unsafe {
-                //     w.ds().bits(0b0111).frxth().set_bit()
-                // });
-
-                // mstr: master configuration
-                // lsbfirst: MSB first
-                // ssm: enable software slave management (NSS pin free for other uses)
-                // ssi: set nss high = master mode
-                // dff: 8 bit frames
-                // bidimode: 2-line unidirectional
-                // spe: enable the SPI bus
                 spi.cr1.write(|w| unsafe {
                     w.cpha()
                         .bit(mode.phase == Phase::CaptureOnSecondTransition)
@@ -177,7 +165,7 @@ macro_rules! spi {
                         .dff()
                         .clear_bit()
                         .bidimode()
-                        .set_bit()
+                        .clear_bit()
                 });
                 spi.cr1.write(|w| w.spe().set_bit());
 
