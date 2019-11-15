@@ -1,0 +1,7 @@
+{
+  "editor.formatOnSave": true,
+  "rust.features": [
+    "rt",
+    "stm32g07x"
+  ]
+}
