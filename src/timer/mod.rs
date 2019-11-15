@@ -93,6 +93,11 @@ macro_rules! timers {
                     }
                 }
 
+                /// Stop timer
+                pub fn stop(&mut self) {
+                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                }
+
                 /// Starts listening
                 pub fn listen(&mut self) {
                     self.tim.dier.write(|w| w.uie().set_bit());
