@@ -63,7 +63,7 @@ impl U32Ext for u32 {
 }
 
 impl Hertz {
-    pub fn duration(&self, cycles: u32) -> MicroSecond {
+    pub fn duration(self, cycles: u32) -> MicroSecond {
         let cycles = cycles as u64;
         let clk = self.0 as u64;
         let us = cycles.saturating_mul(1_000_000_u64) / clk;
@@ -88,7 +88,7 @@ impl Div for Hertz {
 }
 
 impl MicroSecond {
-    pub fn cycles(&self, clk: Hertz) -> u32 {
+    pub fn cycles(self, clk: Hertz) -> u32 {
         assert!(self.0 > 0);
         let clk = clk.0 as u64;
         let period = self.0 as u64;

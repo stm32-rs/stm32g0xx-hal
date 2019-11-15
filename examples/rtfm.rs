@@ -17,44 +17,43 @@ use hal::stm32;
 use hal::timer::Timer;
 use rtfm::app;
 
-#[app(device = hal::stm32)]
+#[app(device = hal::stm32, peripherals = true)]
 const APP: () = {
-    static mut EXTI: stm32::EXTI = ();
-    static mut TIMER: Timer<stm32::TIM17> = ();
-    static mut LED: PA5<Output<PushPull>> = ();
+
+    struct Resources {
+        exti: stm32::EXTI,
+        timer: Timer<stm32::TIM17>,
+        led: PA5<Output<PushPull>>,
+    }
 
     #[init]
-    fn init() {
-        let mut rcc = device.RCC.constrain();
-        let gpioa = device.GPIOA.split(&mut rcc);
-        let gpioc = device.GPIOC.split(&mut rcc);
+    fn init(mut ctx: init::Context) -> init::LateResources {
+        let mut rcc = ctx.device.RCC.constrain();
+        let gpioa = ctx.device.GPIOA.split(&mut rcc);
+        let gpioc = ctx.device.GPIOC.split(&mut rcc);
 
-        let mut timer = device.TIM17.timer(&mut rcc);
+        let mut timer = ctx.device.TIM17.timer(&mut rcc);
         timer.start(3.hz());
         timer.listen();
 
-        gpioc.pc13.listen(SignalEdge::Falling, &mut device.EXTI);
+        gpioc.pc13.listen(SignalEdge::Falling, &mut ctx.device.EXTI);
 
-        LED = gpioa.pa5.into_push_pull_output();
-        TIMER = timer;
-        EXTI = device.EXTI;
+        init::LateResources {
+            timer,
+            exti: ctx.device.EXTI,
+            led: gpioa.pa5.into_push_pull_output(),
+        }
     }
 
-    #[interrupt(binds = TIM17, resources = [TIMER, LED])]
-    fn on_timer_tick() {
-        resources.LED.toggle().unwrap();
-        resources.TIMER.clear_irq();
+    #[task(binds = TIM17, resources = [led, timer])]
+    fn timer_tick(ctx: timer_tick::Context) {
+        ctx.resources.led.toggle().unwrap();
+        ctx.resources.timer.clear_irq();
     }
 
-    #[interrupt(binds = EXTI4_15, resources = [EXTI])]
-    fn on_button_click() {
-        hprintln!(
-            "{}",
-            resources
-                .EXTI
-                .is_pending(Event::GPIO13, SignalEdge::Falling)
-        )
-        .unwrap();
-        resources.EXTI.unpend(Event::GPIO13);
+    #[task(binds = EXTI4_15, resources = [exti])]
+    fn button_click(ctx: button_click::Context) {
+        hprintln!("Button pressed").unwrap();
+        ctx.resources.exti.unpend(Event::GPIO13);
     }
 };

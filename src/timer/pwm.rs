@@ -61,6 +61,7 @@ where
     CH3: Pins<TIM>,
     CH4: Pins<TIM>,
 {
+    #[allow(clippy::type_complexity)]
     type Channel = (
         Pwm<TIM, Channel1>,
         Pwm<TIM, Channel2>,

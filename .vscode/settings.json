@@ -1,5 +1,7 @@
 {
-  "editor.formatOnSave": true,
+  "rust.all_targets": false,
+  "rust.target": "thumbv6m-none-eabi",
+  "rust.all_features": false,
   "rust.features": [
     "rt",
     "stm32g07x"
