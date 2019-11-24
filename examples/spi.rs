@@ -11,27 +11,45 @@ extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
 use hal::prelude::*;
-use hal::rcc::Config;
+use hal::rcc::{self, PllConfig};
 use hal::spi;
 use hal::stm32;
-use nb::block;
 use rt::entry;
+use smart_leds::{SmartLedsWrite, RGB};
+use ws2812_spi as ws2812;
 
 #[entry]
 fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
-    let mut rcc = dp.RCC.freeze(Config::pll());
+    let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
+
+    // Configure APB bus clock to 48MHz, cause ws2812 requires 3Mbps SPI
+    let pll_cfg = PllConfig::with_hsi(4, 24, 2);
+    let rcc_cfg = rcc::Config::pll().pll_cfg(pll_cfg);
+    let mut rcc = dp.RCC.freeze(rcc_cfg);
+
+    let mut delay = cp.SYST.delay(&rcc.clocks);
     let gpioa = dp.GPIOA.split(&mut rcc);
+    let spi = dp.SPI2.spi(
+        (spi::NoSck, spi::NoMiso, gpioa.pa10),
+        ws2812::MODE,
+        3.mhz(),
+        &mut rcc,
+    );
+    let mut ws = ws2812::Ws2812::new(spi);
 
-    let sck = gpioa.pa1;
-    let mosi = gpioa.pa2;
-    let miso = gpioa.pa6;
-
-    let mut spi = dp
-        .SPI1
-        .spi((sck, miso, mosi), spi::MODE_0, 100.khz(), &mut rcc);
-
+    let mut cnt: usize = 0;
+    let mut data: [RGB<u8>; 8] = [RGB::default(); 8];
     loop {
-        block!(spi.send(128)).unwrap();
+        for (idx, color) in data.iter_mut().enumerate() {
+            *color = match (cnt + idx) % 3 {
+                0 => RGB { r: 255, g: 0, b: 0 },
+                1 => RGB { r: 0, g: 255, b: 0 },
+                _ => RGB { r: 0, g: 0, b: 255 },
+            };
+        }
+        ws.write(data.iter().cloned()).unwrap();
+        cnt += 1;
+        delay.delay(200.ms());
     }
 }

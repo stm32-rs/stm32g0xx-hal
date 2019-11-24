@@ -80,6 +80,19 @@ impl Default for PllConfig {
     }
 }
 
+impl PllConfig {
+    pub fn with_hsi(m: PLLDiv, n: PLLMul, r: PLLDiv) -> PllConfig {
+        PllConfig {
+            mux: PLLSrc::HSI,
+            m,
+            n,
+            r,
+            q: None,
+            p: None,
+        }
+    }
+}
+
 /// Clocks configutation
 pub struct Config {
     pub(crate) sys_mux: SysClockSrc,

@@ -17,8 +17,6 @@ pub enum Error {
     ModeFault,
     /// CRC error
     Crc,
-    #[doc(hidden)]
-    _Extensible,
 }
 
 /// A filler type for when the SCK pin is unnecessary
@@ -145,6 +143,11 @@ macro_rules! spi {
                     96..=191 => 0b110,
                     _ => 0b111,
                 };
+
+                spi.cr2.write(|w| unsafe {
+                    w.frxth().set_bit().ds().bits(0b111).ssoe().clear_bit()
+                });
+
                 spi.cr1.write(|w| unsafe {
                     w.cpha()
                         .bit(mode.phase == Phase::CaptureOnSecondTransition)
@@ -166,8 +169,12 @@ macro_rules! spi {
                         .clear_bit()
                         .bidimode()
                         .clear_bit()
+                        .ssi()
+                        .set_bit()
+                        .spe()
+                        .set_bit()
                 });
-                spi.cr1.write(|w| w.spe().set_bit());
+
 
                 Spi { spi, pins }
             }

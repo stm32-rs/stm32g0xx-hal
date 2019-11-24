@@ -169,6 +169,12 @@ macro_rules! int_adc {
                 }
             }
 
+            impl Default for $Chan {
+                fn default() -> $Chan {
+                    $Chan::new()
+                }
+            }
+
             impl Channel<Adc> for $Chan {
                 type ID = u8;
 
