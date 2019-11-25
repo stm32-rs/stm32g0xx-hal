@@ -19,7 +19,6 @@ use rtfm::app;
 
 #[app(device = hal::stm32, peripherals = true)]
 const APP: () = {
-
     struct Resources {
         exti: stm32::EXTI,
         timer: Timer<stm32::TIM17>,

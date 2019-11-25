@@ -35,6 +35,7 @@ cortex-m-rtfm = "0.5.0"
 cortex-m-semihosting = "0.3.5"
 panic-halt = "0.2.0"
 panic-semihosting = "0.5.3"
+embedded-sdmmc = "0.2.1"
 smart-leds = {git = "https://github.com/smart-leds-rs/smart-leds"}
 ws2812-spi = {git = "https://github.com/smart-leds-rs/ws2812-spi-rs"}
 
