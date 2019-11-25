@@ -41,7 +41,8 @@ const APP: () = {
         gpioc.pc13.listen(SignalEdge::Falling, &mut ctx.device.EXTI);
 
         let mut rtc = ctx.device.RTC.constrain(&mut rcc);
-        rtc.set_date(&Date::new(1983.year(), 1.month(), 27.day()));
+        rtc.set_date(&Date::new(2019.year(), 11.month(), 24.day()));
+        rtc.set_time(&Time::new(21.hours(), 15.minutes(), 10.seconds(), false));
 
         init::LateResources {
             timer,

@@ -11,92 +11,82 @@ impl Rtc {
     pub fn new(rtc: RTC, src: RTCSrc, rcc: &mut Rcc) -> Self {
         let mut rtc = Rtc { rb: rtc };
         rcc.enable_rtc(src);
-        rtc.disable_write_protection();
-        rtc.enter_init_mode();
-        rtc.rb.cr.modify(|_, w| w.fmt().clear_bit());
-        rtc.exit_init_mode();
-        rtc.enable_write_protection();
+        rtc.modify(|rb| {
+            rb.cr.modify(|_, w| w.fmt().clear_bit());
+        });
         rtc
     }
 
-    fn enable_write_protection(&mut self) {
-        self.rb.wpr.write(|w| unsafe { w.bits(0xFF) });
-    }
-
-    fn disable_write_protection(&mut self) {
+    fn modify<F>(&mut self, mut closure: F)
+    where
+        F: FnMut(&mut RTC) -> (),
+    {
+        // Disable write protection
         self.rb.wpr.write(|w| unsafe { w.bits(0xCA) });
         self.rb.wpr.write(|w| unsafe { w.bits(0x53) });
-    }
-
-    fn enter_init_mode(&mut self) {
+        // Enter init mode
         let isr = self.rb.icsr.read();
         if isr.initf().bit_is_clear() {
             self.rb.icsr.write(|w| w.init().set_bit());
             self.rb.icsr.write(|w| unsafe { w.bits(0xffff_ffff) });
             while self.rb.icsr.read().initf().bit_is_clear() {}
         }
-    }
-
-    fn exit_init_mode(&mut self) {
+        // Invoke closure
+        closure(&mut self.rb);
+        // Exit init mode
         self.rb.icsr.write(|w| w.init().clear_bit());
+        // Enable_write_protection
+        self.rb.wpr.write(|w| unsafe { w.bits(0xFF) });
     }
 
     pub fn set_date(&mut self, date: &Date) {
-        self.disable_write_protection();
-        self.enter_init_mode();
-
         let (yt, yu) = bcd2_encode(date.year - 1970);
         let (mt, mu) = bcd2_encode(date.month);
         let (dt, du) = bcd2_encode(date.day);
 
-        self.rb.dr.write(|w| unsafe {
-            w.dt()
-                .bits(dt)
-                .du()
-                .bits(du)
-                .mt()
-                .bit(mt > 0)
-                .mu()
-                .bits(mu)
-                .yt()
-                .bits(yt)
-                .yu()
-                .bits(yu)
-                .wdu()
-                .bits(date.day as u8)
+        self.modify(|rb| {
+            rb.dr.write(|w| unsafe {
+                w.dt()
+                    .bits(dt)
+                    .du()
+                    .bits(du)
+                    .mt()
+                    .bit(mt > 0)
+                    .mu()
+                    .bits(mu)
+                    .yt()
+                    .bits(yt)
+                    .yu()
+                    .bits(yu)
+                    .wdu()
+                    .bits(date.day as u8)
+            });
         });
-
-        self.exit_init_mode();
-        self.enable_write_protection();
     }
 
     pub fn set_time(&mut self, time: &Time) {
-        self.disable_write_protection();
-        self.enter_init_mode();
-
         let (ht, hu) = bcd2_encode(time.hours);
         let (mnt, mnu) = bcd2_encode(time.minutes);
         let (st, su) = bcd2_encode(time.seconds);
-        self.rb.tr.write(|w| unsafe {
-            w.ht()
-                .bits(ht)
-                .hu()
-                .bits(hu)
-                .mnt()
-                .bits(mnt)
-                .mnu()
-                .bits(mnu)
-                .st()
-                .bits(st)
-                .su()
-                .bits(su)
-                .pm()
-                .clear_bit()
+        self.modify(|rb| {
+            rb.tr.write(|w| unsafe {
+                w.ht()
+                    .bits(ht)
+                    .hu()
+                    .bits(hu)
+                    .mnt()
+                    .bits(mnt)
+                    .mnu()
+                    .bits(mnu)
+                    .st()
+                    .bits(st)
+                    .su()
+                    .bits(su)
+                    .pm()
+                    .clear_bit()
+            });
+            rb.cr.modify(|_, w| w.fmt().bit(time.daylight_savings));
         });
-        self.rb.cr.modify(|_, w| w.fmt().bit(time.daylight_savings));
-
-        self.exit_init_mode();
-        self.enable_write_protection();
     }
 
     pub fn get_time(&self) -> Time {
