@@ -28,7 +28,7 @@ impl Rtc {
         let isr = self.rb.icsr.read();
         if isr.initf().bit_is_clear() {
             self.rb.icsr.write(|w| w.init().set_bit());
-            self.rb.icsr.write(|w| unsafe { w.bits(0xffff_ffff) });
+            self.rb.icsr.write(|w| unsafe { w.bits(0xFFFF_FFFF) });
             while self.rb.icsr.read().initf().bit_is_clear() {}
         }
         // Invoke closure

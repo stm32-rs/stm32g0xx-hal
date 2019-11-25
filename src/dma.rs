@@ -88,6 +88,18 @@ pub trait DmaExt {
     fn split(self, rcc: &mut Rcc) -> Self::Channels;
 }
 
+pub trait DmaChannel {
+    fn set_peripheral_address(&mut self, address: u32, inc: bool);
+    fn set_memory_address(&mut self, address: u32, inc: bool);
+    fn set_transfer_length(&mut self, len: usize);
+    fn set_direction(&mut self, dir: TransferDirection);
+    fn set_priority(&mut self, priority: Priority);
+    fn start(&mut self);
+    fn stop(&mut self);
+    fn listen(&mut self, event: Event);
+    fn unlisten(&mut self, event: Event);
+}
+
 macro_rules! dma {
     ($($DMAX:ident: ($dmaXen:ident, $dmaXrst:ident, {
         $($CX:ident: ($ccrX:ident, $cndtrX:ident, $cparX:ident, $cmarX:ident, $cgifX:ident),)+
@@ -110,13 +122,12 @@ macro_rules! dma {
             $(
                 pub struct $CX;
 
-                impl $CX {
+                impl DmaChannel for $CX {
                     /// Associated peripheral `address`
                     ///
                     /// `inc` indicates whether the address will be incremented after every byte transfer
-                    pub fn set_peripheral_address(&mut self, address: u32, inc: bool) {
+                    fn set_peripheral_address(&mut self, address: u32, inc: bool) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
-
                         dma.$cparX.write(|w| unsafe { w.pa().bits(address) });
                         dma.$ccrX.modify(|_, w| w.pinc().bit(inc) );
                     }
@@ -124,22 +135,20 @@ macro_rules! dma {
                     /// `address` where from/to data will be read/write
                     ///
                     /// `inc` indicates whether the address will be incremented after every byte transfer
-                    pub fn set_memory_address(&mut self, address: u32, inc: bool) {
+                    fn set_memory_address(&mut self, address: u32, inc: bool) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
-
                         dma.$cmarX.write(|w| unsafe { w.ma().bits(address) });
                         dma.$ccrX.modify(|_, w| w.minc().bit(inc) );
                     }
 
                     /// Number of bytes to transfer
-                    pub fn set_transfer_length(&mut self, len: usize) {
+                    fn set_transfer_length(&mut self, len: usize) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
-
                         dma.$cndtrX.write(|w| unsafe { w.ndt().bits(len as u16) });
                     }
 
                     /// DMA Transfer direction
-                    pub fn set_direction(&mut self, dir: TransferDirection) {
+                    fn set_direction(&mut self, dir: TransferDirection) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
                         match dir {
                             TransferDirection::MemoryToMemory => dma.$ccrX.modify(|_, w| {
@@ -152,31 +161,28 @@ macro_rules! dma {
                                 w.mem2mem().clear_bit().circ().clear_bit().dir().clear_bit()
                             }),
                         }
-
                     }
 
                     /// Set channel priority
-                    pub fn set_priority(&mut self, priority: Priority) {
+                    fn set_priority(&mut self, priority: Priority) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
                         dma.$ccrX.modify(|_, w| unsafe { w.pl().bits(priority as u8) });
                     }
 
                     /// Starts the DMA transfer
-                    pub fn start(&mut self) {
+                    fn start(&mut self) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
                         dma.$ccrX.modify(|_, w| w.en().set_bit() );
                     }
 
                     /// Stops the DMA transfer
-                    pub fn stop(&mut self) {
+                    fn stop(&mut self) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
-
-                        // TODO: https://github.com/stm32-rs/stm32-rs/pull/228
-                        // dma.ifcr.$cgifX().write(|w| w.set_bit());
+                        dma.ifcr.write(|w| w.$cgifX().set_bit());
                         dma.$ccrX.modify(|_, w| w.en().clear_bit() );
                     }
 
-                    pub fn listen(&mut self, event: Event) {
+                    fn listen(&mut self, event: Event) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
                         match event {
                             Event::HalfTransfer => dma.$ccrX.modify(|_, w| w.htie().set_bit()),
@@ -186,7 +192,7 @@ macro_rules! dma {
                         }
                     }
 
-                    pub fn unlisten(&mut self, event: Event) {
+                    fn unlisten(&mut self, event: Event) {
                         let dma = unsafe { &(*$DMAX::ptr()) };
                         match event {
                             Event::HalfTransfer => {
@@ -208,22 +214,18 @@ macro_rules! dma {
                     Self: core::marker::Sized,
                 {
                     fn copy(mut self, buf_from: Pin<F>, buf_to: Pin<T>) -> Transfer<Self, (Pin<F>, Pin<T>)> {
-                        {
-                            let slice_from = buf_from.as_slice();
-                            let slice_to = buf_to.as_slice();
+                        let slice_from = buf_from.as_slice();
+                        let slice_to = buf_to.as_slice();
+                        let (ptr_from, len_from) = (slice_from.as_ptr(), slice_from.len());
+                        let (ptr_to, len_to) = (slice_to.as_ptr(), slice_to.len());
+                        assert!(len_from == len_to);
 
-                            let (ptr_from, len_from) = (slice_from.as_ptr(), slice_from.len());
-                            let (ptr_to, len_to) = (slice_to.as_ptr(), slice_to.len());
+                        self.set_direction(TransferDirection::MemoryToMemory);
+                        self.set_memory_address(ptr_from as u32, true);
+                        self.set_peripheral_address(ptr_to as u32, false);
+                        self.set_transfer_length(len_from);
 
-                            assert!(len_from == len_to);
-
-                            self.set_direction(TransferDirection::MemoryToMemory);
-                            self.set_memory_address(ptr_from as u32, true);
-                            self.set_peripheral_address(ptr_to as u32, false);
-                            self.set_transfer_length(len_from);
-                        }
-                        atomic::compiler_fence(Ordering::Release);
-
+                        atomic::compiler_fence(Ordering::SeqCst);
                         self.start();
 
                         Transfer {
@@ -239,10 +241,12 @@ macro_rules! dma {
 
 dma! {
     DMA: (dmaen, dma1rst, {
-        Channel1: ( ccr1, cndtr1, cpar1, cmar1, cgif1 ),
-        Channel2: ( ccr2, cndtr2, cpar2, cmar2, cgif2 ),
-        Channel3: ( ccr3, cndtr3, cpar3, cmar3, cgif3 ),
-        Channel4: ( ccr4, cndtr4, cpar4, cmar4, cgif4 ),
-        Channel5: ( ccr5, cndtr5, cpar5, cmar5, cgif5 ),
+        Channel1: ( ccr1, cndtr1, cpar1, cmar1, cgif0 ),
+        Channel2: ( ccr2, cndtr2, cpar2, cmar2, cgif4 ),
+        Channel3: ( ccr3, cndtr3, cpar3, cmar3, cgif8 ),
+        Channel4: ( ccr4, cndtr4, cpar4, cmar4, cgif12 ),
+        Channel5: ( ccr5, cndtr5, cpar5, cmar5, cgif16 ),
+        Channel6: ( ccr6, cndtr6, cpar6, cmar6, cgif20 ),
+        Channel7: ( ccr7, cndtr7, cpar7, cmar7, cgif24 ),
     }),
 }

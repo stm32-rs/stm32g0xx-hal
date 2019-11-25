@@ -2,16 +2,16 @@ use core::fmt;
 use core::marker::PhantomData;
 use core::ops;
 use core::pin::Pin;
+use core::sync::atomic::{self, Ordering};
 
-use as_slice::AsMutSlice;
-
-use crate::dma::{ReadDma, Transfer, WriteDma};
+use crate::dma::{DmaChannel, ReadDma, Transfer, TransferDirection, WriteDma};
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
 use crate::gpio::{AltFunction, DefaultMode};
 use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::*;
 use crate::time::Bps;
+use as_slice::{AsMutSlice, AsSlice};
 use hal;
 use nb::block;
 
@@ -135,13 +135,13 @@ pub struct Tx<USART> {
 /// Serial DMA receiver
 pub struct DmaRx<USART, CHANNEL> {
     _usart: PhantomData<USART>,
-    _channel: CHANNEL,
+    channel: CHANNEL,
 }
 
 /// Serial DMA transmitter
 pub struct DmaTx<USART, CHANNEL> {
     _usart: PhantomData<USART>,
-    _channel: CHANNEL,
+    channel: CHANNEL,
 }
 
 /// Serial abstraction
@@ -246,6 +246,7 @@ macro_rules! uart {
                 // Reset other registers to disable advanced USART features
                 usart.cr2.reset();
                 usart.cr3.reset();
+
                 // Enable transmission and receiving
                 usart.cr1.write(|w| {
                     w.ue()
@@ -307,30 +308,57 @@ macro_rules! uart {
         }
 
         impl Tx<$USARTX> {
-            pub fn with_dma<CHANNEL>(self, channel: CHANNEL) -> DmaTx<$USARTX, CHANNEL> {
+            pub fn with_dma<CHANNEL>(self, channel: CHANNEL) -> DmaTx<$USARTX, CHANNEL>
+                where CHANNEL: DmaChannel
+            {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                let usart_ptr = &usart.tdr as *const _ as _;
+
+                let mut channel = channel;
+                channel.set_direction(TransferDirection::MemoryToPeriph);
+                channel.set_peripheral_address(usart_ptr, false);
                 DmaTx {
+                    channel,
                     _usart: PhantomData,
-                    _channel: channel,
                 }
             }
         }
 
         impl Rx<$USARTX> {
-            pub fn with_dma<CHANNEL>(self, channel: CHANNEL) -> DmaRx<$USARTX, CHANNEL> {
+            pub fn with_dma<CHANNEL>(self, channel: CHANNEL) -> DmaRx<$USARTX, CHANNEL>
+                where CHANNEL: DmaChannel
+            {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                let usart_ptr = &usart.rdr as *const _ as _;
+
+                let mut channel = channel;
+                channel.set_direction(TransferDirection::PeriphToMemory);
+                channel.set_peripheral_address(usart_ptr, false);
                 DmaRx {
+                    channel,
                     _usart: PhantomData,
-                    _channel: channel,
                 }
             }
         }
 
         impl<CHANNEL, B> ReadDma<B> for DmaRx<$USARTX, CHANNEL>
         where
+            CHANNEL: DmaChannel,
             B: ops::DerefMut + 'static,
             B::Target: AsMutSlice<Element = u8> + Unpin,
             Self: core::marker::Sized,
         {
-            fn read(self, buffer: Pin<B>) -> Transfer<Self, Pin<B>> {
+            fn read(mut self, buffer: Pin<B>) -> Transfer<Self, Pin<B>> {
+                let mut buffer = buffer;
+                let slice = buffer.as_mut_slice();
+                let (ptr, len) = (slice.as_ptr(), slice.len());
+
+                let dma_channel = &mut self.channel;
+                dma_channel.set_memory_address(ptr as u32, true);
+                dma_channel.set_transfer_length(len);
+
+                atomic::compiler_fence(Ordering::SeqCst);
+                dma_channel.start();
 
                 Transfer {
                     buffer,
@@ -339,13 +367,23 @@ macro_rules! uart {
             }
         }
 
-        impl<CHANNEL, B> WriteDma<B> for DmaRx<$USARTX, CHANNEL>
+        impl<CHANNEL, B> WriteDma<B> for DmaTx<$USARTX, CHANNEL>
         where
-            B: ops::DerefMut + 'static,
-            B::Target: AsMutSlice<Element = u8> + Unpin,
+            CHANNEL: DmaChannel,
+            B: ops::Deref + 'static,
+            B::Target: AsSlice<Element = u8> + Unpin,
             Self: core::marker::Sized,
         {
-            fn write(self, buffer: Pin<B>) -> Transfer<Self, Pin<B>> {
+            fn write(mut self, buffer: Pin<B>) -> Transfer<Self, Pin<B>> {
+                let slice = buffer.as_slice();
+                let (ptr, len) = (slice.as_ptr(), slice.len());
+
+                let dma_channel = &mut self.channel;
+                dma_channel.set_memory_address(ptr as u32, true);
+                dma_channel.set_transfer_length(len);
+
+                atomic::compiler_fence(Ordering::SeqCst);
+                dma_channel.start();
 
                 Transfer {
                     buffer,
