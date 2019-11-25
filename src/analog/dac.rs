@@ -49,7 +49,9 @@ where
     rcc.rb.apbrstr1.modify(|_, w| w.dac1rst().clear_bit());
 
     #[allow(clippy::uninit_assumed_init)]
-    unsafe { MaybeUninit::uninit().assume_init() }
+    unsafe {
+        MaybeUninit::uninit().assume_init()
+    }
 }
 
 macro_rules! dac {

@@ -1,12 +1,10 @@
 pub use hal::digital::v2::*;
 pub use hal::prelude::*;
-
 pub use hal::adc::OneShot as _;
 pub use hal::watchdog::Watchdog as _;
 pub use hal::watchdog::WatchdogEnable as _;
 
 pub use crate::analog::adc::AdcExt as _;
-
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::analog::dac::DacExt as _;
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
@@ -28,6 +26,7 @@ pub use crate::rcc::MCOExt as _;
 pub use crate::rcc::RccExt as _;
 pub use crate::rng::RngCore as _;
 pub use crate::rng::RngExt as _;
+pub use crate::rtc::RtcExt as _;
 pub use crate::serial::SerialExt as _;
 pub use crate::spi::SpiExt as _;
 pub use crate::time::U32Ext as _;

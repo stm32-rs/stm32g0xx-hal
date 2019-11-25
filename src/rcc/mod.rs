@@ -259,6 +259,29 @@ impl Rcc {
         self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
         let pwr = unsafe { &(*PWR::ptr()) };
         pwr.cr1.modify(|_, w| w.dbp().set_bit());
+        while pwr.cr1.read().dbp().bit_is_clear() {}
+    }
+
+    pub(crate) fn enable_rtc(&self, src: RTCSrc) {
+        match src {
+            RTCSrc::LSI => self.enable_lsi(),
+            RTCSrc::HSE => self.enable_hse(false),
+            RTCSrc::LSE => self.enable_lse(false),
+        }
+        self.rb
+            .apbenr1
+            .modify(|_, w| w.rtcapben().set_bit().pwren().set_bit());
+        self.rb.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
+        self.unlock_rtc();
+        self.rb.bdcr.modify(|_, w| w.bdrst().set_bit());
+        self.rb.bdcr.modify(|_, w| unsafe {
+            w.rtcsel()
+                .bits(src as u8)
+                .rtcen()
+                .set_bit()
+                .bdrst()
+                .clear_bit()
+        });
     }
 }
 

@@ -97,7 +97,7 @@ macro_rules! timers {
                 pub fn pause(&mut self) {
                     self.tim.cr1.modify(|_, w| w.cen().clear_bit());
                 }
-                
+
                 /// Resumes timer
                 pub fn resume(&mut self) {
                     self.tim.cr1.modify(|_, w| w.cen().set_bit());

@@ -4,7 +4,7 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
-extern crate panic_halt;
+extern crate panic_semihosting;
 extern crate rtfm;
 extern crate stm32g0xx_hal as hal;
 
@@ -13,7 +13,9 @@ use hal::exti::Event;
 use hal::gpio::gpioa::PA5;
 use hal::gpio::{Output, PushPull, SignalEdge};
 use hal::prelude::*;
+use hal::rtc::Rtc;
 use hal::stm32;
+use hal::time::*;
 use hal::timer::Timer;
 use rtfm::app;
 
@@ -23,6 +25,7 @@ const APP: () = {
         exti: stm32::EXTI,
         timer: Timer<stm32::TIM17>,
         led: PA5<Output<PushPull>>,
+        rtc: Rtc,
     }
 
     #[init]
@@ -37,8 +40,12 @@ const APP: () = {
 
         gpioc.pc13.listen(SignalEdge::Falling, &mut ctx.device.EXTI);
 
+        let mut rtc = ctx.device.RTC.constrain(&mut rcc);
+        rtc.set_date(&Date::new(1983.year(), 1.month(), 27.day()));
+
         init::LateResources {
             timer,
+            rtc,
             exti: ctx.device.EXTI,
             led: gpioa.pa5.into_push_pull_output(),
         }
@@ -50,9 +57,11 @@ const APP: () = {
         ctx.resources.timer.clear_irq();
     }
 
-    #[task(binds = EXTI4_15, resources = [exti])]
+    #[task(binds = EXTI4_15, resources = [exti, rtc])]
     fn button_click(ctx: button_click::Context) {
-        hprintln!("Button pressed").unwrap();
+        let date = ctx.resources.rtc.get_date();
+        let time = ctx.resources.rtc.get_time();
+        hprintln!("Button pressed @ {:?} {:?}", date, time).unwrap();
         ctx.resources.exti.unpend(Event::GPIO13);
     }
 };
