@@ -13,12 +13,18 @@ pub mod opm;
 pub mod pwm;
 pub mod qei;
 pub mod stopwatch;
+pub mod pins;
 
 /// Hardware timers
 pub struct Timer<TIM> {
     clk: Hertz,
     tim: TIM,
 }
+
+pub struct Channel1;
+pub struct Channel2;
+pub struct Channel3;
+pub struct Channel4;
 
 /// System timer
 impl Timer<SYST> {
@@ -77,6 +83,20 @@ impl TimerExt<SYST> for SYST {
 
 impl Periodic for Timer<SYST> {}
 
+// pub trait ExternalClockTimer<TIM> {
+//     fn ext_clk<S>(self, clk_src: S, edge: SignalEdge);
+// }
+
+// impl ExternalClockTimer<TIM1> for Timer<TIM1> {
+//     fn ext_clk<S>(self, clk_src: S, edge: SignalEdge) {
+//         self.tim.smcr.write(|w| unsafe { w.sms().bits(0b111) });
+//         self.tim
+//             .ccmr1_output()
+//             .write(|w| unsafe { w.cc1s().bits(0b01).cc2s().bits(0b01) });
+//         self.tim.tisel.modify(|_, w| w.cen().set_bit());
+//     }
+// }
+
 macro_rules! timers {
     ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
         $(
@@ -118,12 +138,12 @@ macro_rules! timers {
                     self.tim.sr.modify(|_, w| w.uif().clear_bit());
                 }
 
-                /// Releases the TIM peripheral
-                pub fn release(self) -> $TIM {
-                    self.tim
+                /// Resets counter value
+                pub fn reset(&mut self) {
+                    self.tim.cnt.reset();
                 }
 
-                /// Gets timer counter value
+                /// Gets timer counter current value
                 pub fn counter(&self) -> u32 {
                     let _high = 0;
                     $(
@@ -131,6 +151,11 @@ macro_rules! timers {
                     )*
                     let low = self.tim.cnt.read().$cnt().bits() as u32;
                     low | (_high << 16)
+                }
+
+                /// Releases the TIM peripheral
+                pub fn release(self) -> $TIM {
+                    self.tim
                 }
             }
 

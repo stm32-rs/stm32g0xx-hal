@@ -10,6 +10,7 @@ extern crate stm32g0xx_hal as hal;
 
 use cortex_m::asm;
 use hal::prelude::*;
+use hal::timer::pwm::*;
 use hal::stm32;
 use rt::{entry, exception, ExceptionFrame};
 

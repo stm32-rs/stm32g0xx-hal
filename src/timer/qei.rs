@@ -1,43 +1,33 @@
 //! Quadrature Encoder Interface
-use crate::gpio::gpioa::{PA0, PA1, PA6, PA7, PA8, PA9};
-use crate::gpio::{AltFunction, DefaultMode};
 use crate::hal::{self, Direction};
 use crate::rcc::Rcc;
 use crate::stm32::{TIM1, TIM2, TIM3};
-
-pub trait Pins<TIM> {
-    fn setup(&self);
-}
-
-impl Pins<TIM1> for (PA8<DefaultMode>, PA9<DefaultMode>) {
-    fn setup(&self) {
-        self.0.set_alt_mode(AltFunction::AF2);
-        self.1.set_alt_mode(AltFunction::AF2);
-    }
-}
-
-impl Pins<TIM2> for (PA0<DefaultMode>, PA1<DefaultMode>) {
-    fn setup(&self) {
-        self.0.set_alt_mode(AltFunction::AF2);
-        self.1.set_alt_mode(AltFunction::AF2);
-    }
-}
-
-impl Pins<TIM3> for (PA6<DefaultMode>, PA7<DefaultMode>) {
-    fn setup(&self) {
-        self.0.set_alt_mode(AltFunction::AF2);
-        self.1.set_alt_mode(AltFunction::AF2);
-    }
-}
+use crate::timer::*;
+use crate::timer::pins::TimerPin;
 
 pub struct Qei<TIM, PINS> {
     tim: TIM,
     pins: PINS,
 }
 
+pub trait QeiPins<TIM> {
+    fn setup(&self);
+}
+
+impl<TIM, P1, P2> QeiPins<TIM> for (P1, P2)
+where
+    P1: TimerPin<TIM, Channel = Channel1>,
+    P2: TimerPin<TIM, Channel = Channel2>,
+{
+    fn setup(&self) {
+        self.0.setup();
+        self.1.setup();
+    }
+}
+
 pub trait QeiExt<TIM, PINS>
 where
-    PINS: Pins<TIM>,
+    PINS: QeiPins<TIM>,
 {
     fn qei(self, pins: PINS, rcc: &mut Rcc) -> Qei<TIM, PINS>;
 }
@@ -45,7 +35,7 @@ where
 macro_rules! qei {
     ($($TIMX:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident, $arr:ident, $cnt:ident),)+) => {
         $(
-            impl<PINS> Qei<$TIMX, PINS> where PINS: Pins<$TIMX> {
+            impl<PINS> Qei<$TIMX, PINS> where PINS: QeiPins<$TIMX> {
                 fn $tim(tim: $TIMX, pins: PINS, rcc: &mut Rcc) -> Self {
                     pins.setup();
                     // enable and reset peripheral to a clean slate state
@@ -102,7 +92,7 @@ macro_rules! qei {
                 }
             }
 
-            impl<PINS> QeiExt<$TIMX, PINS> for $TIMX where PINS: Pins<$TIMX> {
+            impl<PINS> QeiExt<$TIMX, PINS> for $TIMX where PINS: QeiPins<$TIMX> {
                 fn qei(self, pins: PINS, rcc: &mut Rcc) -> Qei<$TIMX, PINS> {
                     Qei::$tim(self, pins, rcc)
                 }

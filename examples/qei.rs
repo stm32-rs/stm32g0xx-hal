@@ -22,7 +22,7 @@ fn main() -> ! {
     let gpioc = dp.GPIOC.split(&mut rcc);
 
     let switch = gpioc.pc5.into_pull_up_input();
-    let qei = dp.TIM2.qei((gpioa.pa0, gpioa.pa1), &mut rcc);
+    let qei = dp.TIM1.qei((gpioa.pa8, gpioa.pa9), &mut rcc);
 
     loop {
         let count = qei.count();

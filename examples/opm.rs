@@ -14,7 +14,8 @@ use hal::gpio::{Output, PushPull, SignalEdge};
 use hal::prelude::*;
 use hal::rcc;
 use hal::stm32;
-use hal::timer::opm::{Channel1, Opm};
+use hal::timer::Channel1;
+use hal::timer::opm::Opm;
 use rtfm::app;
 
 #[app(device = hal::stm32, peripherals = true)]
