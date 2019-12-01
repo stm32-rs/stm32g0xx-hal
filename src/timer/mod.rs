@@ -78,7 +78,7 @@ impl TimerExt<SYST> for SYST {
 impl Periodic for Timer<SYST> {}
 
 macro_rules! timers {
-    ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident),)+) => {
+    ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
         $(
             impl Timer<$TIM> {
                 /// Configures a TIM peripheral as a periodic count down timer
@@ -121,6 +121,16 @@ macro_rules! timers {
                 /// Releases the TIM peripheral
                 pub fn release(self) -> $TIM {
                     self.tim
+                }
+
+                /// Gets timer counter value
+                pub fn counter(&self) -> u32 {
+                    let _high = 0;
+                    $(
+                        let _high = self.tim.cnt.read().$cnt_h().bits() as u32;
+                    )*
+                    let low = self.tim.cnt.read().$cnt().bits() as u32;
+                    low | (_high << 16)
                 }
             }
 
@@ -168,17 +178,17 @@ macro_rules! timers {
 }
 
 timers! {
-    TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2),
-    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1),
-    TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1),
-    TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2),
-    TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2),
-    TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2),
+    TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2, cnt),
+    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1, cnt_l, cnt_h),
+    TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1, cnt_l, cnt_h),
+    TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2, cnt),
+    TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2, cnt),
+    TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2, cnt),
 }
 
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 timers! {
-    TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1),
-    TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1),
-    TIM15: (tim15, tim15en, tim15rst, apbenr2, apbrstr2),
+    TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1, cnt),
+    TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1, cnt),
+    TIM15: (tim15, tim15en, tim15rst, apbenr2, apbrstr2, cnt),
 }

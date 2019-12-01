@@ -19,7 +19,7 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
     let mut rcc = dp.RCC.constrain();
-    let mut delay = cp.SYST.delay(&rcc.clocks);
+    let mut delay = cp.SYST.delay(&rcc);
 
     let gpioa = dp.GPIOA.split(&mut rcc);
     let mut led = gpioa.pa5.into_push_pull_output();

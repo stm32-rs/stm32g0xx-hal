@@ -22,7 +22,7 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
 
-    let mut delay = cp.SYST.delay(&rcc.clocks);
+    let mut delay = cp.SYST.delay(&rcc);
     let mut timer = dp.TIM17.timer(&mut rcc);
     let mut stopwatch = dp.TIM2.stopwatch(&mut rcc);
 
@@ -57,7 +57,7 @@ fn main() -> ! {
 
 fn calc_something() -> u32 {
     let mut result = 0;
-    for i in 1..1_000 {
+    for i in 1..1000 {
         result = (result + i) / 3
     }
     result

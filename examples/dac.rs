@@ -19,7 +19,7 @@ fn main() -> ! {
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.constrain();
-    let mut delay = cp.SYST.delay(&rcc.clocks);
+    let mut delay = cp.SYST.delay(&rcc);
 
     let gpioa = dp.GPIOA.split(&mut rcc);
     let mut dac = dp.DAC.constrain(gpioa.pa4, &mut rcc);

@@ -1,10 +1,9 @@
 //! DAC
 use core::mem::MaybeUninit;
 
-use crate::delay::Delay;
+use hal::blocking::delay::DelayUs;
 use crate::gpio::gpioa::{PA4, PA5};
 use crate::gpio::DefaultMode;
-use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::DAC;
 
@@ -18,7 +17,7 @@ pub trait DacOut<V> {
 
 pub trait DacPin {
     fn enable(&mut self);
-    fn calibrate(&mut self, delay: &mut Delay);
+    fn calibrate<T>(&mut self, delay: &mut T) where T: DelayUs<u32>;
 }
 
 pub trait Pins<DAC> {
@@ -63,7 +62,7 @@ macro_rules! dac {
                     dac.dac_cr.modify(|_, w| w.$en().set_bit());
                 }
 
-                fn calibrate(&mut self, delay: &mut Delay) {
+                fn calibrate<T>(&mut self, delay: &mut T) where T: DelayUs<u32> {
                     let dac = unsafe { &(*DAC::ptr()) };
                     dac.dac_cr.modify(|_, w| w.$en().clear_bit());
                     dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(0) });
