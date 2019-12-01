@@ -71,13 +71,19 @@ macro_rules! opm_hal {
                     self.rb.cr1.write(|w| w.opm().set_bit().cen().set_bit());
                 }
 
-                pub fn set_pulse_width (&mut self, pulse_width: MicroSecond) {
-                    self.pulse_width = pulse_width;
+                pub fn set_pulse_width<T> (&mut self, pulse_width: T)
+                where
+                    T: Into<MicroSecond>
+                {
+                    self.pulse_width = pulse_width.into();
                     self.setup();
                 }
 
-                pub fn set_delay (&mut self, delay: MicroSecond) {
-                    self.delay = delay;
+                pub fn set_delay<T> (&mut self, delay: T)
+                where
+                    T: Into<MicroSecond>
+                {
+                    self.delay = delay.into();
                     self.setup();
                 }
 

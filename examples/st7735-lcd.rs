@@ -40,9 +40,9 @@ fn main() -> ! {
   let mut disp = st7735_lcd::ST7735::new(spi, dc, rst, false, true);
   disp.init(&mut delay).unwrap();
   disp.set_orientation(&Orientation::Landscape).unwrap();
-  let black_backdrop = Rectangle::new(Coord::new(0, 0), Coord::new(160, 128)).fill(Some(0x0000u16.into()));
+  let black_backdrop =
+    Rectangle::new(Coord::new(0, 0), Coord::new(160, 128)).fill(Some(0x0000u16.into()));
   disp.draw(black_backdrop.into_iter());
-  
   let ferris = Image16BPP::new(include_bytes!("./ferris.raw"), 86, 64);
   let mut cnt = 0;
   loop {

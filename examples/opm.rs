@@ -12,37 +12,44 @@ use hal::exti::Event;
 use hal::gpio::gpioa::PA5;
 use hal::gpio::{Output, PushPull, SignalEdge};
 use hal::prelude::*;
-use hal::rcc::{Config, SysClockSrc};
+use hal::rcc;
 use hal::stm32;
 use hal::timer::opm::{Channel1, Opm};
 use rtfm::app;
 
-#[app(device = hal::stm32)]
+#[app(device = hal::stm32, peripherals = true)]
 const APP: () = {
-    static mut EXTI: stm32::EXTI = ();
-    static mut OPM: Opm<stm32::TIM14, Channel1> = ();
-    static mut LED: PA5<Output<PushPull>> = ();
-
-    #[init]
-    fn init() {
-        let mut rcc = device.RCC.freeze(Config::new(SysClockSrc::PLL));
-
-        let gpioa = device.GPIOA.split(&mut rcc);
-        let mut opm = device.TIM14.opm(gpioa.pa4, 5.ms(), &mut rcc);
-        opm.enable();
-
-        let gpioc = device.GPIOC.split(&mut rcc);
-        gpioc.pc13.listen(SignalEdge::Falling, &mut device.EXTI);
-
-        OPM = opm;
-        LED = gpioa.pa5.into_push_pull_output();
-        EXTI = device.EXTI;
+    struct Resources {
+        exti: stm32::EXTI,
+        led: PA5<Output<PushPull>>,
+        opm: Opm<stm32::TIM14, Channel1>,
     }
 
-    #[interrupt(binds = EXTI4_15, resources = [EXTI, LED, OPM])]
-    fn on_button_click() {
-        resources.EXTI.unpend(Event::GPIO13);
-        resources.LED.toggle().unwrap();
-        resources.OPM.generate();
+    #[init]
+     fn init(ctx: init::Context) -> init::LateResources {
+        let mut rcc = ctx.device.RCC.freeze(rcc::Config::pll());
+        let mut exti = ctx.device.EXTI;
+
+        let gpioa = ctx.device.GPIOA.split(&mut rcc);
+        let gpioc = ctx.device.GPIOC.split(&mut rcc);
+
+        let led = gpioa.pa5.into_push_pull_output();
+        gpioc.pc13.listen(SignalEdge::Falling, &mut exti);
+
+        let mut opm = ctx.device.TIM14.opm(gpioa.pa4, 5.ms(), &mut rcc);
+        opm.enable();
+
+        init::LateResources {
+            opm,
+            exti,
+            led,
+        }
+    }
+
+    #[task(binds = EXTI4_15, resources = [exti, led, opm])]
+    fn button_click(ctx: button_click::Context) {
+        ctx.resources.led.toggle().unwrap();
+        ctx.resources.opm.generate();
+        ctx.resources.exti.unpend(Event::GPIO13);
     }
 };
