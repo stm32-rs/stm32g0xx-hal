@@ -1,6 +1,5 @@
 //! # Pulse Width Modulation
 use core::marker::PhantomData;
-use core::mem::MaybeUninit;
 
 use crate::rcc::Rcc;
 use crate::stm32::*;
@@ -9,40 +8,54 @@ use crate::timer::pins::TimerPin;
 use crate::timer::*;
 use hal;
 
-pub struct Pwm<TIM, CH> {
-    _ch: PhantomData<CH>,
-    _tim: PhantomData<TIM>,
+pub struct Pwm<TIM> {
+    tim: PhantomData<TIM>,
+}
+
+pub struct PwmPin<TIM, CH> {
+   tim: PhantomData<TIM>,
+   channel: PhantomData<CH>,
 }
 
 pub trait PwmExt: Sized {
-    fn pwm<PIN, T>(self, pin: PIN, freq: T, rcc: &mut Rcc) -> Pwm<Self, PIN::Channel>
+    fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
     where
-        PIN: TimerPin<Self>,
         T: Into<Hertz>;
+}
+
+impl<TIM> Pwm<TIM> {
+    pub fn bind_pin<PIN>(&self, pin: PIN) -> PwmPin<TIM, PIN::Channel>
+    where
+        PIN: TimerPin<TIM>
+    {
+        pin.setup();
+        PwmPin {
+            tim: PhantomData,
+            channel: PhantomData,
+        }
+    }
 }
 
 macro_rules! pwm {
     ($($TIMX:ident: ($apbXenr:ident, $apbXrstr:ident, $timX:ident, $timXen:ident, $timXrst:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
         $(
             impl PwmExt for $TIMX {
-                fn pwm<PIN, T>(self, pin: PIN, freq: T, rcc: &mut Rcc) -> Pwm<Self, PIN::Channel>
+                fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
                 where
-                    PIN: TimerPin<Self>,
                     T: Into<Hertz>,
                 {
-                    $timX(self, pin, freq.into(), rcc)
+                    $timX(self, freq, rcc)
                 }
             }
 
-            fn $timX<PIN>(tim: $TIMX, pin: PIN, freq: Hertz, rcc: &mut Rcc) -> Pwm<$TIMX, PIN::Channel>
+            fn $timX<T>(tim: $TIMX, freq: T, rcc: &mut Rcc) -> Pwm<$TIMX>
             where
-                PIN: TimerPin<$TIMX>,
+                T: Into<Hertz>,
             {
-                pin.setup();
                 rcc.rb.$apbXenr.modify(|_, w| w.$timXen().set_bit());
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().set_bit());
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
-                let ratio = rcc.clocks.apb_tim_clk / freq;
+                let ratio = rcc.clocks.apb_tim_clk / freq.into();
                 let psc = (ratio - 1) / 0xffff;
                 let arr = ratio / (psc + 1);
                 tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
@@ -51,7 +64,9 @@ macro_rules! pwm {
                     tim.arr.modify(|_, w| unsafe { w.$arr_h().bits((arr >> 16) as u16) });
                 )*
                 tim.cr1.write(|w| w.cen().set_bit());
-                unsafe { MaybeUninit::uninit().assume_init() }
+                Pwm {
+                    tim: PhantomData
+                }
             }
         )+
     }
@@ -62,7 +77,7 @@ macro_rules! pwm_hal {
         ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident),)+
     ) => {
         $(
-            impl hal::PwmPin for Pwm<$TIMX, $CH> {
+            impl hal::PwmPin for PwmPin<$TIMX, $CH> {
                 type Duty = u32;
 
                 fn disable(&mut self) {
@@ -98,7 +113,7 @@ macro_rules! pwm_hal {
         ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident $(,$moe:ident)*),)+
     ) => {
         $(
-            impl hal::PwmPin for Pwm<$TIMX, $CH> {
+            impl hal::PwmPin for PwmPin<$TIMX, $CH> {
                 type Duty = u16;
 
                 fn disable(&mut self) {

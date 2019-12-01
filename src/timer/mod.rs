@@ -83,20 +83,6 @@ impl TimerExt<SYST> for SYST {
 
 impl Periodic for Timer<SYST> {}
 
-// pub trait ExternalClockTimer<TIM> {
-//     fn ext_clk<S>(self, clk_src: S, edge: SignalEdge);
-// }
-
-// impl ExternalClockTimer<TIM1> for Timer<TIM1> {
-//     fn ext_clk<S>(self, clk_src: S, edge: SignalEdge) {
-//         self.tim.smcr.write(|w| unsafe { w.sms().bits(0b111) });
-//         self.tim
-//             .ccmr1_output()
-//             .write(|w| unsafe { w.cc1s().bits(0b01).cc2s().bits(0b01) });
-//         self.tim.tisel.modify(|_, w| w.cen().set_bit());
-//     }
-// }
-
 macro_rules! timers {
     ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
         $(
