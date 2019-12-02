@@ -1,4 +1,4 @@
-/// TCS3210 programmable color light-to-frequency converter example
+// TCS3210 programmable color light-to-frequency converter example
 #![no_std]
 #![no_main]
 #![deny(warnings)]
@@ -54,10 +54,11 @@ const APP: () = {
         channel: ColorChannel,
         exti: stm32::EXTI,
         s2: PA9<Output<PushPull>>,
-        s3: PA8<Output<PushPull>>,
+        s3: PA7<Output<PushPull>>,
         led: PA5<Output<PushPull>>,
         uart: Serial<stm32::USART2>,
-        timer: Timer<stm32::TIM17>,
+        timer: Timer<stm32::TIM16>,
+        log_timer: Timer<stm32::TIM17>,
     }
 
     #[init]
@@ -72,12 +73,21 @@ const APP: () = {
         gpioc.pc13.listen(SignalEdge::Falling, &mut exti);
 
         let led = gpioa.pa5.into_push_pull_output();
+        let mut s0 = gpioa.pa4.into_push_pull_output();
+        let mut s1 = gpioa.pa0.into_push_pull_output();
         let s2 = gpioa.pa9.into_push_pull_output();
-        let s3 = gpioa.pa8.into_push_pull_output();
+        let s3 = gpioa.pa7.into_push_pull_output();
 
-        let mut timer = ctx.device.TIM17.timer(&mut rcc);
-        timer.start(4.hz());
+        s0.set_high().unwrap();
+        s1.set_low().unwrap();
+
+        let mut timer = ctx.device.TIM16.timer(&mut rcc);
+        timer.start(8.hz());
         timer.listen();
+
+        let mut log_timer = ctx.device.TIM17.timer(&mut rcc);
+        log_timer.start(2.hz());
+        log_timer.listen();
 
         let uart = ctx
             .device
@@ -90,6 +100,7 @@ const APP: () = {
             exti,
             led,
             timer,
+            log_timer,
             s2,
             s3,
             counter: 0,
@@ -109,45 +120,50 @@ const APP: () = {
         ctx.resources.exti.unpend(Event::GPIO13);
     }
 
-    #[task(binds = TIM17, resources = [led, timer, uart, counter, channel, color, s2, s3])]
+    #[task(binds = TIM16, resources = [led, timer, counter, channel, color, s2, s3])]
     fn timer_tick(ctx: timer_tick::Context) {
         match *ctx.resources.channel {
             ColorChannel::R => {
                 ctx.resources.color.r = *ctx.resources.counter;
-                *ctx.resources.channel = ColorChannel::G;
                 ctx.resources.s2.set_high().unwrap();
                 ctx.resources.s3.set_high().unwrap();
+                *ctx.resources.channel = ColorChannel::G;
             }
             ColorChannel::G => {
                 ctx.resources.color.g = *ctx.resources.counter;
-                *ctx.resources.channel = ColorChannel::B;
                 ctx.resources.s2.set_low().unwrap();
                 ctx.resources.s3.set_high().unwrap();
+                *ctx.resources.channel = ColorChannel::B;
             }
             ColorChannel::B => {
                 ctx.resources.color.b = *ctx.resources.counter;
-                *ctx.resources.channel = ColorChannel::A;
                 ctx.resources.s2.set_high().unwrap();
                 ctx.resources.s3.set_low().unwrap();
+                *ctx.resources.channel = ColorChannel::A;
             }
             ColorChannel::A => {
                 ctx.resources.color.a = *ctx.resources.counter;
-                *ctx.resources.channel = ColorChannel::R;
                 ctx.resources.s2.set_low().unwrap();
                 ctx.resources.s3.set_low().unwrap();
-                writeln!(
-                    ctx.resources.uart,
-                    "{}:{}:{}:{}\r",
-                    ctx.resources.color.r,
-                    ctx.resources.color.g,
-                    ctx.resources.color.b,
-                    ctx.resources.color.a
-                )
-                .unwrap();
+                *ctx.resources.channel = ColorChannel::R;
             }
         }
         *ctx.resources.counter = 0;
         ctx.resources.led.toggle().unwrap();
         ctx.resources.timer.clear_irq();
+    }
+
+    #[task(binds = TIM17, resources = [log_timer, uart, color])]
+    fn log_timer_tick(ctx: log_timer_tick::Context) {
+        writeln!(
+            ctx.resources.uart,
+            "RGBA: {}, {}, {}, {}\r",
+            ctx.resources.color.r,
+            ctx.resources.color.g,
+            ctx.resources.color.b,
+            ctx.resources.color.a
+        )
+        .unwrap();
+        ctx.resources.log_timer.clear_irq();
     }
 };
