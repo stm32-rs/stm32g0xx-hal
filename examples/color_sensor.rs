@@ -82,11 +82,11 @@ const APP: () = {
         s1.set_low().unwrap();
 
         let mut timer = ctx.device.TIM16.timer(&mut rcc);
-        timer.start(8.hz());
+        timer.start(16.hz());
         timer.listen();
 
         let mut log_timer = ctx.device.TIM17.timer(&mut rcc);
-        log_timer.start(2.hz());
+        log_timer.start(4.hz());
         log_timer.listen();
 
         let uart = ctx
