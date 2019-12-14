@@ -246,7 +246,5 @@ dma! {
         Channel3: ( ccr3, cndtr3, cpar3, cmar3, cgif8 ),
         Channel4: ( ccr4, cndtr4, cpar4, cmar4, cgif12 ),
         Channel5: ( ccr5, cndtr5, cpar5, cmar5, cgif16 ),
-        Channel6: ( ccr6, cndtr6, cpar6, cmar6, cgif20 ),
-        Channel7: ( ccr7, cndtr7, cpar7, cmar7, cgif24 ),
     }),
 }

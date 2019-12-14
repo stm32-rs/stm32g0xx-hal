@@ -79,20 +79,22 @@ const APP: () = {
         let s3 = gpioa.pa7.into_push_pull_output();
 
         s0.set_high().unwrap();
-        s1.set_low().unwrap();
+        s1.set_high().unwrap();
 
         let mut timer = ctx.device.TIM16.timer(&mut rcc);
-        timer.start(16.hz());
+        timer.start(32.hz());
         timer.listen();
 
         let mut log_timer = ctx.device.TIM17.timer(&mut rcc);
-        log_timer.start(4.hz());
+        log_timer.start(8.hz());
         log_timer.listen();
 
+        let tx = gpioa.pa2;
+        let rx = gpioa.pa3;
         let uart = ctx
             .device
             .USART2
-            .usart(gpioa.pa2, gpioa.pa3, serial::Config::default(), &mut rcc)
+            .usart(tx, rx, serial::Config::default(), &mut rcc)
             .unwrap();
 
         init::LateResources {
