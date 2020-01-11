@@ -55,6 +55,16 @@ impl Default for Clocks {
     }
 }
 
+/// Reset pin mode and remap
+pub enum ResetMode {
+    /// Reset Input only: a low level on the NRST pin generates system reset, internal RESET not propagated to the NSRT pin
+    ResetInput = 0b01,
+    /// GPIO: standard GPIO pad functionality, only internal RESET possible
+    GPIO = 0b10,
+    /// Bidirectional reset: NRST pin configured in reset input/output mode (legacy mode)
+    Bidirectional = 0b11,
+}
+
 /// Constrained RCC peripheral
 pub struct Rcc {
     /// Clock configuration
@@ -161,6 +171,24 @@ impl Rcc {
                 apb_clk: apb_freq.hz(),
                 apb_tim_clk: apb_tim_freq.hz(),
             },
+        }
+    }
+
+    pub fn set_reset_mode(&mut self, mode: ResetMode) {
+        unsafe {
+            let flash = &(*FLASH::ptr());
+
+            // Unlock flash
+            flash.keyr.write(|w| w.keyr().bits(0x45670123));
+            flash.keyr.write(|w| w.keyr().bits(0xcdef89ab));
+
+            // Unlock flash OTP
+            flash.optkeyr.write(|w| w.optkeyr().bits(0x08192a3b));
+            flash.optkeyr.write(|w| w.optkeyr().bits(0x4c5d6e7f));
+            flash.cr.modify(|_, w| w.optlock().clear_bit());
+
+            flash.optr.modify(|_, w| w.nrst_mode().bits(mode as u8));
+            flash.cr.modify(|_, w| w.optstrt().set_bit());
         }
     }
 

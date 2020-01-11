@@ -4,7 +4,6 @@ use cortex_m::peripheral::SYST;
 use hal::timer::{CountDown, Periodic};
 use nb;
 use void::Void;
-
 use crate::rcc::Rcc;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
@@ -45,6 +44,10 @@ impl Timer<SYST> {
     /// Stops listening
     pub fn unlisten(&mut self) {
         self.tim.disable_interrupt()
+    }
+
+    pub fn get_current(&self) -> u32 {
+        SYST::get_current()
     }
 }
 
@@ -130,7 +133,7 @@ macro_rules! timers {
                 }
 
                 /// Gets timer counter current value
-                pub fn counter(&self) -> u32 {
+                pub fn get_current(&self) -> u32 {
                     let _high = 0;
                     $(
                         let _high = self.tim.cnt.read().$cnt_h().bits() as u32;
