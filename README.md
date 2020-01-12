@@ -19,7 +19,7 @@ If you are compiling the crate on its own for development or running examples,
 specify your microcontroller on the command line. For example:
 
 ```
-cargo build --example blinky
+cargo build --example blinky --features stm32g07x
 ```
 
 ### Using as a Dependency
