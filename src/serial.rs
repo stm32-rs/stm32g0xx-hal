@@ -146,8 +146,8 @@ pub struct DmaTx<USART, CHANNEL> {
 
 /// Serial abstraction
 pub struct Serial<USART> {
-    _tx: Tx<USART>,
-    _rx: Rx<USART>,
+    tx: Tx<USART>,
+    rx: Rx<USART>,
 }
 
 pub trait SerialExt<USART> {
@@ -176,6 +176,16 @@ pub trait RxPin<USART> {
 impl<USART> fmt::Write for Serial<USART>
 where
     Serial<USART>: hal::serial::Write<u8>,
+{
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();
+        Ok(())
+    }
+}
+
+impl<USART> fmt::Write for Tx<USART>
+where
+    Tx<USART>: hal::serial::Write<u8>,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();
@@ -273,8 +283,8 @@ macro_rules! uart {
                     })
                 });
                 Ok(Serial {
-                    _tx: Tx { _usart: PhantomData },
-                    _rx: Rx { _usart: PhantomData },
+                    tx: Tx { _usart: PhantomData },
+                    rx: Rx { _usart: PhantomData },
                 })
             }
 
@@ -303,7 +313,7 @@ macro_rules! uart {
             /// Separates the serial struct into separate channel objects for sending (Tx) and
             /// receiving (Rx)
             pub fn split(self) -> (Tx<$USARTX>, Rx<$USARTX>) {
-                (self._tx, self._rx)
+                (self.tx, self.rx)
             }
         }
 
@@ -424,11 +434,11 @@ macro_rules! uart {
             type Error = Error;
 
             fn read(&mut self) -> nb::Result<u8, Error> {
-                self._tx.read()
+                self.tx.read()
             }
         }
 
-        impl hal::serial::Write<u8> for Rx<$USARTX> {
+        impl hal::serial::Write<u8> for Tx<$USARTX> {
             type Error = Error;
 
             fn flush(&mut self) -> nb::Result<(), Self::Error> {
@@ -455,11 +465,11 @@ macro_rules! uart {
             type Error = Error;
 
             fn flush(&mut self) -> nb::Result<(), Self::Error> {
-                self._rx.flush()
+                self.tx.flush()
             }
 
             fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
-                self._rx.write(byte)
+                self.tx.write(byte)
             }
         }
     }
