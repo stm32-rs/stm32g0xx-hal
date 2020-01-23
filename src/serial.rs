@@ -332,6 +332,18 @@ macro_rules! uart {
                     _usart: PhantomData,
                 }
             }
+
+            /// Starts listening for an interrupt event
+            pub fn listen(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1.modify(|_, w| w.txeie().set_bit());
+            }
+
+            /// Stop listening for an interrupt event
+            pub fn unlisten(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1.modify(|_, w| w.txeie().clear_bit());
+            }
         }
 
         impl Rx<$USARTX> {
@@ -348,6 +360,18 @@ macro_rules! uart {
                     channel,
                     _usart: PhantomData,
                 }
+            }
+
+            /// Starts listening for an interrupt event
+            pub fn listen(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1.modify(|_, w| w.rxneie().set_bit());
+            }
+
+            /// Stop listening for an interrupt event
+            pub fn unlisten(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1.modify(|_, w| w.rxneie().clear_bit());
             }
         }
 
@@ -402,7 +426,7 @@ macro_rules! uart {
             }
         }
 
-        impl hal::serial::Read<u8> for Tx<$USARTX> {
+        impl hal::serial::Read<u8> for Rx<$USARTX> {
             type Error = Error;
 
             fn read(&mut self) -> nb::Result<u8, Error> {
@@ -434,7 +458,7 @@ macro_rules! uart {
             type Error = Error;
 
             fn read(&mut self) -> nb::Result<u8, Error> {
-                self.tx.read()
+                self.rx.read()
             }
         }
 

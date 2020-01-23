@@ -179,12 +179,12 @@ impl Rcc {
             let flash = &(*FLASH::ptr());
 
             // Unlock flash
-            flash.keyr.write(|w| w.keyr().bits(0x45670123));
-            flash.keyr.write(|w| w.keyr().bits(0xcdef89ab));
+            flash.keyr.write(|w| w.keyr().bits(0x4567_0123));
+            flash.keyr.write(|w| w.keyr().bits(0xcdef_89ab));
 
             // Unlock flash OTP
-            flash.optkeyr.write(|w| w.optkeyr().bits(0x08192a3b));
-            flash.optkeyr.write(|w| w.optkeyr().bits(0x4c5d6e7f));
+            flash.optkeyr.write(|w| w.optkeyr().bits(0x0819_2a3b));
+            flash.optkeyr.write(|w| w.optkeyr().bits(0x4c5d_6e7f));
             flash.cr.modify(|_, w| w.optlock().clear_bit());
 
             flash.optr.modify(|_, w| w.nrst_mode().bits(mode as u8));
