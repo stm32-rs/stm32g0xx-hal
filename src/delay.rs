@@ -15,7 +15,7 @@ pub struct Delay<TIM> {
 }
 
 pub trait DelayExt<TIM> {
-    fn delay(self, rcc: &Rcc) -> Delay<TIM>;
+    fn delay(self, rcc: &mut Rcc) -> Delay<TIM>;
 }
 
 impl Delay<SYST> {
@@ -86,7 +86,7 @@ impl DelayMs<u8> for Delay<SYST> {
 }
 
 impl DelayExt<SYST> for SYST {
-    fn delay(self, rcc: &Rcc) -> Delay<SYST> {
+    fn delay(self, rcc: &mut Rcc) -> Delay<SYST> {
         Delay::syst(self, rcc)
     }
 }
@@ -96,7 +96,7 @@ macro_rules! delays {
         $(
             impl Delay<$TIM> {
                 /// Configures $TIM timer as a delay provider
-                pub fn $tim(tim: $TIM, rcc: &Rcc) -> Self {
+                pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
                     rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
                     rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
                     rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().clear_bit());
@@ -165,7 +165,7 @@ macro_rules! delays {
             }
 
             impl DelayExt<$TIM> for $TIM {
-                fn delay(self, rcc: &Rcc) -> Delay<$TIM> {
+                fn delay(self, rcc: &mut Rcc) -> Delay<$TIM> {
                     Delay::$tim(self, rcc)
                 }
             }

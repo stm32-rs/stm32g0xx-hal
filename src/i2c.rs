@@ -236,9 +236,32 @@ macro_rules! i2c {
                 bytes: &[u8],
                 buffer: &mut [u8],
             ) -> Result<(), Self::Error> {
-                self.write(addr, bytes)?;
-                self.read(addr, buffer)?;
+                assert!(bytes.len() < 256 && bytes.len() > 0);
 
+                self.i2c.cr2.modify(|_, w| unsafe {
+                    w.start()
+                        .set_bit()
+                        .nbytes()
+                        .bits(bytes.len() as u8)
+                        .sadd()
+                        .bits((addr << 1) as u16)
+                        .rd_wrn()
+                        .clear_bit()
+                        .autoend()
+                        .set_bit()
+                });
+
+                busy_wait!(self.i2c, busy);
+
+                // Send bytes
+                for byte in bytes {
+                    // Wait until we're ready for sending
+                    busy_wait!(self.i2c, txe);
+
+                    // Push out a byte of data
+                    self.i2c.txdr.write(|w| unsafe { w.txdata().bits(*byte) });
+                }
+                self.read(addr, buffer)?;
                 Ok(())
             }
         }
