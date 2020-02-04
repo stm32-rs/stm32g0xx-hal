@@ -220,11 +220,6 @@ macro_rules! i2c {
             pub fn release(self) -> ($I2CX, SDA, SCL) {
                 (self.i2c, self.sda, self.scl)
             }
-
-            fn recv_byte(&self) -> Result<u8, Error> {
-                busy_wait!(self.i2c, rxne);
-                Ok(self.i2c.rxdr.read().rxdata().bits())
-            }
         }
 
         impl<SDA, SCL> WriteRead for I2c<$I2CX, SDA, SCL> {
@@ -237,30 +232,7 @@ macro_rules! i2c {
                 buffer: &mut [u8],
             ) -> Result<(), Self::Error> {
                 assert!(bytes.len() < 256 && bytes.len() > 0);
-
-                self.i2c.cr2.modify(|_, w| unsafe {
-                    w.start()
-                        .set_bit()
-                        .nbytes()
-                        .bits(bytes.len() as u8)
-                        .sadd()
-                        .bits((addr << 1) as u16)
-                        .rd_wrn()
-                        .clear_bit()
-                        .autoend()
-                        .set_bit()
-                });
-
-                busy_wait!(self.i2c, busy);
-
-                // Send bytes
-                for byte in bytes {
-                    // Wait until we're ready for sending
-                    busy_wait!(self.i2c, txe);
-
-                    // Push out a byte of data
-                    self.i2c.txdr.write(|w| unsafe { w.txdata().bits(*byte) });
-                }
+                self.write(addr, bytes)?;
                 self.read(addr, buffer)?;
                 Ok(())
             }
@@ -284,13 +256,12 @@ macro_rules! i2c {
                         .autoend()
                         .set_bit()
                 });
-
                 busy_wait!(self.i2c, busy);
 
                 // Send bytes
                 for byte in bytes {
-                    // Wait until we're ready for sending or until stop condition
-                    busy_wait!(self.i2c, txe, stopf);
+                    // Wait until we're ready for sending
+                    busy_wait!(self.i2c, txe, txis);
 
                     // Push out a byte of data
                     self.i2c.txdr.write(|w| unsafe { w.txdata().bits(*byte) });
@@ -298,7 +269,6 @@ macro_rules! i2c {
 
                 // Wait until stop condition
                 busy_wait!(self.i2c, stopf);
-
                 Ok(())
             }
         }
@@ -321,13 +291,13 @@ macro_rules! i2c {
                         .autoend()
                         .set_bit()
                 });
-
                 // Wait until address was sent
                 busy_wait!(self.i2c, busy);
 
                 // Receive bytes into buffer
                 for c in bytes {
-                    *c = self.recv_byte()?;
+                    busy_wait!(self.i2c, rxne);
+                    *c = self.i2c.rxdr.read().rxdata().bits();
                 }
                 Ok(())
             }
