@@ -6,7 +6,6 @@ use crate::stm32::*;
 use crate::time::Hertz;
 use crate::timer::pins::TimerPin;
 use crate::timer::*;
-use hal;
 
 pub struct Pwm<TIM> {
     tim: PhantomData<TIM>,

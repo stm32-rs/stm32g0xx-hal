@@ -12,7 +12,6 @@ use crate::rcc::Rcc;
 use crate::stm32::*;
 use crate::time::Bps;
 use as_slice::{AsMutSlice, AsSlice};
-use hal;
 use nb::block;
 
 /// Serial error

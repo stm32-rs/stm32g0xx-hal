@@ -2,7 +2,6 @@
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::SYST;
 use hal::timer::{CountDown, Periodic};
-use nb;
 use void::Void;
 use crate::rcc::Rcc;
 use crate::stm32::*;

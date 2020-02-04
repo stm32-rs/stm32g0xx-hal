@@ -3,9 +3,6 @@ use crate::rcc::Rcc;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
 use core::ptr;
-use hal;
-use nb;
-
 pub use hal::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
 
 /// SPI error
