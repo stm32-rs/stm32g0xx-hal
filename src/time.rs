@@ -217,35 +217,16 @@ impl Add for MicroSecond {
     }
 }
 
-impl Into<MicroSecond> for Hertz {
-    fn into(self) -> MicroSecond {
-        assert!(self.0 <= 1_000_000);
-        MicroSecond(1_000_000 / self.0)
+impl From<Hertz> for MicroSecond {
+    fn from(freq: Hertz) -> MicroSecond {
+        assert!(freq.0 <= 1_000_000);
+        MicroSecond(1_000_000 / freq.0)
     }
 }
 
-impl Into<Hertz> for MicroSecond {
-    fn into(self) -> Hertz {
-        let period = self.0;
-        assert!(period > 0 && period <= 1_000_000);
-        Hertz(1_000_000 / period)
-    }
-}
-
-impl Into<MicroSecond> for Second {
-    fn into(self) -> MicroSecond {
-        MicroSecond(self.0 * 1000)
-    }
-}
-
-impl Into<Second> for Minute {
-    fn into(self) -> Second {
-        Second(self.0 * 60)
-    }
-}
-
-impl Into<Second> for Hour {
-    fn into(self) -> Second {
-        Second(self.0 * 3600)
+impl From<MicroSecond> for Hertz {
+    fn from(period: MicroSecond) -> Hertz {
+        assert!(period.0 > 0 && period.0 <= 1_000_000);
+        Hertz(1_000_000 / period.0)
     }
 }
