@@ -136,6 +136,6 @@ fn bcd2_encode(word: u32) -> (u8, u8) {
 
 fn bcd2_decode(fst: u8, snd: u8) -> u32 {
     let value = snd | fst << 4;
-    let value = (value & 0x0F) + ((value & 0xF0) >> 0x4) * 10;
+    let value = (value & 0x0F) + ((value & 0xF0) >> 4) * 10;
     value as u32
 }
