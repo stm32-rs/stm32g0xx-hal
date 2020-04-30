@@ -42,7 +42,6 @@ smart-leds = {git = "https://github.com/smart-leds-rs/smart-leds"}
 ws2812-spi = {git = "https://github.com/smart-leds-rs/ws2812-spi-rs"}
 
 [features]
-default = ["rt", "stm32g07x"]
 rt = ["stm32g0/rt"]
 stm32g07x = ["stm32g0/stm32g07x"]
 stm32g030 = ["stm32g0/stm32g030"]
