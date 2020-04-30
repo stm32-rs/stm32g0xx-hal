@@ -107,6 +107,23 @@ pub trait I2cExt<I2C> {
 }
 
 macro_rules! busy_wait {
+    ($i2c:expr) => {
+        loop {
+            let isr = $i2c.isr.read();
+            if isr.berr().bit_is_set() {
+                $i2c.icr.write(|w| w.berrcf().set_bit());
+                return Err(Error::BusError);
+            } else if isr.arlo().bit_is_set() {
+                $i2c.icr.write(|w| w.arlocf().set_bit());
+                return Err(Error::ArbitrationLost);
+            } else if isr.nackf().bit_is_set() {
+                $i2c.icr.write(|w| w.nackcf().set_bit());
+                return Err(Error::Nack);
+            } else if isr.busy().bit_is_clear() {
+                break;
+            }
+        }
+    };
     ($i2c:expr, $flag:ident) => {
         loop {
             let isr = $i2c.isr.read();
@@ -291,8 +308,9 @@ macro_rules! i2c {
                         .autoend()
                         .set_bit()
                 });
+
                 // Wait until address was sent
-                busy_wait!(self.i2c, busy);
+                busy_wait!(self.i2c);
 
                 // Receive bytes into buffer
                 for c in bytes {
