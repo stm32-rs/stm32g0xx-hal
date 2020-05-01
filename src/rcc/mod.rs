@@ -193,11 +193,12 @@ impl Rcc {
     }
 
     pub fn enable_low_power_mode(&self) {
+        assert!(self.clocks.sys_clk.0 <= 2_000_000);
         self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
         let pwr = unsafe { &(*PWR::ptr()) };
         pwr.cr1.modify(|_, w| w.lpr().set_bit());
     }
-    
+
     pub fn disable_low_power_mode(&self) {
         self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
         let pwr = unsafe { &(*PWR::ptr()) };
