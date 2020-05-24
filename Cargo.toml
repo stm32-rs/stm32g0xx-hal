@@ -11,6 +11,10 @@ readme = "README.md"
 repository = "https://github.com/stm32-rs/stm32g0xx-hal"
 version = "0.0.7"
 
+[package.metadata.docs.rs]
+features = ["stm32g07x", "rt"]
+default-target = "thumbv6m-none-eabi"
+
 [dependencies]
 cortex-m = "0.6.1"
 nb = "0.1.1"
@@ -43,7 +47,6 @@ smart-leds = {git = "https://github.com/smart-leds-rs/smart-leds"}
 ws2812-spi = {git = "https://github.com/smart-leds-rs/ws2812-spi-rs"}
 
 [features]
-default = ["rt", "stm32g07x"]
 rt = ["stm32g0/rt"]
 stm32g07x = ["stm32g0/stm32g07x"]
 stm32g030 = ["stm32g0/stm32g030"]
