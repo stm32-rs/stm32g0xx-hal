@@ -41,8 +41,8 @@ pub use stm32g0::stm32g081 as stm32;
 pub use crate::stm32::interrupt;
 
 pub mod analog;
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
-pub mod comparator;
+// #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+// pub mod comparator;
 pub mod crc;
 pub mod delay;
 pub mod dma;
