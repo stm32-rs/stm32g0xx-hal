@@ -1,39 +1,53 @@
 //! DAC
+
+use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 
-use hal::blocking::delay::DelayUs;
 use crate::gpio::gpioa::{PA4, PA5};
 use crate::gpio::DefaultMode;
 use crate::rcc::Rcc;
 use crate::stm32::DAC;
-
-pub struct Channel1;
-pub struct Channel2;
+use hal::blocking::delay::DelayUs;
 
 pub trait DacOut<V> {
     fn set_value(&mut self, val: V);
     fn get_value(&mut self) -> V;
 }
 
-pub trait DacPin {
-    fn enable(&mut self);
-    fn calibrate<T>(&mut self, delay: &mut T) where T: DelayUs<u32>;
+/// Enabled DAC (type state)
+pub struct Enabled;
+/// Enabled DAC without output buffer (type state)
+pub struct EnabledUnbuffered;
+/// Disabled DAC (type state)
+pub struct Disabled;
+
+pub trait ED {}
+impl ED for Enabled {}
+impl ED for EnabledUnbuffered {}
+impl ED for Disabled {}
+
+pub struct Channel1<ED> {
+    _enabled: PhantomData<ED>,
+}
+pub struct Channel2<ED> {
+    _enabled: PhantomData<ED>,
 }
 
+/// Trait for GPIO pins that can be converted to DAC output pins
 pub trait Pins<DAC> {
     type Output;
 }
 
 impl Pins<DAC> for PA4<DefaultMode> {
-    type Output = Channel1;
+    type Output = Channel1<Disabled>;
 }
 
 impl Pins<DAC> for PA5<DefaultMode> {
-    type Output = Channel2;
+    type Output = Channel2<Disabled>;
 }
 
 impl Pins<DAC> for (PA4<DefaultMode>, PA5<DefaultMode>) {
-    type Output = (Channel1, Channel2);
+    type Output = (Channel1<Disabled>, Channel2<Disabled>);
 }
 
 pub fn dac<PINS>(_dac: DAC, _pins: PINS, rcc: &mut Rcc) -> PINS::Output
@@ -56,13 +70,46 @@ where
 macro_rules! dac {
     ($($CX:ident: ($en:ident, $cen:ident, $cal_flag:ident, $trim:ident, $mode:ident, $dhrx:ident, $dac_dor:ident, $daccxdhr:ident),)+) => {
         $(
-            impl DacPin for $CX {
-                fn enable(&mut self) {
+            impl $CX<Disabled> {
+                pub fn enable(self) -> $CX<Enabled> {
                     let dac = unsafe { &(*DAC::ptr()) };
+
+                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(0) });
                     dac.dac_cr.modify(|_, w| w.$en().set_bit());
+
+                    $CX {
+                        _enabled: PhantomData,
+                    }
                 }
 
-                fn calibrate<T>(&mut self, delay: &mut T) where T: DelayUs<u32> {
+                pub fn enable_unbuffered(self) -> $CX<EnabledUnbuffered> {
+                    let dac = unsafe { &(*DAC::ptr()) };
+
+                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(2) });
+                    dac.dac_cr.modify(|_, w| w.$en().set_bit());
+
+                    $CX {
+                        _enabled: PhantomData,
+                    }
+                }
+            }
+
+            impl<ED> $CX<ED> {
+                /// Calibrate the DAC output buffer by performing a "User
+                /// trimming" operation. It is useful when the VDDA/VREF+
+                /// voltage or temperature differ from the factory trimming
+                /// conditions.
+                ///
+                /// The calibration is only valid when the DAC channel is
+                /// operating with the buffer enabled. If applied in other
+                /// modes it has no effect.
+                ///
+                /// After the calibration operation, the DAC channel is
+                /// disabled.
+                pub fn calibrate_buffer<T>(self, delay: &mut T) -> $CX<Disabled>
+                where
+                    T: DelayUs<u32>,
+                {
                     let dac = unsafe { &(*DAC::ptr()) };
                     dac.dac_cr.modify(|_, w| w.$en().clear_bit());
                     dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(0) });
@@ -77,10 +124,26 @@ macro_rules! dac {
                         trim += 1;
                     }
                     dac.dac_cr.modify(|_, w| w.$cen().clear_bit());
+
+                    $CX {
+                        _enabled: PhantomData,
+                    }
+                }
+
+                /// Disable the DAC channel
+                pub fn disable(self) -> $CX<Disabled> {
+                    let dac = unsafe { &(*DAC::ptr()) };
+                    dac.dac_cr.modify(|_, w| w.$en().clear_bit());
+
+                    $CX {
+                        _enabled: PhantomData,
+                    }
                 }
             }
 
-            impl DacOut<u16> for $CX {
+            /// DacOut implementation available in any Enabled/Disabled
+            /// state
+            impl<ED> DacOut<u16> for $CX<ED> {
                 fn set_value(&mut self, val: u16) {
                     let dac = unsafe { &(*DAC::ptr()) };
                     dac.$dhrx.write(|w| unsafe { w.bits(val as u32) });

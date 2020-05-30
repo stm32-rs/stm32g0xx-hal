@@ -9,8 +9,6 @@ pub use crate::analog::adc::AdcExt as _;
 pub use crate::analog::dac::DacExt as _;
 #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 pub use crate::analog::dac::DacOut as _;
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
-pub use crate::analog::dac::DacPin as _;
 // #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
 // pub use crate::comparator::ComparatorExt as _;
 pub use crate::crc::CrcExt as _;
