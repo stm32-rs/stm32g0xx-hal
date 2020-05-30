@@ -19,13 +19,12 @@ fn main() -> ! {
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.constrain();
-    let mut delay = cp.SYST.delay(&rcc);
+    let mut delay = cp.SYST.delay(&mut rcc);
 
     let gpioa = dp.GPIOA.split(&mut rcc);
-    let mut dac = dp.DAC.constrain(gpioa.pa4, &mut rcc);
+    let dac = dp.DAC.constrain(gpioa.pa4, &mut rcc);
 
-    dac.calibrate(&mut delay);
-    dac.enable();
+    let mut dac = dac.calibrate_buffer(&mut delay).enable();
 
     let mut dir = Direction::Upcounting;
     let mut val = 0;
