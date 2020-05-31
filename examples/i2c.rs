@@ -26,11 +26,11 @@ fn main() -> ! {
 
     let mut i2c = dp
         .I2C1
-        .i2c(sda, scl, Config::with_timing(0x2020151b), &mut rcc);
+        .i2c(sda, scl, Config::with_timing(0x2020_151b), &mut rcc);
 
-    let mut buf: [u8; 1] = [0];
+    let buf: [u8; 1] = [0];
     loop {
-        match i2c.write(0x3c, &mut buf) {
+        match i2c.write(0x3c, &buf) {
             Ok(_) => hprintln!("ok").unwrap(),
             Err(err) => hprintln!("error: {:?}", err).unwrap(),
         }

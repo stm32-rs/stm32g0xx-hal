@@ -27,7 +27,7 @@ fn main() -> ! {
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.freeze(rcc::Config::pll());
-    let mut _delay = cp.SYST.delay(&rcc);
+    let mut _delay = cp.SYST.delay(&mut rcc);
     let gpioa = dp.GPIOA.split(&mut rcc);
     let gpiob = dp.GPIOB.split(&mut rcc);
 

@@ -2,8 +2,8 @@
 use crate::hal::{self, Direction};
 use crate::rcc::Rcc;
 use crate::stm32::{TIM1, TIM2, TIM3};
-use crate::timer::*;
 use crate::timer::pins::TimerPin;
+use crate::timer::*;
 
 pub struct Qei<TIM, PINS> {
     tim: TIM,

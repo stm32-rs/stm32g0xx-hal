@@ -1,11 +1,11 @@
 //! # One-pulse Mode
-use core::marker::PhantomData;
 use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
-use crate::timer::*;
 use crate::timer::pins::TimerPin;
+use crate::timer::*;
+use core::marker::PhantomData;
 
 pub trait OpmExt: Sized {
     fn opm<PIN>(self, _: PIN, pulse_width: MicroSecond, rcc: &mut Rcc) -> Opm<Self, PIN::Channel>
@@ -26,7 +26,7 @@ macro_rules! opm {
         $(
             impl OpmExt for $TIMX {
                 fn opm<PIN>(self, pin: PIN, pulse_width: MicroSecond, rcc: &mut Rcc) -> Opm<Self, PIN::Channel>
-                where 
+                where
                     PIN: TimerPin<Self>
                 {
                     $timX(self, pin, pulse_width, rcc)

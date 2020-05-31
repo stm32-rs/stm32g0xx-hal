@@ -22,7 +22,7 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
 
-    let mut delay = cp.SYST.delay(&rcc);
+    let mut delay = cp.SYST.delay(&mut rcc);
     let mut timer = dp.TIM17.timer(&mut rcc);
     let mut stopwatch = dp.TIM2.stopwatch(&mut rcc);
 

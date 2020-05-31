@@ -18,7 +18,7 @@ fn main() -> ! {
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.constrain();
-    let mut delay = cp.SYST.delay(&rcc);
+    let mut delay = cp.SYST.delay(&mut rcc);
 
     let gpioc = dp.GPIOC.split(&mut rcc);
     let button = gpioc.pc13.into_pull_up_input();

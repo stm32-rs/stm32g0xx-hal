@@ -1,17 +1,17 @@
 //! Timers
+use crate::rcc::Rcc;
+use crate::stm32::*;
+use crate::time::{Hertz, MicroSecond};
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::SYST;
 use hal::timer::{CountDown, Periodic};
 use void::Void;
-use crate::rcc::Rcc;
-use crate::stm32::*;
-use crate::time::{Hertz, MicroSecond};
 
 pub mod opm;
+pub mod pins;
 pub mod pwm;
 pub mod qei;
 pub mod stopwatch;
-pub mod pins;
 
 /// Hardware timers
 pub struct Timer<TIM> {

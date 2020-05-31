@@ -29,7 +29,7 @@ fn main() -> ! {
         hprintln!(
             "crc32: 0x{:x}, crc32b: 0x{:x}",
             hash_sum,
-            hash_sum ^ 0xffffffff
+            hash_sum ^ 0xffff_ffff
         )
         .unwrap();
 
@@ -38,7 +38,7 @@ fn main() -> ! {
         hprintln!(
             "crc32: 0x{:x}, crc32b: 0x{:x}",
             hash_sum,
-            hash_sum ^ 0xffffffff
+            hash_sum ^ 0xffff_ffff
         )
         .unwrap();
     }

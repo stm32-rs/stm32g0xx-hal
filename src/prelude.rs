@@ -1,6 +1,6 @@
+pub use hal::adc::OneShot as _;
 pub use hal::digital::v2::*;
 pub use hal::prelude::*;
-pub use hal::adc::OneShot as _;
 pub use hal::watchdog::Watchdog as _;
 pub use hal::watchdog::WatchdogEnable as _;
 
@@ -13,8 +13,8 @@ pub use crate::analog::dac::DacOut as _;
 // pub use crate::comparator::ComparatorExt as _;
 pub use crate::crc::CrcExt as _;
 pub use crate::delay::DelayExt as _;
-pub use crate::dma::DmaExt as _;
 pub use crate::dma::CopyDma as _;
+pub use crate::dma::DmaExt as _;
 pub use crate::dma::ReadDma as _;
 pub use crate::dma::WriteDma as _;
 pub use crate::exti::ExtiExt as _;

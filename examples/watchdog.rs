@@ -20,7 +20,7 @@ fn main() -> ! {
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
     let mut rcc = dp.RCC.constrain();
-    let mut delay = cp.SYST.delay(&rcc);
+    let mut delay = cp.SYST.delay(&mut rcc);
     hprintln!("Watchdog").unwrap();
 
     let mut watchdog = dp.WWDG.constrain(&mut rcc);

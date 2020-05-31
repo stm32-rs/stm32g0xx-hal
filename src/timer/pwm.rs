@@ -12,8 +12,8 @@ pub struct Pwm<TIM> {
 }
 
 pub struct PwmPin<TIM, CH> {
-   tim: PhantomData<TIM>,
-   channel: PhantomData<CH>,
+    tim: PhantomData<TIM>,
+    channel: PhantomData<CH>,
 }
 
 pub trait PwmExt: Sized {
@@ -25,7 +25,7 @@ pub trait PwmExt: Sized {
 impl<TIM> Pwm<TIM> {
     pub fn bind_pin<PIN>(&self, pin: PIN) -> PwmPin<TIM, PIN::Channel>
     where
-        PIN: TimerPin<TIM>
+        PIN: TimerPin<TIM>,
     {
         pin.setup();
         PwmPin {

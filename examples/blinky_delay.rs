@@ -17,7 +17,7 @@ use rt::entry;
 fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.freeze(Config::lsi());
-    let mut delay = dp.TIM15.delay(&rcc);
+    let mut delay = dp.TIM15.delay(&mut rcc);
 
     let gpioa = dp.GPIOA.split(&mut rcc);
     let mut led = gpioa.pa5.into_push_pull_output();

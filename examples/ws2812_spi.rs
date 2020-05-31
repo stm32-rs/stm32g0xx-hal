@@ -28,7 +28,7 @@ fn main() -> ! {
     let rcc_cfg = rcc::Config::pll().pll_cfg(pll_cfg);
     let mut rcc = dp.RCC.freeze(rcc_cfg);
 
-    let mut delay = cp.SYST.delay(&rcc);
+    let mut delay = cp.SYST.delay(&mut rcc);
     let gpioa = dp.GPIOA.split(&mut rcc);
     let spi = dp.SPI2.spi(
         (spi::NoSck, spi::NoMiso, gpioa.pa10),
