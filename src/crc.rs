@@ -81,19 +81,36 @@ impl Digest<&[u16]> for Crc {
     }
 }
 
-#[allow(clippy::cast_ptr_alignment)]
 impl Digest<&[u8]> for Crc {
     fn digest(&mut self, data: &[u8]) -> u32 {
-        let words = data.len() / 4;
-        let word_slice: &[u32] =
-            unsafe { core::slice::from_raw_parts(data.as_ptr() as *const _, words) };
-        self.digest(word_slice);
-        data[words * 4..]
-            .iter()
-            .map(|v| unsafe {
-                core::ptr::write_volatile(&self.rb.dr as *const _ as *mut u8, *v);
-            })
-            .last();
+        let mut iter32 = data.chunks_exact(4);
+        loop {
+            match iter32.next() {
+                Some(x) => {
+                    self.digest(u32::from_be_bytes([x[0], x[1], x[2], x[3]]));
+                },
+                None => break,
+            }
+        }
+        let mut iter16 = iter32.remainder().chunks_exact(2);
+        loop {
+            match iter16.next() {
+                Some(x) => {
+                    self.digest(&[u16::from_be_bytes([x[0], x[1]])][..]);
+                },
+                None => break,
+            }
+        }
+        let mut iter8 = iter16.remainder().iter();
+        loop {
+            match iter8.next() {
+                Some(x) => {
+                    unsafe { core::ptr::write_volatile(&self.rb.dr as *const _ as *mut u8, *x); }
+                },
+                None => break,
+            }
+        }
+
         self.rb.dr.read().bits()
     }
 }
