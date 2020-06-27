@@ -5,7 +5,7 @@
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate panic_halt;
-extern crate rtfm;
+extern crate rtic;
 extern crate stm32g0xx_hal as hal;
 
 use hal::exti::Event;
@@ -16,7 +16,7 @@ use hal::rcc;
 use hal::stm32;
 use hal::timer::Channel1;
 use hal::timer::opm::Opm;
-use rtfm::app;
+use rtic::app;
 
 #[app(device = hal::stm32, peripherals = true)]
 const APP: () = {

@@ -6,7 +6,7 @@
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate panic_semihosting;
-extern crate rtfm;
+extern crate rtic;
 extern crate stm32g0xx_hal as hal;
 
 use core::fmt::Write;
@@ -19,7 +19,7 @@ use hal::rcc;
 use hal::serial::{self, Serial};
 use hal::stm32;
 use hal::timer::Timer;
-use rtfm::app;
+use rtic::app;
 
 pub enum ColorChannel {
     R,
