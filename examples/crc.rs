@@ -19,13 +19,16 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
 
-    let mut crc = dp.CRC.constrain(&mut rcc);
-    crc.reverse_input(InputReverse::Word);
-    crc.reverse_output(true);
+    let crc = dp.CRC.constrain(&mut rcc);
+    let mut crc = crc.input_bit_reversal(Some(BitReversal::ByWord))
+        .output_bit_reversal(true)
+        .freeze();
 
     loop {
         crc.reset();
-        let hash_sum = crc.digest("123456789");
+        crc.feed(b"123456789");
+
+        let hash_sum = crc.result();
         hprintln!(
             "crc32: 0x{:x}, crc32b: 0x{:x}",
             hash_sum,
@@ -34,7 +37,8 @@ fn main() -> ! {
         .unwrap();
 
         crc.reset();
-        let hash_sum = crc.digest("The quick brown fox jumps over the lazy dog");
+        crc.feed(b"The quick brown fox jumps over the lazy dog");
+        let hash_sum = crc.result();
         hprintln!(
             "crc32: 0x{:x}, crc32b: 0x{:x}",
             hash_sum,
