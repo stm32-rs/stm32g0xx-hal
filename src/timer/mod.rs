@@ -192,14 +192,18 @@ macro_rules! timers {
 
 timers! {
     TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2, cnt),
-    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1, cnt_l, cnt_h),
     TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1, cnt_l, cnt_h),
     TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2, cnt),
     TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2, cnt),
     TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2, cnt),
 }
 
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+#[cfg(feature = "stm32g0x1")]
+timers! {
+    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1, cnt_l, cnt_h),
+}
+
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 timers! {
     TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1, cnt),
     TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1, cnt),

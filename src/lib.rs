@@ -2,14 +2,15 @@
 #![allow(non_camel_case_types)]
 
 #[cfg(not(any(
-    feature = "stm32g07x",
+    feature = "stm32g070",
+    feature = "stm32g071",
     feature = "stm32g030",
     feature = "stm32g031",
     feature = "stm32g041",
     feature = "stm32g081"
 )))]
 compile_error!(
-    "This crate requires one of the following features enabled: stm32g07x, stm32g030, stm32g031, stm32g041, stm32g081"
+    "This crate requires one of the following features enabled: stm32g030, stm32g070, stm32g031, stm32g041, stm32g071, stm32g081"
 );
 
 extern crate bare_metal;
@@ -22,17 +23,20 @@ pub extern crate stm32g0;
 
 pub use nb::block;
 
-#[cfg(feature = "stm32g07x")]
-pub use stm32g0::stm32g07x as stm32;
-
 #[cfg(feature = "stm32g030")]
 pub use stm32g0::stm32g030 as stm32;
+
+#[cfg(feature = "stm32g070")]
+pub use stm32g0::stm32g07x as stm32;  // TODO should be stm32g070, to be fixed in pac
 
 #[cfg(feature = "stm32g031")]
 pub use stm32g0::stm32g031 as stm32;
 
 #[cfg(feature = "stm32g041")]
 pub use stm32g0::stm32g041 as stm32;
+
+#[cfg(feature = "stm32g071")]
+pub use stm32g0::stm32g07x as stm32; // TODO should be stm32g071, to be fixed in pac
 
 #[cfg(feature = "stm32g081")]
 pub use stm32g0::stm32g081 as stm32;
@@ -41,7 +45,7 @@ pub use stm32g0::stm32g081 as stm32;
 pub use crate::stm32::interrupt;
 
 pub mod analog;
-// #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+// #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 // pub mod comparator;
 pub mod crc;
 pub mod delay;

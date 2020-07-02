@@ -499,20 +499,6 @@ macro_rules! uart {
 }
 
 uart!(
-    LPUART, lpuart, apbenr1, lpuart1en, 256,
-    tx: [
-        (PA2<DefaultMode>, AltFunction::AF6),
-        (PB11<DefaultMode>, AltFunction::AF1),
-        (PC1<DefaultMode>, AltFunction::AF1),
-    ],
-    rx: [
-        (PA3<DefaultMode>, AltFunction::AF6),
-        (PB10<DefaultMode>, AltFunction::AF1),
-        (PC0<DefaultMode>, AltFunction::AF1),
-    ],
-);
-
-uart!(
     USART1, usart1, apbenr2, usart1en, 1,
     tx: [
         (PA9<DefaultMode>, AltFunction::AF1),
@@ -540,7 +526,7 @@ uart!(
     ],
 );
 
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
 uart!(
     USART3, usart3, apbenr1, usart3en, 1,
     tx: [
@@ -562,7 +548,7 @@ uart!(
     ],
 );
 
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
 uart!(
     USART4, usart4, apbenr1, usart4en, 1,
     tx: [
@@ -572,5 +558,20 @@ uart!(
     rx: [
         (PC11<DefaultMode>, AltFunction::AF1),
         (PA1<DefaultMode>, AltFunction::AF4),
+    ],
+);
+
+#[cfg(feature = "stm32g0x1")]
+uart!(
+    LPUART, lpuart, apbenr1, lpuart1en, 256,
+    tx: [
+        (PA2<DefaultMode>, AltFunction::AF6),
+        (PB11<DefaultMode>, AltFunction::AF1),
+        (PC1<DefaultMode>, AltFunction::AF1),
+    ],
+    rx: [
+        (PA3<DefaultMode>, AltFunction::AF6),
+        (PB10<DefaultMode>, AltFunction::AF1),
+        (PC0<DefaultMode>, AltFunction::AF1),
     ],
 );
