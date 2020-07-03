@@ -134,6 +134,7 @@ opm_hal! {
     TIM17: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1, arr),
 }
 
+//todo probably needs feature switches since not all parts have all these timers
 opm! {
     TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst),
     TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst),
@@ -143,7 +144,7 @@ opm! {
     TIM17: (apbenr2, apbrstr2, tim17, tim17en, tim17rst),
 }
 
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 opm! {
     TIM15: (apbenr2, apbrstr2, tim15, tim15en, tim15rst),
 }

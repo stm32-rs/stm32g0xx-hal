@@ -4,6 +4,15 @@
   "rust.all_features": false,
   "rust.features": [
     "rt",
-    "stm32g07x"
+    "stm32g081"
+  ],
+  "rust-analyzer.checkOnSave.allTargets": false,
+  "rust-analyzer.checkOnSave.extraArgs": [
+      "--target",
+      "thumbv6m-none-eabi"
+  ],
+  "rust-analyzer.cargo.features": [
+    "rt",
+    "stm32g081"
   ]
 }

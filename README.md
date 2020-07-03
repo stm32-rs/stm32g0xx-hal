@@ -15,16 +15,16 @@ specified with a feature, for example `stm32g070`.
 
 ### Building an Example
 
-If you are compiling the crate on its own for development or running examples, 
+If you are compiling the crate on its own for development or running examples,
 specify your microcontroller on the command line. For example:
 
 ```
-cargo build --example blinky --features stm32g07x
+cargo build --example blinky --features stm32g071
 ```
 
 ### Using as a Dependency
 
-When using this crate as a dependency in your project, the microcontroller can 
+When using this crate as a dependency in your project, the microcontroller can
 be specified as part of the `Cargo.toml` definition.
 
 ```

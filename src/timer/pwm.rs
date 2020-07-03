@@ -169,7 +169,7 @@ pwm_hal! {
     TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
 }
 
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 pwm_hal! {
     TIM15: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
@@ -183,7 +183,7 @@ pwm! {
     TIM17: (apbenr2, apbrstr2, tim17, tim17en, tim17rst, arr),
 }
 
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 pwm! {
     TIM15: (apbenr2, apbrstr2, tim15, tim15en, tim15rst, arr),
 }

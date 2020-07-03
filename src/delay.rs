@@ -175,14 +175,18 @@ macro_rules! delays {
 
 delays! {
     TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2),
-    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1),
     TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1),
     TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2),
     TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2),
     TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2),
 }
 
-#[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+#[cfg(feature = "stm32g0x1")]
+delays! {
+    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1),
+}
+
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 delays! {
     TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1),
     TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1),
