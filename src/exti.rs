@@ -103,12 +103,11 @@ impl ExtiExt for EXTI {
     }
 
     fn wakeup(&self, ev: Event) {
-        #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32041"))]
+        #[cfg(any(feature = "stm32g030",  feature = "stm32070", feature = "stm32g031", feature = "stm32041"))]
         self.imr1
             .modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
 
-        // TODO how to replace "stm32g07x"
-        #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+        #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
         match ev as u8 {
             line if line < 32 => self
                 .imr1()
@@ -122,7 +121,7 @@ impl ExtiExt for EXTI {
     fn unlisten(&self, ev: Event) {
         self.unpend(ev);
 
-        #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32041"))]
+        #[cfg(any(feature = "stm32g030",feature = "stm32g070", feature = "stm32g031", feature = "stm32041"))]
         {
             let line = ev as u8;
             let mask = !(1 << line);
@@ -133,8 +132,7 @@ impl ExtiExt for EXTI {
             }
         }
 
-        // TODO how to replace "stm32g07x"
-        #[cfg(any(feature = "stm32g07x", feature = "stm32g081"))]
+        #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
         match ev as u8 {
             line if line < 32 => {
                 let mask = !(1 << line);
