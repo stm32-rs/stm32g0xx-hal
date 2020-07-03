@@ -7,6 +7,38 @@ peripheral access API for the STMicro STM32G0 series microcontrollers. The
 selection of the MCU is done by feature gates, typically specified by board
 support crates.
 
+## G0 hardware overview
+
+Feature | Desc | G030 | G070 | G031 | G041 | G071 | G081
+-- | -- | -- | -- | -- | -- | -- | --
+TIM1 | 16bit up/down | 1 | 1 | 1 | 1 | 1 | 1
+TIM2 | 32bit up/down |   |   | 1 | 1 | 1 | 1
+TIM3 | 16bit up/down | 1 | 1 | 1 | 1 | 1 | 1
+TIM6 | 16bit up |   | 1 |   |   | 1 | 1
+TIM7 | 16bit up |   | 1 |   |   | 1 | 1
+TIM14 | 16bit up | 1 | 1 | 1 | 1 | 1 | 1
+TIM15 | 16bit up |   | 1 |   |   | 1 | 1
+TIM16 | 16bit up | 1 | 1 | 1 | 1 | 1 | 1
+TIM17 | 16bit up | 1 | 1 | 1 | 1 | 1 | 1
+LPTIM1 | 16bit up |   |   | 1 | 1 | 1 | 1
+LPTIM2 | 16bit up |   |   | 1 | 1 | 1 | 1
+COMP1 | Comparator |   |   |   |   | 1 | 1
+COMP2 | Comparator |   |   |   |   | 1 | 1
+DAC |   |   |   |   |   | 1 | 1
+UART1 |   | 1 | 1 | 1 | 1 | 1 | 1
+UART2 |   | 1* | 1 | 1* | 1* | 1 | 1
+UART3 |   |   | 1 |   |   | 1 | 1
+UART4 |   |   | 1 |   |   | 1 | 1
+LPUART |   |   |   | 1 | 1 | 1 | 1
+AES |   |   |   |   |   |   | 1
+RNG |   |   |   |   |   |   | 1
+UCPD1 | USB C Power Delivery |   |   |   |   | 1 | 1
+UCPD2 | USB C Power Delivery |   |   |   |   | 1 | 1
+VREFBUF |   |   |   | 1 | 1 | 1 | 1
+TS_CAL2 | Tsense calibration val @ 130 C |   |   | 1 | 1 | 1 | 1
+DMA Channels |  | 5 | 7 | 5 | 5 | 7 | 7
+CEC | HDMI control |   |   |   |   | 1 | 1
+
 ## Usage
 
 This crate will eventually contain support for multiple microcontrollers in the
@@ -28,8 +60,9 @@ When using this crate as a dependency in your project, the microcontroller can
 be specified as part of the `Cargo.toml` definition.
 
 ```
-[dependencies]
-stm32g0xx-hal = "0.0.3"
+[dependencies.stm32g0xx-hal]
+version = "0.0.8"
+features = ["rt", "stm32g081"]
 ```
 
 ## Documentation
