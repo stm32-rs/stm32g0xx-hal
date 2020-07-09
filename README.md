@@ -30,8 +30,8 @@ UART2 |   | 1* | 1 | 1* | 1* | 1 | 1
 UART3 |   |   | 1 |   |   | 1 | 1
 UART4 |   |   | 1 |   |   | 1 | 1
 LPUART |   |   |   | 1 | 1 | 1 | 1
-AES |   |   |   |   |   |   | 1
-RNG |   |   |   |   |   |   | 1
+AES |   |   |   |   |  1  |   | 1
+RNG |   |   |   |   |  1  |   | 1
 UCPD1 | USB C Power Delivery |   |   |   |   | 1 | 1
 UCPD2 | USB C Power Delivery |   |   |   |   | 1 | 1
 VREFBUF |   |   |   | 1 | 1 | 1 | 1
