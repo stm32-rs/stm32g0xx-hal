@@ -69,7 +69,7 @@ impl Event {
 
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 const TRIGGER_MAX: u8 = 18;
-#[cfg(any(feature = "stm32g031", feature = "stm32041"))]
+#[cfg(any(feature = "stm32g031", feature = "stm32g041"))]
 const TRIGGER_MAX: u8 = 16;
 #[cfg(any(feature = "stm32g030", feature = "stm32g070"))]
 const TRIGGER_MAX: u8 = 15;
@@ -103,8 +103,14 @@ impl ExtiExt for EXTI {
     }
 
     fn wakeup(&self, ev: Event) {
-        #[cfg(any(feature = "stm32g030",  feature = "stm32070", feature = "stm32g031", feature = "stm32041"))]
+        #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
         self.imr1
+            .modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
+
+        // TODO: For some reason this is different between PACs:
+        // imr1 vs imr1(). I think it is an SVD bug
+        #[cfg(feature = "stm32g070")]
+        self.imr1()
             .modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
 
         #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
@@ -121,7 +127,7 @@ impl ExtiExt for EXTI {
     fn unlisten(&self, ev: Event) {
         self.unpend(ev);
 
-        #[cfg(any(feature = "stm32g030",feature = "stm32g070", feature = "stm32g031", feature = "stm32041"))]
+        #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
         {
             let line = ev as u8;
             let mask = !(1 << line);
@@ -132,12 +138,24 @@ impl ExtiExt for EXTI {
             }
         }
 
+        // TODO: For some reason this is different between PACs:
+        // imr1 vs imr1(). I think it is an SVD bug
+        #[cfg(feature = "stm32g070")]
+        {
+            let line = ev as u8;
+            let mask = !(1 << line);
+            self.imr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+            if line <= TRIGGER_MAX {
+                self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+                self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+            }
+        }
+
         #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
         match ev as u8 {
             line if line < 32 => {
                 let mask = !(1 << line);
-                self.imr1()
-                    .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+                self.imr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
                 if line <= TRIGGER_MAX {
                     self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
                     self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
