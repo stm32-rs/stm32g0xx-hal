@@ -1,7 +1,12 @@
 //! Quadrature Encoder Interface
 use crate::hal::{self, Direction};
 use crate::rcc::Rcc;
+
+#[cfg(feature = "stm32g0x1")]
 use crate::stm32::{TIM1, TIM2, TIM3};
+#[cfg(feature = "stm32g0x0")]
+use crate::stm32::{TIM1, TIM3};
+
 use crate::timer::pins::TimerPin;
 use crate::timer::*;
 
@@ -103,6 +108,10 @@ macro_rules! qei {
 
 qei! {
     TIM1: (tim1,  tim1en, tim1rst, apbenr2, apbrstr2, arr, cnt),
-    TIM2: (tim2,  tim2en, tim2rst, apbenr1, apbrstr1, arr_l, cnt_l),
     TIM3: (tim3,  tim3en, tim3rst, apbenr1, apbrstr1, arr_l, cnt_l),
+}
+
+#[cfg(feature = "stm32g0x1")]
+qei! {
+    TIM2: (tim2,  tim2en, tim2rst, apbenr1, apbrstr1, arr_l, cnt_l),
 }

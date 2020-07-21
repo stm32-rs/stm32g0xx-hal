@@ -121,10 +121,6 @@ opm_hal! {
     TIM1: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2, arr),
     TIM1: (Channel3, cc3e, ccmr2_output, oc3m, oc3fe, ccr3, arr),
     TIM1: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4, arr),
-    TIM2: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1, arr_l, arr_h),
-    TIM2: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2, arr_l, arr_h),
-    TIM2: (Channel3, cc3e, ccmr2_output, oc3m, oc3fe, ccr3, arr_l, arr_h),
-    TIM2: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4, arr_l, arr_h),
     TIM3: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1, arr_l, arr_h),
     TIM3: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2, arr_l, arr_h),
     TIM3: (Channel3, cc3e, ccmr2_output, oc3m, oc3fe, ccr3, arr_l, arr_h),
@@ -134,14 +130,26 @@ opm_hal! {
     TIM17: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1, arr),
 }
 
+#[cfg(feature = "stm32g0x1")]
+opm_hal! {
+    TIM2: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1, arr_l, arr_h),
+    TIM2: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2, arr_l, arr_h),
+    TIM2: (Channel3, cc3e, ccmr2_output, oc3m, oc3fe, ccr3, arr_l, arr_h),
+    TIM2: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4, arr_l, arr_h),
+}
+
 //todo probably needs feature switches since not all parts have all these timers
 opm! {
     TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst),
-    TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst),
     TIM3: (apbenr1, apbrstr1, tim3, tim3en, tim3rst),
     TIM14: (apbenr2, apbrstr2, tim14, tim14en, tim14rst),
     TIM16: (apbenr2, apbrstr2, tim16, tim16en, tim16rst),
     TIM17: (apbenr2, apbrstr2, tim17, tim17en, tim17rst),
+}
+
+#[cfg(feature = "stm32g0x1")]
+opm! {
+    TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]

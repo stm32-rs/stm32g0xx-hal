@@ -110,24 +110,21 @@ impl ExtiExt for EXTI {
         // TODO: For some reason this is different between PACs:
         // imr1 vs imr1(). I think it is an SVD bug
         #[cfg(feature = "stm32g070")]
-        self.imr1()
-            .modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
+        self.imr1.modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
 
         #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
         match ev as u8 {
             line if line < 32 => self
-                .imr1()
-                .modify(|r, w| unsafe { w.bits(r.bits() | 1 << line) }),
+                .imr1.modify(|r, w| unsafe { w.bits(r.bits() | 1 << line) }),
             line => self
-                .imr2
-                .modify(|r, w| unsafe { w.bits(r.bits() | 1 << (line - 32)) }),
+                .imr2.modify(|r, w| unsafe { w.bits(r.bits() | 1 << (line - 32)) }),
         }
     }
 
     fn unlisten(&self, ev: Event) {
         self.unpend(ev);
 
-        #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
+        #[cfg(any(feature = "stm32g030", feature = "stm32g070", feature = "stm32g031", feature = "stm32g041"))]
         {
             let line = ev as u8;
             let mask = !(1 << line);
@@ -138,24 +135,11 @@ impl ExtiExt for EXTI {
             }
         }
 
-        // TODO: For some reason this is different between PACs:
-        // imr1 vs imr1(). I think it is an SVD bug
-        #[cfg(feature = "stm32g070")]
-        {
-            let line = ev as u8;
-            let mask = !(1 << line);
-            self.imr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
-            if line <= TRIGGER_MAX {
-                self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
-                self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
-            }
-        }
-
         #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
         match ev as u8 {
             line if line < 32 => {
                 let mask = !(1 << line);
-                self.imr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+                self.imr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
                 if line <= TRIGGER_MAX {
                     self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
                     self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });

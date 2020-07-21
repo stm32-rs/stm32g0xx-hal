@@ -26,8 +26,6 @@ pub use nb::block;
 #[cfg(feature = "stm32g030")]
 pub use stm32g0::stm32g030 as stm32;
 
-#[cfg(feature = "stm32g070")]
-pub use stm32g0::stm32g07x as stm32;  // TODO will be stm32g070, to be fixed in next pac release
 
 #[cfg(feature = "stm32g031")]
 pub use stm32g0::stm32g031 as stm32;
@@ -36,15 +34,20 @@ pub use stm32g0::stm32g031 as stm32;
 pub use stm32g0::stm32g041 as stm32;
 
 #[cfg(feature = "stm32g071")]
-pub use stm32g0::stm32g07x as stm32; // TODO will be stm32g071, to be fixed in next pac release
+pub use stm32g0::stm32g071 as stm32;
 
 #[cfg(feature = "stm32g081")]
 pub use stm32g0::stm32g081 as stm32;
+
+
+#[cfg(feature = "stm32g070")]
+pub use stm32g0::stm32g070 as stm32;
 
 #[cfg(feature = "rt")]
 pub use crate::stm32::interrupt;
 
 pub mod analog;
+// TODO fix
 // #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 // pub mod comparator;
 pub mod crc;
@@ -55,6 +58,7 @@ pub mod gpio;
 pub mod i2c;
 pub mod prelude;
 pub mod rcc;
+#[cfg(any(feature = "stm32g041", feature = "stm32g081"))]
 pub mod rng;
 pub mod rtc;
 pub mod serial;

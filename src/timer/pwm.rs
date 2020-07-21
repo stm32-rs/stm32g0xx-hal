@@ -158,11 +158,15 @@ pwm_hal! {
     TIM17: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
+#[cfg(feature = "stm32g0x1")]
 pwm_hal! {
     TIM2: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
     TIM2: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM2: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
     TIM2: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+}
+
+pwm_hal! {
     TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
     TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
@@ -176,11 +180,15 @@ pwm_hal! {
 
 pwm! {
     TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst, arr),
-    TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst, arr_l, arr_h),
     TIM3: (apbenr1, apbrstr1, tim3, tim3en, tim3rst, arr_l, arr_h),
     TIM14: (apbenr2, apbrstr2, tim14, tim14en, tim14rst, arr),
     TIM16: (apbenr2, apbrstr2, tim16, tim16en, tim16rst, arr),
     TIM17: (apbenr2, apbrstr2, tim17, tim17en, tim17rst, arr),
+}
+
+#[cfg(feature = "stm32g0x1")]
+pwm! {
+    TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst, arr_l, arr_h),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
