@@ -26,8 +26,8 @@ path = "../stm32-rs/stm32g0"
 features = ["rt"]
 
 [dependencies.bare-metal]
-features = ["const-fn"]
-version = "0.2.5"
+# features = ["const-fn"]
+version = "1.0.0"
 
 [dependencies.embedded-hal]
 features = ["unproven"]
