@@ -3,6 +3,14 @@
 #![no_main]
 #![no_std]
 
+#[cfg(not(any(
+    feature = "stm32g071",
+    feature = "stm32g081"
+)))]
+compile_error!(
+    "Only stm32g071 and stm32g081 have the DAC peripheral"
+);
+
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate panic_halt;

@@ -8,6 +8,14 @@ extern crate cortex_m_rt as rt;
 extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
+#[cfg(not(any(
+    feature = "stm32g041",
+    feature = "stm32g081"
+)))]
+compile_error!(
+    "Only stm32g041 and stm32g081 have the RNG peripheral"
+);
+
 use cortex_m_semihosting::hprintln;
 use hal::prelude::*;
 use hal::rng::Config;
