@@ -138,7 +138,6 @@ opm_hal! {
     TIM2: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4, arr_l, arr_h),
 }
 
-//todo probably needs feature switches since not all parts have all these timers
 opm! {
     TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst),
     TIM3: (apbenr1, apbrstr1, tim3, tim3en, tim3rst),

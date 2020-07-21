@@ -103,14 +103,9 @@ impl ExtiExt for EXTI {
     }
 
     fn wakeup(&self, ev: Event) {
-        #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
+        #[cfg(any(feature = "stm32g030", feature = "stm32g070", feature = "stm32g031", feature = "stm32g041"))]
         self.imr1
             .modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
-
-        // TODO: For some reason this is different between PACs:
-        // imr1 vs imr1(). I think it is an SVD bug
-        #[cfg(feature = "stm32g070")]
-        self.imr1.modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
 
         #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
         match ev as u8 {
