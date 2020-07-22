@@ -51,6 +51,7 @@ pub mod crc;
 pub mod delay;
 pub mod dma;
 pub mod exti;
+pub mod flash;
 pub mod gpio;
 pub mod i2c;
 pub mod prelude;
