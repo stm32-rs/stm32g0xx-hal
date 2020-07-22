@@ -1,3 +1,4 @@
+use cortex_m::interrupt;
 use crate::stm32::FLASH;
 
 /// The first address of flash memory
@@ -83,12 +84,19 @@ impl FlashExt for FLASH {
         self.cr.modify(|_,w| w.pg().set_bit());
 
         // It is only possible to program a double word (2 x 32-bit data).
-        // Safe, as we know that this points to Flash
         let address = address as *mut u32;
-        unsafe {
-            address.write_volatile(word as u32);
-            address.offset(1).write_volatile((word >> 32) as u32);
-        }
+
+        // We absoluty can't have any access to Flash while preparing the
+        // write, or the process will be interrupted. This includes any
+        // access to the vector table or interrupt handlers that might be
+        // caused by an interrupt.
+        interrupt::free(|_| {
+            // Safe, because we've verified the valididty of `address`.
+            unsafe {
+                address.write_volatile(word as u32);
+                address.offset(1).write_volatile((word >> 32) as u32);
+            }
+        });
 
         // Wait for operation to complete
         while self.sr.read().bsy().bit_is_set() {}
