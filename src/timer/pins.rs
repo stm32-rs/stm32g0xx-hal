@@ -40,6 +40,7 @@ timer_pins!(TIM1, [
     (Channel4, PC11<DefaultMode>, AltFunction::AF2),
 ]);
 
+#[cfg(feature = "stm32g0x1")]
 timer_pins!(TIM2, [
     (Channel1, PA0<DefaultMode>, AltFunction::AF2),
     (Channel1, PA5<DefaultMode>, AltFunction::AF2),

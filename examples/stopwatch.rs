@@ -24,7 +24,11 @@ fn main() -> ! {
 
     let mut delay = cp.SYST.delay(&mut rcc);
     let mut timer = dp.TIM17.timer(&mut rcc);
+
+    #[cfg(feature = "stm32g0x1")]
     let mut stopwatch = dp.TIM2.stopwatch(&mut rcc);
+    #[cfg(feature = "stm32g0x0")] // TODO: not tested yet with TIM3
+    let mut stopwatch = dp.TIM3.stopwatch(&mut rcc);
 
     let elapsed_us = stopwatch.trace(|| {
         delay.delay(10.us());

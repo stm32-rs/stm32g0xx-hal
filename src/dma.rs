@@ -241,10 +241,10 @@ macro_rules! dma {
 
 dma! {
     DMA: (dmaen, dma1rst, {
-        Channel1: ( ccr1, cndtr1, cpar1, cmar1, cgif0 ),
-        Channel2: ( ccr2, cndtr2, cpar2, cmar2, cgif4 ),
-        Channel3: ( ccr3, cndtr3, cpar3, cmar3, cgif8 ),
-        Channel4: ( ccr4, cndtr4, cpar4, cmar4, cgif12 ),
-        Channel5: ( ccr5, cndtr5, cpar5, cmar5, cgif16 ),
+        Channel1: ( ccr1, cndtr1, cpar1, cmar1, cgif1 ),
+        Channel2: ( ccr2, cndtr2, cpar2, cmar2, cgif2 ),
+        Channel3: ( ccr3, cndtr3, cpar3, cmar3, cgif3 ),
+        Channel4: ( ccr4, cndtr4, cpar4, cmar4, cgif4 ),
+        Channel5: ( ccr5, cndtr5, cpar5, cmar5, cgif5 ),
     }),
 }

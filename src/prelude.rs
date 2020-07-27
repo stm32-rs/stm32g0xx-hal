@@ -23,7 +23,9 @@ pub use crate::i2c::I2cExt as _;
 pub use crate::rcc::LSCOExt as _;
 pub use crate::rcc::MCOExt as _;
 pub use crate::rcc::RccExt as _;
+#[cfg(any(feature = "stm32g041", feature = "stm32g081"))]
 pub use crate::rng::RngCore as _;
+#[cfg(any(feature = "stm32g041", feature = "stm32g081"))]
 pub use crate::rng::RngExt as _;
 pub use crate::rtc::RtcExt as _;
 pub use crate::serial::SerialExt as _;
