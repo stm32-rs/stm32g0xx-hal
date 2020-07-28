@@ -540,6 +540,15 @@ macro_rules! uart_full {
             }
 
         }
+        impl Tx<$USARTX, FullConfig> {
+
+             /// Returns true if the tx fifo threshold has been reached.
+             pub fn fifo_threshold_reached(&self) -> bool {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr.read().txft().bit_is_set()
+            }
+
+        }
 
         impl Rx<$USARTX, FullConfig> {
             /// Check if receiver timeout has lapsed
@@ -553,6 +562,12 @@ macro_rules! uart_full {
             pub fn clear_timeout(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.icr.write(|w| w.rtocf().set_bit());
+            }
+
+            /// Returns true if the rx fifo threshold has been reached.
+            pub fn fifo_threshold_reached(&self) -> bool {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr.read().rxft().bit_is_set()
             }
 
         }
