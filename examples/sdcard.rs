@@ -33,7 +33,7 @@ fn main() -> ! {
 
     let mut uart = dp
         .USART2
-        .usart(gpioa.pa2, gpioa.pa3, serial::Config::default(), &mut rcc)
+        .usart(gpioa.pa2, gpioa.pa3, serial::FullConfig::default(), &mut rcc)
         .unwrap();
 
     let sdmmc_spi = dp.SPI1.spi(
