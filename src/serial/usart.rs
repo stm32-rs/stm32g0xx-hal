@@ -497,7 +497,6 @@ macro_rules! uart_full {
                     .bit(config.fifo_enable)
                 });
 
-
                 Ok(Serial {
                     tx: Tx { _usart: PhantomData, _config: PhantomData },
                     rx: Rx { _usart: PhantomData, _config: PhantomData },

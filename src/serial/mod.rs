@@ -1,5 +1,5 @@
 pub mod config;
-pub mod serial;
+pub mod usart;
 
-pub use serial::*;
+pub use usart::*;
 pub use config::*;
