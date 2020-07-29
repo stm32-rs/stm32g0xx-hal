@@ -37,17 +37,17 @@ impl StopBits {
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
 pub enum FifoThreshold {
     #[doc = "1/8 of its depth"]
-    _1_BYTE = 0b000,
+    FIFO_1_BYTE = 0b000,
     #[doc = "1/4 of its depth"]
-    _2_BYTES = 0b001,
+    FIFO_2_BYTES = 0b001,
     #[doc = "1/2 of its depth"]
-    _4_BYTES = 0b010,
+    FIFO_4_BYTES = 0b010,
     #[doc = "3/4 of its depth"]
-    _6_BYTES = 0b011,
+    FIFO_6_BYTES = 0b011,
     #[doc = "7/8 of its depth"]
-    _7_BYTES = 0b100,
+    FIFO_7_BYTES = 0b100,
     #[doc = "fifo empty/full"]
-    _8_BYTES = 0b101,
+    FIFO_8_BYTES = 0b101,
 }
 
 impl FifoThreshold {
@@ -209,8 +209,8 @@ impl Default for FullConfig {
             parity: Parity::ParityNone,
             stopbits: StopBits::STOP1,
             fifo_enable: false,
-            tx_fifo_threshold: FifoThreshold::_8_BYTES,
-            rx_fifo_threshold: FifoThreshold::_8_BYTES,
+            tx_fifo_threshold: FifoThreshold::FIFO_8_BYTES,
+            rx_fifo_threshold: FifoThreshold::FIFO_8_BYTES,
             tx_fifo_interrupt: false,
             rx_fifo_interrupt: false,
             receiver_timeout: None

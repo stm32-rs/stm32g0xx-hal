@@ -26,7 +26,7 @@ fn main() -> ! {
         FullConfig::default().baudrate(115200.bps())
                                     .fifo_enable()
                                     .rx_fifo_enable_interrupt()
-                                    .rx_fifo_threshold(FifoThreshold::_4_BYTES),
+                                    .rx_fifo_threshold(FifoThreshold::FIFO_4_BYTES),
         &mut rcc).unwrap();
 
 
