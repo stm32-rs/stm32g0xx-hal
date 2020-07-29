@@ -56,7 +56,7 @@ const APP: () = {
         s2: PA9<Output<PushPull>>,
         s3: PA7<Output<PushPull>>,
         led: PA5<Output<PushPull>>,
-        uart: Serial<stm32::USART2>,
+        uart: Serial<stm32::USART2, serial::FullConfig>,
         timer: Timer<stm32::TIM16>,
         log_timer: Timer<stm32::TIM17>,
     }
@@ -94,7 +94,7 @@ const APP: () = {
         let uart = ctx
             .device
             .USART2
-            .usart(tx, rx, serial::Config::default(), &mut rcc)
+            .usart(tx, rx, serial::FullConfig::default(), &mut rcc)
             .unwrap();
 
         init::LateResources {
