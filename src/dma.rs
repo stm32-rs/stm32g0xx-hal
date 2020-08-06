@@ -378,12 +378,8 @@ impl DmaExt for DMA {
 /// Trait implemented by DMA targets.
 pub trait Target {
 
-    /// Connect dmamux channel to dma channel and peripheral
-    ///
-    /// The implementation should call
-    /// dma_ch.select_peripheral(DmaMuxIndex::XXX)
-    /// with the correct DmaMuxIndex for XXX
-    fn link_dma<C: Channel>(&mut self, dma_ch: &mut C);
+    /// Returns the correct DMAMUX index to configure DMA channel for this peripheral
+    fn dmamux(&self) -> crate::dmamux::DmaMuxIndex;
 
     /// Enable DMA on the target
     fn enable_dma(&mut self) {}

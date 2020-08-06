@@ -27,24 +27,7 @@ fn main() -> ! {
 
     writeln!(usart1, "Hello without DMA\r\n").unwrap();
 
-    let mut tx_buffer = [0u8; 16];
-
-    tx_buffer[0] = 'H' as u8;
-    tx_buffer[1] = 'e' as u8;
-    tx_buffer[2] = 'l' as u8;
-    tx_buffer[3] = 'l' as u8;
-    tx_buffer[4] = 'o' as u8;
-    tx_buffer[5] = ' ' as u8;
-    tx_buffer[6] = 'w' as u8;
-    tx_buffer[7] = 'i' as u8;
-    tx_buffer[8] = 't' as u8;
-    tx_buffer[9] = 'h' as u8;
-    tx_buffer[10] = ' ' as u8;
-    tx_buffer[11] = 'D' as u8;
-    tx_buffer[12] = 'M' as u8;
-    tx_buffer[13] = 'A' as u8;
-    tx_buffer[14] = '!' as u8;
-    tx_buffer[15] = '\n' as u8;
+    let tx_buffer: [u8; 16] = *b"Hello with DMA!\n";
 
     let (mut tx, _rx) = usart1.split();
 
@@ -59,7 +42,8 @@ fn main() -> ! {
     dma.ch1.set_peripheral_address(tx_data_register_addr, false);
     dma.ch1.set_transfer_length(tx_buffer.len() as u16);
 
-    tx.link_dma(&mut dma.ch1);
+    dma.ch1.select_peripheral(tx.dmamux());
+
     tx.enable_dma();
     dma.ch1.enable();
 

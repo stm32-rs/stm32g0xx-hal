@@ -252,8 +252,8 @@ macro_rules! uart_shared {
 
         impl<Config> dma::Target for Rx<$USARTX, Config> {
 
-            fn link_dma<C: dma::Channel>(&mut self, dma_ch: &mut C) {
-                dma_ch.select_peripheral(DmaMuxIndex::$dmamux_rx)
+            fn dmamux(&self) -> DmaMuxIndex {
+                DmaMuxIndex::$dmamux_rx
             }
 
             fn enable_dma(&mut self) {
@@ -275,8 +275,8 @@ macro_rules! uart_shared {
 
         impl<Config> dma::Target for Tx<$USARTX, Config> {
 
-            fn link_dma<C: dma::Channel>(&mut self, dma_ch: &mut C) {
-                dma_ch.select_peripheral(DmaMuxIndex::$dmamux_tx)
+            fn dmamux(&self) -> DmaMuxIndex {
+                DmaMuxIndex::$dmamux_tx
             }
 
             fn enable_dma(&mut self) {
