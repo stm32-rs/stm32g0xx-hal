@@ -1,6 +1,16 @@
+use crate::stm32::DMAMUX;
+
+/// Extension trait to split a DMA peripheral into independent channels
+pub trait DmaMuxExt {
+    /// The type to split the DMA into
+    type Channels;
+
+    /// Split the DMA into independent channels
+    fn split(self) -> Self::Channels;
+}
 
 
-enum DmaMuxIndex {
+pub enum DmaMuxIndex {
     dmamux_req_gen0 = 0,
     dmamux_req_gen1 = 1,
     dmamux_req_gen2 = 2,
@@ -102,7 +112,7 @@ impl DmaMuxIndex {
 }
 
 
-enum DmaMuxTriggerSync {
+pub enum DmaMuxTriggerSync {
     EXTI_LINE0 = 0,
     EXTI_LINE1 = 1,
     EXTI_LINE2 = 2,
@@ -135,4 +145,86 @@ impl DmaMuxTriggerSync {
     pub fn val(self) -> u8 {
         self as u8
     }
+}
+
+pub trait DmaMuxChannel {
+    fn select_peripheral(&mut self, index: DmaMuxIndex);
+}
+
+macro_rules! dma_mux {
+    (
+        channels: {
+            $( $Ci:ident: ($chi:ident, $cr:ident), )+
+        },
+    ) => {
+
+        /// DMAMUX channels
+        pub struct Channels {
+            $( pub $chi: $Ci, )+
+        }
+
+        $(
+            /// Singleton that represents a DMAMUX channel
+            pub struct $Ci {
+                _0: (),
+            }
+
+            impl DmaMuxChannel for $Ci {
+                fn select_peripheral(&mut self, index: DmaMuxIndex) {
+                    let reg = unsafe { &(*DMAMUX::ptr()).$cr };
+                    reg.write( |w| unsafe {
+                        w.dmareq_id().bits(index.val())
+                        .ege().set_bit()
+                    });
+
+                }
+            }
+        )+
+
+    }
+}
+
+
+#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+dma_mux!(
+    channels: {
+        C0: (ch0, dmamux_c0cr),
+        C1: (ch1, dmamux_c1cr),
+        C2: (ch2, dmamux_c2cr),
+        C3: (ch3, dmamux_c3cr),
+        C4: (ch4, dmamux_c4cr),
+        C5: (ch5, dmamux_c5cr),
+        C6: (ch6, dmamux_c6cr),
+    },
+);
+
+#[cfg(any(feature = "stm32g030",feature = "stm32g031", feature = "stm32g041"))]
+dma_mux!(
+    channels: {
+        C0: (ch0, dmamux_c0cr),
+        C1: (ch1, dmamux_c1cr),
+        C2: (ch2, dmamux_c2cr),
+        C3: (ch3, dmamux_c3cr),
+        C4: (ch4, dmamux_c4cr)
+    },
+);
+
+
+impl DmaMuxExt for DMAMUX {
+    type Channels = Channels;
+
+    fn split(self) -> Self::Channels {
+
+        let channels = Channels {
+            ch0: C0 { _0: () },
+            ch1: C1 { _0: () },
+            ch2: C2 { _0: () },
+            ch3: C3 { _0: () },
+            ch4: C4 { _0: () },
+            ch5: C5 { _0: () },
+            ch6: C6 { _0: () },
+        };
+        channels
+    }
+
 }

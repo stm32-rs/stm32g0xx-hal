@@ -1,18 +1,16 @@
 use core::fmt;
 use core::marker::PhantomData;
-// use core::ops;
-// use core::pin::Pin;
-// use core::sync::atomic::{self, Ordering};
 
-// use crate::dma::{DmaChannel, ReadDma, Transfer, TransferDirection, WriteDma};
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
 use crate::gpio::{AltFunction, DefaultMode};
 use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::*;
-
+use crate::dma;
+use crate::dmamux::DmaMuxIndex;
 
 use nb::block;
+use cortex_m::interrupt;
 
 use crate::serial::config::*;
 /// Serial error
@@ -140,7 +138,7 @@ where
 }
 
 macro_rules! uart_shared {
-    ($USARTX:ident) => {
+    ($USARTX:ident, $dmamux_rx:ident, $dmamux_tx:ident) => {
 
         impl<Config> Rx<$USARTX, Config> {
             pub fn listen(&mut self) {
@@ -204,7 +202,6 @@ macro_rules! uart_shared {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.cr1.modify(|_, w| w.txeie().clear_bit());
             }
-
         }
 
         impl<Config> hal::serial::Write<u8> for Tx<$USARTX, Config> {
@@ -251,6 +248,52 @@ macro_rules! uart_shared {
                 (self.tx, self.rx)
             }
 
+        }
+
+        impl<Config> dma::Target for Rx<$USARTX, Config> {
+
+            fn link_dma<C: dma::Channel>(&mut self, dma_ch: &mut C) {
+                dma_ch.select_peripheral(DmaMuxIndex::$dmamux_rx)
+            }
+
+            fn enable_dma(&mut self) {
+                // NOTE(unsafe) critical section prevents races
+                interrupt::free(|_| unsafe {
+                    let cr3 = &(*$USARTX::ptr()).cr3;
+                    cr3.modify(|_, w| w.dmar().set_bit());
+                });
+            }
+
+            fn disable_dma(&mut self) {
+                // NOTE(unsafe) critical section prevents races
+                interrupt::free(|_| unsafe {
+                    let cr3 = &(*$USARTX::ptr()).cr3;
+                    cr3.modify(|_, w| w.dmar().clear_bit());
+                });
+            }
+        }
+
+        impl<Config> dma::Target for Tx<$USARTX, Config> {
+
+            fn link_dma<C: dma::Channel>(&mut self, dma_ch: &mut C) {
+                dma_ch.select_peripheral(DmaMuxIndex::$dmamux_tx)
+            }
+
+            fn enable_dma(&mut self) {
+                // NOTE(unsafe) critical section prevents races
+                interrupt::free(|_| unsafe {
+                    let cr3 = &(*$USARTX::ptr()).cr3;
+                    cr3.modify(|_, w| w.dmat().set_bit());
+                });
+            }
+
+            fn disable_dma(&mut self) {
+                // NOTE(unsafe) critical section prevents races
+                interrupt::free(|_| unsafe {
+                    let cr3 = &(*$USARTX::ptr()).cr3;
+                    cr3.modify(|_, w| w.dmat().clear_bit());
+                });
+            }
         }
 
     }
@@ -575,10 +618,10 @@ macro_rules! uart_full {
     }
 }
 
-uart_shared!(USART1);
-uart_shared!(USART2);
-uart_shared!(USART3);
-uart_shared!(USART4);
+uart_shared!(USART1, USART1_RX, USART1_TX);
+uart_shared!(USART2, USART2_RX, USART2_TX);
+uart_shared!(USART3, USART3_RX, USART3_TX);
+uart_shared!(USART4, USART4_RX, USART4_TX);
 
 uart_full!(
     USART1, usart1, apbenr2, usart1en, 1,

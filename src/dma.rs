@@ -1,250 +1,393 @@
 //! Direct Memory Access Engine
 use crate::rcc::Rcc;
-use crate::stm32::DMA;
-use as_slice::{AsMutSlice, AsSlice};
-use core::ops;
-use core::pin::Pin;
-use core::sync::atomic::{self, Ordering};
+use crate::stm32::{self, DMA, DMAMUX};
+use crate::dmamux::{self, DmaMuxIndex};
 
-#[derive(Debug)]
-pub enum Error {
-    Overrun,
-    BufferError,
+use crate::dmamux::DmaMuxExt;
+
+/// Extension trait to split a DMA peripheral into independent channels
+pub trait DmaExt {
+    /// The type to split the DMA into
+    type Channels;
+
+    /// Reset the DMA peripheral
+    fn reset(self, rcc: &mut Rcc) -> Self;
+
+    /// Split the DMA into independent channels
+    fn split(self, rcc: &mut Rcc, dmamux: DMAMUX) -> Self::Channels;
 }
 
-#[derive(Debug)]
-pub enum Event {
-    HalfTransfer,
-    TransferComplete,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum Half {
-    First,
-    Second,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum TransferDirection {
-    MemoryToMemory,
-    MemoryToPeriph,
-    PeriphToMemory,
-}
-
-#[derive(Clone, Copy, PartialEq)]
+/// Channel priority level
 pub enum Priority {
+    /// Low
     Low = 0b00,
+    /// Medium
     Medium = 0b01,
+    /// High
     High = 0b10,
+    /// Very high
     VeryHigh = 0b11,
 }
 
-pub struct Transfer<CHANNEL, BUFFER> {
-    pub channel: CHANNEL,
-    pub buffer: BUFFER,
+impl From<Priority> for u8 {
+    fn from(prio: Priority) -> Self {
+        match prio {
+            Priority::Low => 0b00,
+            Priority::Medium => 0b01,
+            Priority::High => 0b10,
+            Priority::VeryHigh => 0b11,
+        }
+    }
 }
 
-pub trait ReadDma<B>
-where
-    B: ops::DerefMut + 'static,
-    B::Target: AsMutSlice<Element = u8> + Unpin,
-    Self: core::marker::Sized,
-{
-    /// Receives data into the given `buffer` until it's filled
+/// DMA transfer direction
+pub enum Direction {
+    /// From memory to peripheral
+    FromMemory,
+    /// From peripheral to memory
+    FromPeripheral,
+}
+
+impl From<Direction> for bool {
+    fn from(dir: Direction) -> Self {
+        match dir {
+            Direction::FromMemory => true,
+            Direction::FromPeripheral => false,
+        }
+    }
+}
+
+#[doc = "Peripheral size"]
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u8)]
+pub enum WordSize {
+    #[doc = "0: 8-bit size"]
+    BITS8 = 0,
+    #[doc = "1: 16-bit size"]
+    BITS16 = 1,
+    #[doc = "2: 32-bit size"]
+    BITS32 = 2,
+}
+impl From<WordSize> for u8 {
+    #[inline(always)]
+    fn from(variant: WordSize) -> Self {
+        variant as _
+    }
+}
+
+/// DMA events
+pub enum Event {
+    /// First half of a transfer is done
+    HalfTransfer,
+    /// Transfer is complete
+    TransferComplete,
+    /// A transfer error occurred
+    TransferError,
+    /// Any of the above events occurred
+    Any,
+}
+
+mod private {
+    use crate::stm32;
+
+    /// Channel methods private to this module
+    pub trait Channel {
+        /// Return the register block for this channel
+        fn ch(&self) -> &stm32::dma::CH;
+    }
+}
+
+/// Trait implemented by all DMA channels
+pub trait Channel: private::Channel {
+
+    /// Connects the DMAMUX channel to the peripheral corresponding to index
+    fn select_peripheral(&mut self, index: DmaMuxIndex);
+
+    /// Is the interrupt flag for the given event set?
+    fn event_occurred(&self, event: Event) -> bool;
+
+    /// Clear the interrupt flag for the given event.
     ///
-    /// Returns a value that represents the in-progress DMA transfer
-    fn read(self, buffer: Pin<B>) -> Transfer<Self, Pin<B>>;
-}
-
-pub trait WriteDma<B>
-where
-    B: ops::Deref + 'static,
-    B::Target: AsSlice<Element = u8>,
-    Self: core::marker::Sized,
-{
-    /// Sends out the given `buffer`
+    /// Passing `Event::Any` clears all interrupt flags.
     ///
-    /// Returns a value that represents the in-progress DMA transfer
-    fn write(self, buffer: Pin<B>) -> Transfer<Self, Pin<B>>;
-}
+    /// Note that the the global interrupt flag is not automatically cleared
+    /// even when all other flags are cleared. The only way to clear it is to
+    /// call this method with `Event::Any`.
+    fn clear_event(&mut self, event: Event);
 
-pub trait CopyDma<F, T>
-where
-    F: ops::Deref + 'static,
-    F::Target: AsSlice<Element = u8>,
-    T: ops::Deref + 'static,
-    T::Target: AsMutSlice<Element = u8> + Unpin,
-    Self: core::marker::Sized,
-{
-    /// Copy data between buffers
+    /// Reset the control registers of this channel.
+    /// This stops any ongoing transfers.
+    fn reset(&mut self) {
+        self.ch().cr.reset();
+        self.ch().ndtr.reset();
+        self.ch().par.reset();
+        self.ch().mar.reset();
+        self.clear_event(Event::Any);
+    }
+
+    /// Set the base address of the peripheral data register from/to which the
+    /// data will be read/written.
     ///
-    /// Returns a value that represents the in-progress DMA transfer
-    fn copy(self, from: Pin<F>, to: Pin<T>) -> Transfer<Self, (Pin<F>, Pin<T>)>;
-}
+    /// Only call this method on disabled channels.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this channel is enabled.
+    fn set_peripheral_address(&mut self, address: u32, inc: bool) {
+        assert!(!self.is_enabled());
 
-pub trait DmaExt {
-    type Channels;
+        self.ch().par.write(|w| unsafe {w.pa().bits(address)});
+        self.ch().cr.modify(|_, w| w.pinc().bit(inc));
+    }
 
-    fn split(self, rcc: &mut Rcc) -> Self::Channels;
-}
+    /// Set the base address of the memory area from/to which
+    /// the data will be read/written.
+    ///
+    /// Only call this method on disabled channels.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this channel is enabled.
+    fn set_memory_address(&mut self, address: u32, inc: bool) {
+        assert!(!self.is_enabled());
 
-pub trait DmaChannel {
-    fn set_peripheral_address(&mut self, address: u32, inc: bool);
-    fn set_memory_address(&mut self, address: u32, inc: bool);
-    fn set_transfer_length(&mut self, len: usize);
-    fn set_direction(&mut self, dir: TransferDirection);
-    fn set_priority(&mut self, priority: Priority);
-    fn start(&mut self);
-    fn stop(&mut self);
-    fn listen(&mut self, event: Event);
-    fn unlisten(&mut self, event: Event);
+        self.ch().mar.write(|w| unsafe {w.ma().bits(address)});
+        self.ch().cr.modify(|_, w| w.minc().bit(inc));
+    }
+
+    /// Set the number of words to transfer.
+    ///
+    /// Only call this method on disabled channels.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this channel is enabled.
+    fn set_transfer_length(&mut self, len: u16) {
+        assert!(!self.is_enabled());
+
+        self.ch().ndtr.write(|w| unsafe {w.ndt().bits(len)});
+    }
+
+    /// Set the word size.
+    fn set_word_size<W>(&mut self, wsize: WordSize) {
+        self.ch().cr.modify(|_, w| unsafe {
+            w.psize().bits(wsize as u8);
+            w.msize().bits(wsize as u8)
+        });
+    }
+
+    /// Set the priority level of this channel
+    fn set_priority_level(&mut self, priority: Priority) {
+        let pl = priority.into();
+        self.ch().cr.modify(|_, w| unsafe  {w.pl().bits(pl) });
+    }
+
+    /// Set the transfer direction
+    fn set_direction(&mut self, direction: Direction) {
+        let dir = direction.into();
+        self.ch().cr.modify(|_, w| w.dir().bit(dir));
+    }
+
+      /// Enable the interrupt for the given event
+      fn listen(&mut self, event: Event) {
+        use Event::*;
+        match event {
+            HalfTransfer => self.ch().cr.modify(|_, w| w.htie().set_bit()),
+            TransferComplete => self.ch().cr.modify(|_, w| w.tcie().set_bit()),
+            TransferError => self.ch().cr.modify(|_, w| w.teie().set_bit()),
+            Any => self.ch().cr.modify(|_, w| {
+                w.htie().set_bit();
+                w.tcie().set_bit();
+                w.teie().set_bit()
+            }),
+        }
+    }
+
+    /// Disable the interrupt for the given event
+    fn unlisten(&mut self, event: Event) {
+        use Event::*;
+        match event {
+            HalfTransfer => self.ch().cr.modify(|_, w| w.htie().clear_bit()),
+            TransferComplete => self.ch().cr.modify(|_, w| w.tcie().clear_bit()),
+            TransferError => self.ch().cr.modify(|_, w| w.teie().clear_bit()),
+            Any => self.ch().cr.modify(|_, w| {
+                w.htie().clear_bit();
+                w.tcie().clear_bit();
+                w.teie().clear_bit()
+            }),
+        }
+    }
+
+    /// Start a transfer
+    fn enable(&mut self) {
+        self.clear_event(Event::Any);
+        self.ch().cr.modify(|_, w| w.en().set_bit());
+    }
+
+    /// Stop the current transfer
+    fn disable(&mut self) {
+        self.ch().cr.modify(|_, w| w.en().clear_bit());
+    }
+
+    /// Is there a transfer in progress on this channel?
+    fn is_enabled(&self) -> bool {
+        self.ch().cr.read().en().bit_is_set()
+    }
+
 }
 
 macro_rules! dma {
-    ($($DMAX:ident: ($dmaXen:ident, $dmaXrst:ident, {
-        $($CX:ident: ($ccrX:ident, $cndtrX:ident, $cparX:ident, $cmarX:ident, $cgifX:ident),)+
-    }),)+) => {
-        $(
-            impl DmaExt for $DMAX {
-                type Channels = Channels;
+    (
+        channels: {
+            $( $Ci:ident: (
+                $chi:ident,
+                $htifi:ident, $tcifi:ident, $teifi:ident, $gifi:ident,
+                $chtifi:ident, $ctcifi:ident, $cteifi:ident, $cgifi:ident,
+                $MuxCi: ident
+            ), )+
+        },
+    ) => {
 
-                fn split(self, rcc: &mut Rcc) -> Channels {
-                    rcc.rb.ahbenr.modify(|_, w| w.$dmaXen().set_bit());
-                    $(
-                        self.$ccrX.reset();
-                    )+
-                    Channels((), $($CX { }),+)
+        /// DMA channels
+        pub struct Channels {
+            $( pub $chi: $Ci, )+
+        }
+
+        impl Channels {
+            /// Reset the control registers of all channels.
+            /// This stops any ongoing transfers.
+            fn reset(&mut self) {
+                $( self.$chi.reset(); )+
+            }
+        }
+
+
+        $(
+            /// Singleton that represents a DMA channel
+            pub struct $Ci {
+                mux: dmamux::$MuxCi,
+            }
+
+            impl private::Channel for $Ci {
+                fn ch(&self) -> &stm32::dma::CH {
+                    // NOTE(unsafe) $Ci grants exclusive access to this register
+                    unsafe { &(*DMA::ptr()).$chi }
                 }
             }
 
-            pub struct Channels((), $(pub $CX),+);
+            impl $Ci {
+                pub fn mux(&mut self) -> &mut dyn dmamux::DmaMuxChannel {
+                    &mut self.mux
+                }
+            }
 
-            $(
-                pub struct $CX;
+            impl Channel for $Ci {
 
-                impl DmaChannel for $CX {
-                    /// Associated peripheral `address`
-                    ///
-                    /// `inc` indicates whether the address will be incremented after every byte transfer
-                    fn set_peripheral_address(&mut self, address: u32, inc: bool) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        dma.$cparX.write(|w| unsafe { w.pa().bits(address) });
-                        dma.$ccrX.modify(|_, w| w.pinc().bit(inc) );
-                    }
+                fn select_peripheral(&mut self, index: DmaMuxIndex) {
+                    self.mux().select_peripheral(index);
+                }
 
-                    /// `address` where from/to data will be read/write
-                    ///
-                    /// `inc` indicates whether the address will be incremented after every byte transfer
-                    fn set_memory_address(&mut self, address: u32, inc: bool) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        dma.$cmarX.write(|w| unsafe { w.ma().bits(address) });
-                        dma.$ccrX.modify(|_, w| w.minc().bit(inc) );
-                    }
+                fn event_occurred(&self, event: Event) -> bool {
+                    use Event::*;
 
-                    /// Number of bytes to transfer
-                    fn set_transfer_length(&mut self, len: usize) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        dma.$cndtrX.write(|w| unsafe { w.ndt().bits(len as u16) });
-                    }
-
-                    /// DMA Transfer direction
-                    fn set_direction(&mut self, dir: TransferDirection) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        match dir {
-                            TransferDirection::MemoryToMemory => dma.$ccrX.modify(|_, w| {
-                                w.mem2mem().set_bit().circ().clear_bit()
-                            }),
-                            TransferDirection::MemoryToPeriph => dma.$ccrX.modify(|_, w| {
-                                w.mem2mem().clear_bit().circ().clear_bit().dir().set_bit()
-                            }),
-                            TransferDirection::PeriphToMemory => dma.$ccrX.modify(|_, w| {
-                                w.mem2mem().clear_bit().circ().clear_bit().dir().clear_bit()
-                            }),
-                        }
-                    }
-
-                    /// Set channel priority
-                    fn set_priority(&mut self, priority: Priority) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        dma.$ccrX.modify(|_, w| unsafe { w.pl().bits(priority as u8) });
-                    }
-
-                    /// Starts the DMA transfer
-                    fn start(&mut self) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        dma.$ccrX.modify(|_, w| w.en().set_bit() );
-                    }
-
-                    /// Stops the DMA transfer
-                    fn stop(&mut self) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        dma.ifcr.write(|w| w.$cgifX().set_bit());
-                        dma.$ccrX.modify(|_, w| w.en().clear_bit() );
-                    }
-
-                    fn listen(&mut self, event: Event) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        match event {
-                            Event::HalfTransfer => dma.$ccrX.modify(|_, w| w.htie().set_bit()),
-                            Event::TransferComplete => {
-                                dma.$ccrX.modify(|_, w| w.tcie().set_bit())
-                            }
-                        }
-                    }
-
-                    fn unlisten(&mut self, event: Event) {
-                        let dma = unsafe { &(*$DMAX::ptr()) };
-                        match event {
-                            Event::HalfTransfer => {
-                                dma.$ccrX.modify(|_, w| w.htie().clear_bit())
-                            },
-                            Event::TransferComplete => {
-                                dma.$ccrX.modify(|_, w| w.tcie().clear_bit())
-                            }
-                        }
+                    // NOTE(unsafe) atomic read
+                    let flags = unsafe { (*DMA::ptr()).isr.read() };
+                    match event {
+                        HalfTransfer => flags.$htifi().bit_is_set(),
+                        TransferComplete => flags.$tcifi().bit_is_set(),
+                        TransferError => flags.$teifi().bit_is_set(),
+                        Any => flags.$gifi().bit_is_set(),
                     }
                 }
 
-                impl<F, T> CopyDma<F, T> for $CX
-                where
-                    F: ops::Deref + 'static,
-                    T: ops::Deref + 'static,
-                    F::Target: AsSlice<Element = u8>,
-                    T::Target: AsMutSlice<Element = u8> + Unpin,
-                    Self: core::marker::Sized,
-                {
-                    fn copy(mut self, buf_from: Pin<F>, buf_to: Pin<T>) -> Transfer<Self, (Pin<F>, Pin<T>)> {
-                        let slice_from = buf_from.as_slice();
-                        let slice_to = buf_to.as_slice();
-                        let (ptr_from, len_from) = (slice_from.as_ptr(), slice_from.len());
-                        let (ptr_to, len_to) = (slice_to.as_ptr(), slice_to.len());
-                        assert!(len_from == len_to);
+                fn clear_event(&mut self, event: Event) {
+                    use Event::*;
 
-                        self.set_direction(TransferDirection::MemoryToMemory);
-                        self.set_memory_address(ptr_from as u32, true);
-                        self.set_peripheral_address(ptr_to as u32, false);
-                        self.set_transfer_length(len_from);
-
-                        atomic::compiler_fence(Ordering::SeqCst);
-                        self.start();
-
-                        Transfer {
-                            buffer: (buf_from, buf_to),
-                            channel: self,
-                        }
+                    // NOTE(unsafe) atomic write to a stateless register
+                    unsafe {
+                        &(*DMA::ptr()).ifcr.write(|w| match event {
+                            HalfTransfer => w.$chtifi().set_bit(),
+                            TransferComplete => w.$ctcifi().set_bit(),
+                            TransferError => w.$cteifi().set_bit(),
+                            Any => w.$cgifi().set_bit(),
+                        });
                     }
                 }
-            )+
+
+            }
         )+
     }
 }
 
-dma! {
-    DMA: (dmaen, dma1rst, {
-        Channel1: ( ccr1, cndtr1, cpar1, cmar1, cgif1 ),
-        Channel2: ( ccr2, cndtr2, cpar2, cmar2, cgif2 ),
-        Channel3: ( ccr3, cndtr3, cpar3, cmar3, cgif3 ),
-        Channel4: ( ccr4, cndtr4, cpar4, cmar4, cgif4 ),
-        Channel5: ( ccr5, cndtr5, cpar5, cmar5, cgif5 ),
-    }),
+#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+dma!(
+    channels: {
+        C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
+        C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
+        C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
+        C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
+        C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
+        C6: (ch6, htif6, tcif6, teif6, gif6, chtif6, ctcif6, cteif6, cgif6, C5),
+        C7: (ch7, htif7, tcif7, teif7, gif7, chtif7, ctcif7, cteif7, cgif7, C6),
+    },
+);
+
+#[cfg(any(feature = "stm32g030",feature = "stm32g031", feature = "stm32g041"))]
+dma!(
+    channels: {
+        C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
+        C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
+        C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
+        C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
+        C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
+    },
+);
+
+impl DmaExt for DMA {
+
+    type Channels = Channels;
+
+    fn reset(self, rcc: &mut Rcc) -> Self {
+         // reset DMA
+         rcc.rb.ahbrstr.modify(|_, w| w.dmarst().set_bit());
+         rcc.rb.ahbrstr.modify(|_, w| w.dmarst().clear_bit());
+         self
+    }
+
+    fn split(self, rcc: &mut Rcc, dmamux: DMAMUX) -> Self::Channels {
+
+        let muxchannels = dmamux.split();
+        // enable DMA clock
+        rcc.rb.ahbenr.modify(|_,w| w.dmaen().set_bit());
+
+        let mut channels = Channels {
+            ch1: C1 { mux: muxchannels.ch0 },
+            ch2: C2 { mux: muxchannels.ch1 },
+            ch3: C3 { mux: muxchannels.ch2 },
+            ch4: C4 { mux: muxchannels.ch3 },
+            ch5: C5 { mux: muxchannels.ch4 },
+            ch6: C6 { mux: muxchannels.ch5 },
+            ch7: C7 { mux: muxchannels.ch6 },
+        };
+        channels.reset();
+        channels
+    }
+
 }
+
+/// Trait implemented by DMA targets.
+pub trait Target {
+
+    /// Connect dmamux channel to dma channel and peripheral
+    ///
+    /// The implementation should call
+    /// dma_ch.select_peripheral(DmaMuxIndex::XXX)
+    /// with the correct DmaMuxIndex for XXX
+    fn link_dma<C: Channel>(&mut self, dma_ch: &mut C);
+
+    /// Enable DMA on the target
+    fn enable_dma(&mut self) {}
+    /// Disable DMA on the target
+    fn disable_dma(&mut self) {}
+}
+

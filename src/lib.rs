@@ -52,6 +52,7 @@ pub mod analog;
 // pub mod comparator;
 pub mod crc;
 pub mod delay;
+pub mod dmamux;
 pub mod dma;
 pub mod exti;
 pub mod gpio;
