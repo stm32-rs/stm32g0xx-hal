@@ -2,7 +2,7 @@ use core::fmt;
 use core::marker::PhantomData;
 
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
-use crate::gpio::{AltFunction, DefaultMode};
+use crate::gpio::{AltFunction};
 use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::*;
@@ -138,7 +138,26 @@ where
 }
 
 macro_rules! uart_shared {
-    ($USARTX:ident, $dmamux_rx:ident, $dmamux_tx:ident) => {
+    ($USARTX:ident, $dmamux_rx:ident, $dmamux_tx:ident,
+        tx: [ $(($PTX:ident, $TAF:expr),)+ ],
+        rx: [ $(($PRX:ident, $RAF:expr),)+ ]) => {
+
+
+        $(
+            impl<MODE> TxPin<$USARTX> for $PTX<MODE> {
+                fn setup(&self) {
+                    self.set_alt_mode($TAF)
+                }
+            }
+        )+
+
+        $(
+            impl<MODE> RxPin<$USARTX> for $PRX<MODE> {
+                fn setup(&self) {
+                    self.set_alt_mode($RAF)
+                }
+            }
+        )+
 
         impl<Config> Rx<$USARTX, Config> {
             pub fn listen(&mut self) {
@@ -302,25 +321,8 @@ macro_rules! uart_shared {
 
 macro_rules! uart_basic {
     ($USARTX:ident,
-        $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr,
-        tx: [ $(($PTX:ty, $TAF:expr),)+ ],
-        rx: [ $(($PRX:ty, $RAF:expr),)+ ],
+        $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
     ) => {
-        $(
-            impl TxPin<$USARTX> for $PTX {
-                fn setup(&self) {
-                    self.set_alt_mode($TAF)
-                }
-            }
-        )+
-
-        $(
-            impl RxPin<$USARTX> for $PRX {
-                fn setup(&self) {
-                    self.set_alt_mode($RAF)
-                }
-            }
-        )+
 
         impl SerialExt<$USARTX, BasicConfig> for $USARTX {
             fn usart<TX, RX>(
@@ -438,27 +440,11 @@ macro_rules! uart_basic {
     }
 }
 
+
 macro_rules! uart_full {
     ($USARTX:ident,
-        $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr,
-        tx: [ $(($PTX:ty, $TAF:expr),)+ ],
-        rx: [ $(($PRX:ty, $RAF:expr),)+ ],
+        $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
     ) => {
-        $(
-            impl TxPin<$USARTX> for $PTX {
-                fn setup(&self) {
-                    self.set_alt_mode($TAF)
-                }
-            }
-        )+
-
-        $(
-            impl RxPin<$USARTX> for $PRX {
-                fn setup(&self) {
-                    self.set_alt_mode($RAF)
-                }
-            }
-        )+
 
         impl SerialExt<$USARTX, FullConfig> for $USARTX {
             fn usart<TX, RX>(
@@ -618,88 +604,100 @@ macro_rules! uart_full {
     }
 }
 
-uart_shared!(USART1, USART1_RX, USART1_TX);
-uart_shared!(USART2, USART2_RX, USART2_TX);
-uart_shared!(USART3, USART3_RX, USART3_TX);
-uart_shared!(USART4, USART4_RX, USART4_TX);
-
-uart_full!(
-    USART1, usart1, apbenr2, usart1en, 1,
+uart_shared!(USART1, USART1_RX, USART1_TX,
     tx: [
-        (PA9<DefaultMode>, AltFunction::AF1),
-        (PB6<DefaultMode>, AltFunction::AF0),
-        (PC4<DefaultMode>, AltFunction::AF1),
+        (PA9, AltFunction::AF1),
+        (PB6, AltFunction::AF0),
+        (PC4, AltFunction::AF1),
     ],
     rx: [
-        (PA10<DefaultMode>, AltFunction::AF1),
-        (PB7<DefaultMode>, AltFunction::AF0),
-        (PC5<DefaultMode>, AltFunction::AF1),
+        (PA10, AltFunction::AF1),
+        (PB7, AltFunction::AF0),
+        (PC5, AltFunction::AF1),
+    ]);
+uart_shared!(USART2, USART2_RX, USART2_TX,
+    tx: [
+        (PA2, AltFunction::AF1),
+        (PA14, AltFunction::AF1),
+        (PD5, AltFunction::AF0),
     ],
+    rx: [
+        (PA3, AltFunction::AF1),
+        (PA15, AltFunction::AF1),
+        (PD6, AltFunction::AF0),
+    ]
+);
+
+#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+uart_shared!(USART3, USART3_RX, USART3_TX,
+    tx: [
+        (PA5, AltFunction::AF4),
+        (PB2, AltFunction::AF4),
+        (PB8, AltFunction::AF4),
+        (PB10, AltFunction::AF4),
+        (PC4, AltFunction::AF1),
+        (PC10, AltFunction::AF1),
+        (PD8, AltFunction::AF1),
+    ],
+    rx: [
+        (PB0, AltFunction::AF4),
+        (PB9, AltFunction::AF4),
+        (PB11, AltFunction::AF4),
+        (PC5, AltFunction::AF1),
+        (PC11, AltFunction::AF1),
+        (PD9, AltFunction::AF1),
+    ]
+);
+
+#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+uart_shared!(USART4, USART4_RX, USART4_TX,
+    tx: [
+        (PA0, AltFunction::AF4),
+        (PC10, AltFunction::AF1),
+    ],
+    rx: [
+        (PC11, AltFunction::AF1),
+        (PA1, AltFunction::AF4),
+    ]
+);
+
+#[cfg(feature = "stm32g0x1")]
+uart_shared!(LPUART, LPUART_RX, LPUART_TX,
+    tx: [
+        (PA2, AltFunction::AF6),
+        (PB11, AltFunction::AF1),
+        (PC1, AltFunction::AF1),
+    ],
+    rx: [
+        (PA3, AltFunction::AF6),
+        (PB10, AltFunction::AF1),
+        (PC0, AltFunction::AF1),
+    ]
+);
+
+
+uart_full!(
+    USART1, usart1, apbenr2, usart1en, 1
 );
 
 #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
 uart_full!(
-    USART2, usart2, apbenr1, usart2en, 1,
-    tx: [
-        (PA2<DefaultMode>, AltFunction::AF1),
-        (PA14<DefaultMode>, AltFunction::AF1),
-        (PD5<DefaultMode>, AltFunction::AF0),
-    ],
-    rx: [
-        (PA3<DefaultMode>, AltFunction::AF1),
-        (PA15<DefaultMode>, AltFunction::AF1),
-        (PD6<DefaultMode>, AltFunction::AF0),
-    ],
+    USART2, usart2, apbenr1, usart2en, 1
 );
 
 #[cfg(any(feature = "stm32g030",feature = "stm32g031", feature = "stm32g041"))]
 uart_basic!(
-    USART2, usart2, apbenr1, usart2en, 1,
-    tx: [
-        (PA2<DefaultMode>, AltFunction::AF1),
-        (PA14<DefaultMode>, AltFunction::AF1),
-        (PD5<DefaultMode>, AltFunction::AF0),
-    ],
-    rx: [
-        (PA3<DefaultMode>, AltFunction::AF1),
-        (PA15<DefaultMode>, AltFunction::AF1),
-        (PD6<DefaultMode>, AltFunction::AF0),
-    ],
+    USART2, usart2, apbenr1, usart2en, 1
 );
 
 #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
 uart_basic!(
-    USART3, usart3, apbenr1, usart3en, 1,
-    tx: [
-        (PA5<DefaultMode>, AltFunction::AF4),
-        (PB2<DefaultMode>, AltFunction::AF4),
-        (PB8<DefaultMode>, AltFunction::AF4),
-        (PB10<DefaultMode>, AltFunction::AF4),
-        (PC4<DefaultMode>, AltFunction::AF1),
-        (PC10<DefaultMode>, AltFunction::AF1),
-        (PD8<DefaultMode>, AltFunction::AF1),
-    ],
-    rx: [
-        (PB0<DefaultMode>, AltFunction::AF4),
-        (PB9<DefaultMode>, AltFunction::AF4),
-        (PB11<DefaultMode>, AltFunction::AF4),
-        (PC5<DefaultMode>, AltFunction::AF1),
-        (PC11<DefaultMode>, AltFunction::AF1),
-        (PD9<DefaultMode>, AltFunction::AF1),
-    ],
+    USART3, usart3, apbenr1, usart3en, 1
 );
 
 #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
 uart_basic!(
-    USART4, usart4, apbenr1, usart4en, 1,
-    tx: [
-        (PA0<DefaultMode>, AltFunction::AF4),
-        (PC10<DefaultMode>, AltFunction::AF1),
-    ],
-    rx: [
-        (PC11<DefaultMode>, AltFunction::AF1),
-        (PA1<DefaultMode>, AltFunction::AF4),
-    ],
+    USART4, usart4, apbenr1, usart4en, 1
 );
 
 // LPUART Should be given its own implementation when it needs to be used with features not present on
@@ -707,15 +705,5 @@ uart_basic!(
 // Or when Synchronous mode is implemented for the basic feature set, since the LP feature set does not have support.
 #[cfg(feature = "stm32g0x1")]
 uart_basic!(
-    LPUART, lpuart, apbenr1, lpuart1en, 256,
-    tx: [
-        (PA2<DefaultMode>, AltFunction::AF6),
-        (PB11<DefaultMode>, AltFunction::AF1),
-        (PC1<DefaultMode>, AltFunction::AF1),
-    ],
-    rx: [
-        (PA3<DefaultMode>, AltFunction::AF6),
-        (PB10<DefaultMode>, AltFunction::AF1),
-        (PC0<DefaultMode>, AltFunction::AF1),
-    ],
+    LPUART, lpuart, apbenr1, lpuart1en, 256
 );
