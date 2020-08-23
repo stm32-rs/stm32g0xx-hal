@@ -51,11 +51,17 @@ impl FlashExt for FLASH {
         while self.sr.read().bsy().bit_is_set() {}
 
         reset_errors();
-        self.cr.modify(|_, w| unsafe {
-            w
-            .per().set_bit()
-            .pnb().bits(page as u8)
-            .strt().set_bit()
+        // We absoluty can't have any access to Flash while preparing the
+        // erase, or the process will be interrupted. This includes any
+        // access to the vector table or interrupt handlers that might be
+        // caused by an interrupt.
+        interrupt::free(|_| {
+            self.cr.modify(|_, w| unsafe {
+                w
+                .per().set_bit()
+                .pnb().bits(page as u8)
+                .strt().set_bit()
+            });
         });
 
         // Wait for operation to complete
