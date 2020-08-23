@@ -51,6 +51,7 @@ timer_pins!(TIM2, [
     (Channel2, PC5<DefaultMode>, AltFunction::AF2),
     (Channel3, PA2<DefaultMode>, AltFunction::AF2),
     (Channel3, PB10<DefaultMode>, AltFunction::AF2),
+    (Channel3, PC6<DefaultMode>, AltFunction::AF2),
     (Channel4, PA3<DefaultMode>, AltFunction::AF2),
     (Channel4, PB11<DefaultMode>, AltFunction::AF2),
     (Channel4, PC7<DefaultMode>, AltFunction::AF2),
