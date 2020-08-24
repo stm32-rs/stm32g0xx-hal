@@ -9,7 +9,6 @@ pub trait DmaMuxExt {
     fn split(self) -> Self::Channels;
 }
 
-
 pub enum DmaMuxIndex {
     dmamux_req_gen0 = 0,
     dmamux_req_gen1 = 1,
@@ -67,9 +66,9 @@ pub enum DmaMuxIndex {
     TIM3_CH4 = 35,
     TIM3_TRIG = 36,
     TIM3_UP = 37,
-    #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
     TIM6_UP = 38,
-    #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
     TIM7_UP = 39,
     TIM15_CH1 = 40,
     TIM15_CH2 = 41,
@@ -86,13 +85,13 @@ pub enum DmaMuxIndex {
     USART1_TX = 51,
     USART2_RX = 52,
     USART2_TX = 53,
-    #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
     USART3_RX = 54,
-    #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
     USART3_TX = 55,
-    #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
     USART4_RX = 56,
-    #[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
     USART4_TX = 57,
 
     #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
@@ -110,7 +109,6 @@ impl DmaMuxIndex {
         self as u8
     }
 }
-
 
 pub enum DmaMuxTriggerSync {
     EXTI_LINE0 = 0,
@@ -139,7 +137,7 @@ pub enum DmaMuxTriggerSync {
     #[cfg(feature = "stm32g0x1")]
     LPTIM2_OUT = 21,
 
-    TIM14_OC = 22
+    TIM14_OC = 22,
 }
 impl DmaMuxTriggerSync {
     pub fn val(self) -> u8 {
@@ -184,8 +182,7 @@ macro_rules! dma_mux {
     }
 }
 
-
-#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 dma_mux!(
     channels: {
         C0: (ch0, dmamux_c0cr),
@@ -198,33 +195,32 @@ dma_mux!(
     },
 );
 
-#[cfg(any(feature = "stm32g030",feature = "stm32g031", feature = "stm32g041"))]
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 dma_mux!(
     channels: {
-        C0: (ch0, dmamux_c0cr),
-        C1: (ch1, dmamux_c1cr),
-        C2: (ch2, dmamux_c2cr),
-        C3: (ch3, dmamux_c3cr),
-        C4: (ch4, dmamux_c4cr)
+        C0: (ch0, c0cr),
+        C1: (ch1, c1cr),
+        C2: (ch2, c2cr),
+        C3: (ch3, c3cr),
+        C4: (ch4, c4cr),
     },
 );
-
 
 impl DmaMuxExt for DMAMUX {
     type Channels = Channels;
 
     fn split(self) -> Self::Channels {
-
         let channels = Channels {
             ch0: C0 { _0: () },
             ch1: C1 { _0: () },
             ch2: C2 { _0: () },
             ch3: C3 { _0: () },
             ch4: C4 { _0: () },
+            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
             ch5: C5 { _0: () },
+            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
             ch6: C6 { _0: () },
         };
         channels
     }
-
 }

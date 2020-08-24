@@ -1,7 +1,7 @@
 //! Direct Memory Access Engine
+use crate::dmamux::{self, DmaMuxIndex};
 use crate::rcc::Rcc;
 use crate::stm32::{self, DMA, DMAMUX};
-use crate::dmamux::{self, DmaMuxIndex};
 
 use crate::dmamux::DmaMuxExt;
 
@@ -99,7 +99,6 @@ mod private {
 
 /// Trait implemented by all DMA channels
 pub trait Channel: private::Channel {
-
     /// Connects the DMAMUX channel to the peripheral corresponding to index
     fn select_peripheral(&mut self, index: DmaMuxIndex);
 
@@ -136,7 +135,7 @@ pub trait Channel: private::Channel {
     fn set_peripheral_address(&mut self, address: u32, inc: bool) {
         assert!(!self.is_enabled());
 
-        self.ch().par.write(|w| unsafe {w.pa().bits(address)});
+        self.ch().par.write(|w| unsafe { w.pa().bits(address) });
         self.ch().cr.modify(|_, w| w.pinc().bit(inc));
     }
 
@@ -151,7 +150,7 @@ pub trait Channel: private::Channel {
     fn set_memory_address(&mut self, address: u32, inc: bool) {
         assert!(!self.is_enabled());
 
-        self.ch().mar.write(|w| unsafe {w.ma().bits(address)});
+        self.ch().mar.write(|w| unsafe { w.ma().bits(address) });
         self.ch().cr.modify(|_, w| w.minc().bit(inc));
     }
 
@@ -165,7 +164,7 @@ pub trait Channel: private::Channel {
     fn set_transfer_length(&mut self, len: u16) {
         assert!(!self.is_enabled());
 
-        self.ch().ndtr.write(|w| unsafe {w.ndt().bits(len)});
+        self.ch().ndtr.write(|w| unsafe { w.ndt().bits(len) });
     }
 
     /// Set the word size.
@@ -179,7 +178,7 @@ pub trait Channel: private::Channel {
     /// Set the priority level of this channel
     fn set_priority_level(&mut self, priority: Priority) {
         let pl = priority.into();
-        self.ch().cr.modify(|_, w| unsafe  {w.pl().bits(pl) });
+        self.ch().cr.modify(|_, w| unsafe { w.pl().bits(pl) });
     }
 
     /// Set the transfer direction
@@ -188,8 +187,8 @@ pub trait Channel: private::Channel {
         self.ch().cr.modify(|_, w| w.dir().bit(dir));
     }
 
-      /// Enable the interrupt for the given event
-      fn listen(&mut self, event: Event) {
+    /// Enable the interrupt for the given event
+    fn listen(&mut self, event: Event) {
         use Event::*;
         match event {
             HalfTransfer => self.ch().cr.modify(|_, w| w.htie().set_bit()),
@@ -233,7 +232,6 @@ pub trait Channel: private::Channel {
     fn is_enabled(&self) -> bool {
         self.ch().cr.read().en().bit_is_set()
     }
-
 }
 
 macro_rules! dma {
@@ -319,7 +317,7 @@ macro_rules! dma {
     }
 }
 
-#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 dma!(
     channels: {
         C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
@@ -332,7 +330,7 @@ dma!(
     },
 );
 
-#[cfg(any(feature = "stm32g030",feature = "stm32g031", feature = "stm32g041"))]
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 dma!(
     channels: {
         C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
@@ -344,40 +342,52 @@ dma!(
 );
 
 impl DmaExt for DMA {
-
     type Channels = Channels;
 
     fn reset(self, rcc: &mut Rcc) -> Self {
-         // reset DMA
-         rcc.rb.ahbrstr.modify(|_, w| w.dmarst().set_bit());
-         rcc.rb.ahbrstr.modify(|_, w| w.dmarst().clear_bit());
-         self
+        // reset DMA
+        rcc.rb.ahbrstr.modify(|_, w| w.dmarst().set_bit());
+        rcc.rb.ahbrstr.modify(|_, w| w.dmarst().clear_bit());
+        self
     }
 
     fn split(self, rcc: &mut Rcc, dmamux: DMAMUX) -> Self::Channels {
-
         let muxchannels = dmamux.split();
         // enable DMA clock
-        rcc.rb.ahbenr.modify(|_,w| w.dmaen().set_bit());
+        rcc.rb.ahbenr.modify(|_, w| w.dmaen().set_bit());
 
         let mut channels = Channels {
-            ch1: C1 { mux: muxchannels.ch0 },
-            ch2: C2 { mux: muxchannels.ch1 },
-            ch3: C3 { mux: muxchannels.ch2 },
-            ch4: C4 { mux: muxchannels.ch3 },
-            ch5: C5 { mux: muxchannels.ch4 },
-            ch6: C6 { mux: muxchannels.ch5 },
-            ch7: C7 { mux: muxchannels.ch6 },
+            ch1: C1 {
+                mux: muxchannels.ch0,
+            },
+            ch2: C2 {
+                mux: muxchannels.ch1,
+            },
+            ch3: C3 {
+                mux: muxchannels.ch2,
+            },
+            ch4: C4 {
+                mux: muxchannels.ch3,
+            },
+            ch5: C5 {
+                mux: muxchannels.ch4,
+            },
+            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            ch6: C6 {
+                mux: muxchannels.ch5,
+            },
+            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            ch7: C7 {
+                mux: muxchannels.ch6,
+            },
         };
         channels.reset();
         channels
     }
-
 }
 
 /// Trait implemented by DMA targets.
 pub trait Target {
-
     /// Returns the correct DMAMUX index to configure DMA channel for this peripheral
     fn dmamux(&self) -> crate::dmamux::DmaMuxIndex;
 
@@ -386,4 +396,3 @@ pub trait Target {
     /// Disable DMA on the target
     fn disable_dma(&mut self) {}
 }
-
