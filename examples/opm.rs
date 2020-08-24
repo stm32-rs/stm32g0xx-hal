@@ -14,8 +14,8 @@ use hal::gpio::{Output, PushPull, SignalEdge};
 use hal::prelude::*;
 use hal::rcc;
 use hal::stm32;
-use hal::timer::Channel1;
 use hal::timer::opm::Opm;
+use hal::timer::Channel1;
 use rtic::app;
 
 #[app(device = hal::stm32, peripherals = true)]
@@ -27,7 +27,7 @@ const APP: () = {
     }
 
     #[init]
-     fn init(ctx: init::Context) -> init::LateResources {
+    fn init(ctx: init::Context) -> init::LateResources {
         let mut rcc = ctx.device.RCC.freeze(rcc::Config::pll());
         let mut exti = ctx.device.EXTI;
 
@@ -40,11 +40,7 @@ const APP: () = {
         let mut opm = ctx.device.TIM14.opm(gpioa.pa4, 5.ms(), &mut rcc);
         opm.enable();
 
-        init::LateResources {
-            opm,
-            exti,
-            led,
-        }
+        init::LateResources { opm, exti, led }
     }
 
     #[task(binds = EXTI4_15, resources = [exti, led, opm])]

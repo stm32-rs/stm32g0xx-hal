@@ -20,20 +20,23 @@ fn main() -> ! {
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);
 
-    let mut usart1 = dp.USART1.usart(
-        gpioa.pa9,
-        gpioa.pa10,
-        FullConfig::default().baudrate(115200.bps())
-                                    .fifo_enable()
-                                    .rx_fifo_enable_interrupt()
-                                    .rx_fifo_threshold(FifoThreshold::FIFO_4_BYTES),
-        &mut rcc).unwrap();
-
+    let mut usart1 = dp
+        .USART1
+        .usart(
+            gpioa.pa9,
+            gpioa.pa10,
+            FullConfig::default()
+                .baudrate(115200.bps())
+                .fifo_enable()
+                .rx_fifo_enable_interrupt()
+                .rx_fifo_threshold(FifoThreshold::FIFO_4_BYTES),
+            &mut rcc,
+        )
+        .unwrap();
 
     writeln!(usart1, "Hello USART1\r\n").unwrap();
 
     let (mut tx1, mut rx1) = usart1.split();
-
 
     let mut cnt = 0;
     loop {
@@ -43,14 +46,14 @@ fn main() -> ! {
                     Err(nb::Error::WouldBlock) => {
                         // no more data available in fifo
                         break;
-                    },
+                    }
                     Err(nb::Error::Other(_err)) => {
                         // Handle other error Overrun, Framing, Noise or Parity
-                    },
+                    }
                     Ok(byte) => {
                         writeln!(tx1, "{}: {}\n", cnt, byte).unwrap();
                         cnt += 1;
-                    },
+                    }
                 }
             }
         }

@@ -26,7 +26,6 @@ pub use nb::block;
 #[cfg(feature = "stm32g030")]
 pub use stm32g0::stm32g030 as stm32;
 
-
 #[cfg(feature = "stm32g031")]
 pub use stm32g0::stm32g031 as stm32;
 
@@ -38,7 +37,6 @@ pub use stm32g0::stm32g071 as stm32;
 
 #[cfg(feature = "stm32g081")]
 pub use stm32g0::stm32g081 as stm32;
-
 
 #[cfg(feature = "stm32g070")]
 pub use stm32g0::stm32g070 as stm32;
@@ -52,8 +50,8 @@ pub mod analog;
 // pub mod comparator;
 pub mod crc;
 pub mod delay;
-pub mod dmamux;
 pub mod dma;
+pub mod dmamux;
 pub mod exti;
 pub mod gpio;
 pub mod i2c;

@@ -23,7 +23,7 @@ fn main() -> ! {
 
     let mut pwm_ch1 = pwm.bind_pin(gpioa.pa8);
     let mut pwm_ch2 = pwm.bind_pin(gpioa.pa9);
-    
+
     let max = pwm_ch1.get_max_duty();
     pwm_ch1.set_duty(max / 2);
     pwm_ch2.set_duty(max / 4);

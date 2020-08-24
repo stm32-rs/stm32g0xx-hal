@@ -1,16 +1,16 @@
 use core::fmt;
 use core::marker::PhantomData;
 
+use crate::dma;
+use crate::dmamux::DmaMuxIndex;
+use crate::gpio::AltFunction;
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
-use crate::gpio::{AltFunction};
 use crate::prelude::*;
 use crate::rcc::Rcc;
 use crate::stm32::*;
-use crate::dma;
-use crate::dmamux::DmaMuxIndex;
 
-use nb::block;
 use cortex_m::interrupt;
+use nb::block;
 
 use crate::serial::config::*;
 /// Serial error
@@ -75,14 +75,13 @@ impl Event {
 /// Serial receiver
 pub struct Rx<USART, Config> {
     _usart: PhantomData<USART>,
-    _config: PhantomData<Config>
+    _config: PhantomData<Config>,
 }
-
 
 /// Serial transmitter
 pub struct Tx<USART, Config> {
     _usart: PhantomData<USART>,
-    _config: PhantomData<Config>
+    _config: PhantomData<Config>,
 }
 
 /// Serial abstraction
@@ -90,7 +89,7 @@ pub struct Serial<USART, Config> {
     tx: Tx<USART, Config>,
     rx: Rx<USART, Config>,
     usart: USART,
-    _config: PhantomData<Config>
+    _config: PhantomData<Config>,
 }
 
 // Serial TX pin
@@ -115,7 +114,6 @@ pub trait SerialExt<USART, Config> {
         TX: TxPin<USART>,
         RX: RxPin<USART>;
 }
-
 
 impl<USART, Config> fmt::Write for Serial<USART, Config>
 where
@@ -318,19 +316,18 @@ macro_rules! uart_shared {
     }
 }
 
-
 macro_rules! uart_basic {
     ($USARTX:ident,
         $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
     ) => {
-
         impl SerialExt<$USARTX, BasicConfig> for $USARTX {
             fn usart<TX, RX>(
                 self,
                 tx: TX,
                 rx: RX,
                 config: BasicConfig,
-                rcc: &mut Rcc) -> Result<Serial<$USARTX, BasicConfig>, InvalidConfig>
+                rcc: &mut Rcc,
+            ) -> Result<Serial<$USARTX, BasicConfig>, InvalidConfig>
             where
                 TX: TxPin<$USARTX>,
                 RX: RxPin<$USARTX>,
@@ -339,19 +336,18 @@ macro_rules! uart_basic {
             }
         }
 
-
         impl Serial<$USARTX, BasicConfig> {
-
             pub fn $usartX<TX, RX>(
                 usart: $USARTX,
                 tx: TX,
                 rx: RX,
                 config: BasicConfig,
-                rcc: &mut Rcc,)  -> Result<Self, InvalidConfig>
-                where
+                rcc: &mut Rcc,
+            ) -> Result<Self, InvalidConfig>
+            where
                 TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX> {
-
+                RX: RxPin<$USARTX>,
+            {
                 tx.setup();
                 rx.setup();
 
@@ -360,9 +356,7 @@ macro_rules! uart_basic {
                 let clk = rcc.clocks.apb_clk.0 as u64;
                 let bdr = config.baudrate.0 as u64;
                 let div = ($clk_mul * clk) / bdr;
-                usart
-                    .brr
-                    .write(|w| unsafe { w.bits(div as u32) });
+                usart.brr.write(|w| unsafe { w.bits(div as u32) });
                 // Reset other registers to disable advanced USART features
                 usart.cr2.reset();
                 usart.cr3.reset();
@@ -394,10 +388,16 @@ macro_rules! uart_basic {
                 });
 
                 Ok(Serial {
-                    tx: Tx { _usart: PhantomData, _config: PhantomData },
-                    rx: Rx { _usart: PhantomData, _config: PhantomData },
+                    tx: Tx {
+                        _usart: PhantomData,
+                        _config: PhantomData,
+                    },
+                    rx: Rx {
+                        _usart: PhantomData,
+                        _config: PhantomData,
+                    },
                     usart,
-                    _config: PhantomData
+                    _config: PhantomData,
                 })
             }
 
@@ -407,7 +407,7 @@ macro_rules! uart_basic {
                     Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
                     Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
                     Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
-                    _ => {},
+                    _ => {}
                 }
             }
 
@@ -417,7 +417,7 @@ macro_rules! uart_basic {
                     Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
                     Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
                     Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
-                    _ => {},
+                    _ => {}
                 }
             }
 
@@ -430,29 +430,26 @@ macro_rules! uart_basic {
             pub fn unpend(&mut self, event: Event) {
                 // mask the allowed bits
                 let mask: u32 = 0x123BFF;
-                self.usart.icr.write(|w| unsafe {
-                    w.bits(event.val() & mask)
-                });
+                self.usart
+                    .icr
+                    .write(|w| unsafe { w.bits(event.val() & mask) });
             }
-
         }
-
-    }
+    };
 }
-
 
 macro_rules! uart_full {
     ($USARTX:ident,
         $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
     ) => {
-
         impl SerialExt<$USARTX, FullConfig> for $USARTX {
             fn usart<TX, RX>(
                 self,
                 tx: TX,
                 rx: RX,
                 config: FullConfig,
-                rcc: &mut Rcc) -> Result<Serial<$USARTX, FullConfig>, InvalidConfig>
+                rcc: &mut Rcc,
+            ) -> Result<Serial<$USARTX, FullConfig>, InvalidConfig>
             where
                 TX: TxPin<$USARTX>,
                 RX: RxPin<$USARTX>,
@@ -461,19 +458,18 @@ macro_rules! uart_full {
             }
         }
 
-
         impl Serial<$USARTX, FullConfig> {
-
             pub fn $usartX<TX, RX>(
                 usart: $USARTX,
                 tx: TX,
                 rx: RX,
                 config: FullConfig,
-                rcc: &mut Rcc,)  -> Result<Self, InvalidConfig>
-                where
+                rcc: &mut Rcc,
+            ) -> Result<Self, InvalidConfig>
+            where
                 TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX> {
-
+                RX: RxPin<$USARTX>,
+            {
                 tx.setup();
                 rx.setup();
 
@@ -490,9 +486,9 @@ macro_rules! uart_full {
                 usart.cr2.reset();
                 usart.cr3.reset();
 
-                usart.cr2.write(|w| unsafe {
-                    w.stop().bits(config.stopbits.bits())
-                });
+                usart
+                    .cr2
+                    .write(|w| unsafe { w.stop().bits(config.stopbits.bits()) });
 
                 if let Some(timeout) = config.receiver_timeout {
                     usart.cr1.write(|w| w.rtoie().set_bit());
@@ -501,36 +497,46 @@ macro_rules! uart_full {
                 }
 
                 usart.cr3.write(|w| unsafe {
-                    w.txftcfg().bits(config.tx_fifo_threshold.bits())
-                    .rxftcfg().bits(config.rx_fifo_threshold.bits())
-                    .txftie().bit(config.tx_fifo_interrupt)
-                    .rxftie().bit(config.rx_fifo_interrupt)
+                    w.txftcfg()
+                        .bits(config.tx_fifo_threshold.bits())
+                        .rxftcfg()
+                        .bits(config.rx_fifo_threshold.bits())
+                        .txftie()
+                        .bit(config.tx_fifo_interrupt)
+                        .rxftie()
+                        .bit(config.rx_fifo_interrupt)
                 });
 
                 usart.cr1.modify(|_, w| {
                     w.ue()
-                    .set_bit()
-                    .te()
-                    .set_bit()
-                    .re()
-                    .set_bit()
-                    .m0()
-                    .bit(config.wordlength == WordLength::DataBits7)
-                    .m1()
-                    .bit(config.wordlength == WordLength::DataBits9)
-                    .pce()
-                    .bit(config.parity != Parity::ParityNone)
-                    .ps()
-                    .bit(config.parity == Parity::ParityOdd)
-                    .fifoen()
-                    .bit(config.fifo_enable)
+                        .set_bit()
+                        .te()
+                        .set_bit()
+                        .re()
+                        .set_bit()
+                        .m0()
+                        .bit(config.wordlength == WordLength::DataBits7)
+                        .m1()
+                        .bit(config.wordlength == WordLength::DataBits9)
+                        .pce()
+                        .bit(config.parity != Parity::ParityNone)
+                        .ps()
+                        .bit(config.parity == Parity::ParityOdd)
+                        .fifoen()
+                        .bit(config.fifo_enable)
                 });
 
                 Ok(Serial {
-                    tx: Tx { _usart: PhantomData, _config: PhantomData },
-                    rx: Rx { _usart: PhantomData, _config: PhantomData },
+                    tx: Tx {
+                        _usart: PhantomData,
+                        _config: PhantomData,
+                    },
+                    rx: Rx {
+                        _usart: PhantomData,
+                        _config: PhantomData,
+                    },
                     usart,
-                    _config: PhantomData
+                    _config: PhantomData,
                 })
             }
 
@@ -540,7 +546,7 @@ macro_rules! uart_full {
                     Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
                     Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
                     Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
-                    _ => {},
+                    _ => {}
                 }
             }
 
@@ -550,7 +556,7 @@ macro_rules! uart_full {
                     Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
                     Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
                     Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
-                    _ => {},
+                    _ => {}
                 }
             }
 
@@ -563,20 +569,17 @@ macro_rules! uart_full {
             pub fn unpend(&mut self, event: Event) {
                 // mask the allowed bits
                 let mask: u32 = 0x123BFF;
-                self.usart.icr.write(|w| unsafe {
-                    w.bits(event.val() & mask)
-                });
+                self.usart
+                    .icr
+                    .write(|w| unsafe { w.bits(event.val() & mask) });
             }
-
         }
         impl Tx<$USARTX, FullConfig> {
-
-             /// Returns true if the tx fifo threshold has been reached.
-             pub fn fifo_threshold_reached(&self) -> bool {
+            /// Returns true if the tx fifo threshold has been reached.
+            pub fn fifo_threshold_reached(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.isr.read().txft().bit_is_set()
             }
-
         }
 
         impl Rx<$USARTX, FullConfig> {
@@ -598,23 +601,21 @@ macro_rules! uart_full {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.isr.read().rxft().bit_is_set()
             }
-
         }
-
-    }
+    };
 }
 
 uart_shared!(USART1, USART1_RX, USART1_TX,
-    tx: [
-        (PA9, AltFunction::AF1),
-        (PB6, AltFunction::AF0),
-        (PC4, AltFunction::AF1),
-    ],
-    rx: [
-        (PA10, AltFunction::AF1),
-        (PB7, AltFunction::AF0),
-        (PC5, AltFunction::AF1),
-    ]);
+tx: [
+    (PA9, AltFunction::AF1),
+    (PB6, AltFunction::AF0),
+    (PC4, AltFunction::AF1),
+],
+rx: [
+    (PA10, AltFunction::AF1),
+    (PB7, AltFunction::AF0),
+    (PC5, AltFunction::AF1),
+]);
 uart_shared!(USART2, USART2_RX, USART2_TX,
     tx: [
         (PA2, AltFunction::AF1),
@@ -628,7 +629,7 @@ uart_shared!(USART2, USART2_RX, USART2_TX,
     ]
 );
 
-#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 uart_shared!(USART3, USART3_RX, USART3_TX,
     tx: [
         (PA5, AltFunction::AF4),
@@ -649,7 +650,7 @@ uart_shared!(USART3, USART3_RX, USART3_TX,
     ]
 );
 
-#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 uart_shared!(USART4, USART4_RX, USART4_TX,
     tx: [
         (PA0, AltFunction::AF4),
@@ -675,35 +676,22 @@ uart_shared!(LPUART, LPUART_RX, LPUART_TX,
     ]
 );
 
+uart_full!(USART1, usart1, apbenr2, usart1en, 1);
 
-uart_full!(
-    USART1, usart1, apbenr2, usart1en, 1
-);
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+uart_full!(USART2, usart2, apbenr1, usart2en, 1);
 
-#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
-uart_full!(
-    USART2, usart2, apbenr1, usart2en, 1
-);
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
+uart_basic!(USART2, usart2, apbenr1, usart2en, 1);
 
-#[cfg(any(feature = "stm32g030",feature = "stm32g031", feature = "stm32g041"))]
-uart_basic!(
-    USART2, usart2, apbenr1, usart2en, 1
-);
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+uart_basic!(USART3, usart3, apbenr1, usart3en, 1);
 
-#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
-uart_basic!(
-    USART3, usart3, apbenr1, usart3en, 1
-);
-
-#[cfg(any(feature = "stm32g070",feature = "stm32g071", feature = "stm32g081"))]
-uart_basic!(
-    USART4, usart4, apbenr1, usart4en, 1
-);
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+uart_basic!(USART4, usart4, apbenr1, usart4en, 1);
 
 // LPUART Should be given its own implementation when it needs to be used with features not present on
 // the basic feature set such as: Dual clock domain, FIFO or prescaler.
 // Or when Synchronous mode is implemented for the basic feature set, since the LP feature set does not have support.
 #[cfg(feature = "stm32g0x1")]
-uart_basic!(
-    LPUART, lpuart, apbenr1, lpuart1en, 256
-);
+uart_basic!(LPUART, lpuart, apbenr1, lpuart1en, 256);
