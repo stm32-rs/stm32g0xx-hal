@@ -20,7 +20,8 @@ fn main() -> ! {
     let mut rcc = dp.RCC.constrain();
 
     let crc = dp.CRC.constrain(&mut rcc);
-    let mut crc = crc.input_bit_reversal(Some(BitReversal::ByWord))
+    let mut crc = crc
+        .input_bit_reversal(Some(BitReversal::ByWord))
         .output_bit_reversal(true)
         .freeze();
 

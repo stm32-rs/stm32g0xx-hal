@@ -15,7 +15,6 @@ pub enum Parity {
     ParityOdd,
 }
 
-
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
 pub enum StopBits {
     #[doc = "1 stop bit"]
@@ -75,7 +74,7 @@ pub struct FullConfig {
     pub(crate) tx_fifo_interrupt: bool,
     pub(crate) rx_fifo_interrupt: bool,
     #[doc = "Number of bits no activity on rx line"]
-    pub(crate) receiver_timeout: Option<u32>
+    pub(crate) receiver_timeout: Option<u32>,
 }
 
 impl BasicConfig {
@@ -182,7 +181,6 @@ impl FullConfig {
         self.receiver_timeout = Some(t as u32);
         self
     }
-
 }
 
 #[derive(Debug)]
@@ -213,7 +211,7 @@ impl Default for FullConfig {
             rx_fifo_threshold: FifoThreshold::FIFO_8_BYTES,
             tx_fifo_interrupt: false,
             rx_fifo_interrupt: false,
-            receiver_timeout: None
+            receiver_timeout: None,
         }
     }
 }

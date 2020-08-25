@@ -7,10 +7,10 @@ extern crate stm32g0xx_hal as hal;
 
 use core::fmt::Write;
 
+use hal::dma::{self, Channel, Target};
 use hal::prelude::*;
 use hal::serial::*;
 use hal::stm32;
-use hal::dma::{self, Channel, Target};
 
 use rt::entry;
 
@@ -20,10 +20,15 @@ fn main() -> ! {
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);
 
-    let mut usart1 = dp.USART1.usart(
-        gpioa.pa9,
-        gpioa.pa10,
-        FullConfig::default().baudrate(115200.bps()), &mut rcc).unwrap();
+    let mut usart1 = dp
+        .USART1
+        .usart(
+            gpioa.pa9,
+            gpioa.pa10,
+            FullConfig::default().baudrate(115200.bps()),
+            &mut rcc,
+        )
+        .unwrap();
 
     writeln!(usart1, "Hello without DMA\r\n").unwrap();
 
@@ -35,7 +40,7 @@ fn main() -> ! {
 
     let usart = unsafe { &(*stm32::USART1::ptr()) };
     let tx_data_register_addr = &usart.tdr as *const _ as u32;
-    let tx_dma_buf_addr : u32 = tx_buffer.as_ptr() as u32;
+    let tx_dma_buf_addr: u32 = tx_buffer.as_ptr() as u32;
 
     dma.ch1.set_direction(dma::Direction::FromMemory);
     dma.ch1.set_memory_address(tx_dma_buf_addr, true);

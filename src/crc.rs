@@ -1,7 +1,7 @@
 //! CRC calculation unit
 //!
 //! This unit is modeled after the [corresponding unit in the stm32l4xx-hal](https://github.com/stm32-rs/stm32l4xx-hal/blob/master/src/crc.rs).
-//! 
+//!
 //! Usage example:
 //! ```
 //! let crc = dp.RCC.constrain();
