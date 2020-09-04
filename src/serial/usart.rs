@@ -361,11 +361,12 @@ macro_rules! uart_basic {
                 usart.cr2.reset();
                 usart.cr3.reset();
 
+                // Disable USART, there are many bits where UE=0 is required
+                usart.cr1.modify(|_, w| w.ue().clear_bit());
+
                 // Enable transmission and receiving
                 usart.cr1.write(|w| {
-                    w.ue()
-                        .set_bit()
-                        .te()
+                    w.te()
                         .set_bit()
                         .re()
                         .set_bit()
@@ -386,6 +387,9 @@ macro_rules! uart_basic {
                         StopBits::STOP1P5 => 0b11,
                     })
                 });
+
+                // Enable USART
+                usart.cr1.modify(|_, w| w.ue().set_bit());
 
                 Ok(Serial {
                     tx: Tx {
