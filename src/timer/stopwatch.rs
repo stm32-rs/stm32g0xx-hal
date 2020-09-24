@@ -70,7 +70,7 @@ macro_rules! stopwatches {
 
                 pub fn trace<F>(&self, mut closure: F) -> MicroSecond
                 where
-                    F: FnMut() -> (),
+                    F: FnMut(),
                 {
                     let started = self.now().0;
                     closure();

@@ -19,7 +19,7 @@ impl Rtc {
 
     fn modify<F>(&mut self, mut closure: F)
     where
-        F: FnMut(&mut RTC) -> (),
+        F: FnMut(&mut RTC),
     {
         // Disable write protection
         self.rb.wpr.write(|w| unsafe { w.bits(0xCA) });
