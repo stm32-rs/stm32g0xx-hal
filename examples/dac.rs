@@ -11,8 +11,10 @@ extern crate cortex_m_rt as rt;
 extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
+use hal::analog::dac::GeneratorMode;
 use hal::hal::Direction;
 use hal::prelude::*;
+use hal::rcc::Config;
 use hal::stm32;
 use rt::entry;
 
@@ -21,24 +23,20 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");
 
-    let mut rcc = dp.RCC.constrain();
+    let mut rcc = dp.RCC.freeze(Config::pll());
     let mut delay = cp.SYST.delay(&mut rcc);
 
     let gpioa = dp.GPIOA.split(&mut rcc);
-    let dac = dp.DAC.constrain(gpioa.pa4, &mut rcc);
+    let (dac0, dac1) = dp.DAC.constrain((gpioa.pa4, gpioa.pa5), &mut rcc);
 
-    let mut dac = dac.calibrate_buffer(&mut delay).enable();
+    let mut dac = dac0.calibrate_buffer(&mut delay).enable();
+    let mut generator = dac1.enable_generator(GeneratorMode::triangle(11));
 
     let mut dir = Direction::Upcounting;
     let mut val = 0;
 
-    dac.set_value(2058);
-    cortex_m::asm::bkpt();
-
-    dac.set_value(4095);
-    cortex_m::asm::bkpt();
-
     loop {
+        generator.trigger();
         dac.set_value(val);
         match val {
             0 => dir = Direction::Upcounting,
