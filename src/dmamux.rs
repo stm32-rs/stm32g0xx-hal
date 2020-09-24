@@ -210,7 +210,7 @@ impl DmaMuxExt for DMAMUX {
     type Channels = Channels;
 
     fn split(self) -> Self::Channels {
-        let channels = Channels {
+        Channels {
             ch0: C0 { _0: () },
             ch1: C1 { _0: () },
             ch2: C2 { _0: () },
@@ -220,7 +220,6 @@ impl DmaMuxExt for DMAMUX {
             ch5: C5 { _0: () },
             #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
             ch6: C6 { _0: () },
-        };
-        channels
+        }
     }
 }
