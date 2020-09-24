@@ -11,9 +11,9 @@ extern crate cortex_m_rt as rt;
 extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
-use hal::prelude::*;
 use hal::analog::dac::GeneratorMode;
 use hal::hal::Direction;
+use hal::prelude::*;
 use hal::rcc::Config;
 use hal::stm32;
 use rt::entry;
