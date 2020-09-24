@@ -36,7 +36,7 @@ fn main() -> ! {
     let mut val = 0;
 
     loop {
-        generator.update();
+        generator.trigger();
         dac.set_value(val);
         match val {
             0 => dir = Direction::Upcounting,

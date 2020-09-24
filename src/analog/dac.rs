@@ -212,7 +212,7 @@ macro_rules! dac {
 
             /// Wave generator state implementation
             impl $CX<WaveGenerator> {
-                pub fn update(&mut self) {
+                pub fn trigger(&mut self) {
                     let dac = unsafe { &(*DAC::ptr()) };
                     dac.dac_swtrgr.write(|w| { w.$swtrig().set_bit() });
                 }
