@@ -14,16 +14,40 @@ pub trait DacOut<V> {
     fn get_value(&mut self) -> V;
 }
 
+pub struct GeneratorMode {
+    mode: u8,
+    amp: u8,
+}
+
+impl GeneratorMode {
+    pub fn triangle(amplitude: u8) -> Self {
+        Self {
+            mode: 0b10,
+            amp: amplitude,
+        }
+    }
+
+    pub fn noise(seed: u8) -> Self {
+        Self {
+            mode: 0b01,
+            amp: seed,
+        }
+    }
+}
+
 /// Enabled DAC (type state)
 pub struct Enabled;
 /// Enabled DAC without output buffer (type state)
 pub struct EnabledUnbuffered;
+/// Enabled DAC wave generator (type state)
+pub struct WaveGenerator;
 /// Disabled DAC (type state)
 pub struct Disabled;
 
 pub trait ED {}
 impl ED for Enabled {}
 impl ED for EnabledUnbuffered {}
+impl ED for WaveGenerator {}
 impl ED for Disabled {}
 
 pub struct Channel1<ED> {
@@ -68,7 +92,20 @@ where
 }
 
 macro_rules! dac {
-    ($($CX:ident: ($en:ident, $cen:ident, $cal_flag:ident, $trim:ident, $mode:ident, $dhrx:ident, $dac_dor:ident, $daccxdhr:ident),)+) => {
+    ($($CX:ident: (
+        $en:ident,
+        $cen:ident,
+        $cal_flag:ident,
+        $trim:ident,
+        $mode:ident,
+        $dhrx:ident,
+        $dac_dor:ident,
+        $daccxdhr:ident,
+        $wave:ident,
+        $mamp:ident,
+        $ten:ident,
+        $swtrig:ident
+    ),)+) => {
         $(
             impl $CX<Disabled> {
                 pub fn enable(self) -> $CX<Enabled> {
@@ -87,6 +124,22 @@ macro_rules! dac {
 
                     dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(2) });
                     dac.dac_cr.modify(|_, w| w.$en().set_bit());
+
+                    $CX {
+                        _enabled: PhantomData,
+                    }
+                }
+
+                pub fn enable_generator(self, mode: GeneratorMode) -> $CX<WaveGenerator> {
+                    let dac = unsafe { &(*DAC::ptr()) };
+
+                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(0) });
+                    dac.dac_cr.modify(|_, w| unsafe {
+                        w.$wave().bits(mode.mode);
+                        w.$ten().set_bit();
+                        w.$mamp().bits(mode.amp);
+                        w.$en().set_bit()
+                    });
 
                     $CX {
                         _enabled: PhantomData,
@@ -133,7 +186,9 @@ macro_rules! dac {
                 /// Disable the DAC channel
                 pub fn disable(self) -> $CX<Disabled> {
                     let dac = unsafe { &(*DAC::ptr()) };
-                    dac.dac_cr.modify(|_, w| w.$en().clear_bit());
+                    dac.dac_cr.modify(|_, w| unsafe {
+                        w.$en().clear_bit().$wave().bits(0).$ten().clear_bit()
+                    });
 
                     $CX {
                         _enabled: PhantomData,
@@ -152,6 +207,14 @@ macro_rules! dac {
                 fn get_value(&mut self) -> u16 {
                     let dac = unsafe { &(*DAC::ptr()) };
                     dac.$dac_dor.read().bits() as u16
+                }
+            }
+
+            /// Wave generator state implementation
+            impl $CX<WaveGenerator> {
+                pub fn update(&mut self) {
+                    let dac = unsafe { &(*DAC::ptr()) };
+                    dac.dac_swtrgr.write(|w| { w.$swtrig().set_bit() });
                 }
             }
         )+
@@ -183,7 +246,11 @@ dac!(
             mode1,
             dac_dhr12r1,
             dac_dor1,
-            dacc1dhr
+            dacc1dhr,
+            wave1,
+            mamp1,
+            ten1,
+            swtrig1
         ),
     Channel2:
         (
@@ -194,6 +261,10 @@ dac!(
             mode2,
             dac_dhr12r2,
             dac_dor2,
-            dacc2dhr
+            dacc2dhr,
+            wave2,
+            mamp2,
+            ten2,
+            swtrig2
         ),
 );
