@@ -4,7 +4,7 @@ use core::marker::PhantomData;
 use crate::rcc::Rcc;
 
 /// Default pin mode
-pub type DefaultMode = Input<Floating>;
+pub type DefaultMode = Analog;
 
 /// Extension trait to split a GPIO peripheral in independent pins and registers
 pub trait GpioExt {
@@ -87,7 +87,7 @@ macro_rules! gpio {
             /// GPIO parts
             pub struct Parts {
                 $(
-                    pub $pxi: $PXi<Input<Floating>>,
+                    pub $pxi: $PXi<DefaultMode>,
                 )+
             }
 
@@ -189,9 +189,9 @@ macro_rules! gpio {
                     }
                 }
 
-                impl Into<$PXi<Analog>> for $PXi<DefaultMode> {
-                    fn into(self) -> $PXi<Analog> {
-                        self.into_analog()
+                impl Into<$PXi<Input<Floating>>> for $PXi<DefaultMode> {
+                    fn into(self) -> $PXi<Input<Floating>> {
+                        self.into_floating_input()
                     }
                 }
 
