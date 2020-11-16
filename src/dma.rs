@@ -187,6 +187,11 @@ pub trait Channel: private::Channel {
         self.ch().cr.modify(|_, w| w.dir().bit(dir));
     }
 
+    /// Set the circular mode of this channel
+    fn set_circular_mode(&mut self, circular: bool) {
+        self.ch().cr.modify(|_, w| w.circ().bit(circular));
+    }
+
     /// Enable the interrupt for the given event
     fn listen(&mut self, event: Event) {
         use Event::*;
