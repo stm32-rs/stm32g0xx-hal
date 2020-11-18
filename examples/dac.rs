@@ -1,4 +1,4 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 #![deny(unsafe_code)]
 #![no_main]
 #![no_std]
@@ -11,7 +11,7 @@ extern crate cortex_m_rt as rt;
 extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
-use hal::analog::dac::GeneratorMode;
+use hal::analog::dac::GeneratorConfig;
 use hal::hal::Direction;
 use hal::prelude::*;
 use hal::rcc::Config;
@@ -30,7 +30,7 @@ fn main() -> ! {
     let (dac0, dac1) = dp.DAC.constrain((gpioa.pa4, gpioa.pa5), &mut rcc);
 
     let mut dac = dac0.calibrate_buffer(&mut delay).enable();
-    let mut generator = dac1.enable_generator(GeneratorMode::triangle(11));
+    let mut generator = dac1.enable_generator(GeneratorConfig::noise(11));
 
     let mut dir = Direction::Upcounting;
     let mut val = 0;

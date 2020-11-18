@@ -14,12 +14,12 @@ pub trait DacOut<V> {
     fn get_value(&mut self) -> V;
 }
 
-pub struct GeneratorMode {
+pub struct GeneratorConfig {
     mode: u8,
     amp: u8,
 }
 
-impl GeneratorMode {
+impl GeneratorConfig {
     pub fn triangle(amplitude: u8) -> Self {
         Self {
             mode: 0b10,
@@ -130,7 +130,7 @@ macro_rules! dac {
                     }
                 }
 
-                pub fn enable_generator(self, mode: GeneratorMode) -> $CX<WaveGenerator> {
+                pub fn enable_generator(self, mode: GeneratorConfig) -> $CX<WaveGenerator> {
                     let dac = unsafe { &(*DAC::ptr()) };
 
                     dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(0) });
