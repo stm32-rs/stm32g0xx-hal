@@ -305,7 +305,7 @@ macro_rules! gpio {
                     }
 
                     /// Configures the pin as external trigger
-                    pub fn listen(self, edge: SignalEdge, exti: &mut EXTI) -> $PXi<Input<PushPull>> {
+                    pub fn listen(self, edge: SignalEdge, exti: &mut EXTI) -> $PXi<Input<Floating>> {
                         let offset = 2 * $i;
                         unsafe {
                             &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
