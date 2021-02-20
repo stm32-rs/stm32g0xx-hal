@@ -1,3 +1,3 @@
 pub mod adc;
-#[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(feature = "dac")]
 pub mod dac;
