@@ -61,8 +61,7 @@ impl Config {
         self
     }
 
-    /// Sets the output polarity to inverted
-    pub fn inverted(mut self) -> Self {
+    pub fn output_inverted(mut self) -> Self {
         self.inverted = true;
         self
     }
@@ -294,8 +293,11 @@ pub struct WindowComparator {
     comp2: Comparator<COMP2>,
 }
 
+// TODO: impl for (COMP2, COMP1), (COMP2, COMP3), (COMP3, COMP2)
 pub trait WindowComparatorExt {
+    /// Returns `true` if the input is between the lower and upper thresholds
     fn output(&self) -> bool;
+    /// Returns `true` if the input is above the lower threshold
     fn above_lower(&self) -> bool;
     fn enable(&self);
     fn disable(&self);
@@ -305,13 +307,13 @@ pub trait WindowComparatorExt {
 /// See Figure 69 in RM0444 Rev 5.
 pub fn window_comparator<
     P: PositiveInput<COMP1>,
-    U: NegativeInput<COMP1>,
     L: NegativeInput<COMP2>,
+    U: NegativeInput<COMP1>,
 >(
     comp: COMP,
     input: P,
-    upper_threshold: U,
     lower_threshold: L,
+    upper_threshold: U,
     config: Config,
     rcc: &mut Rcc,
 ) -> WindowComparator {
@@ -364,4 +366,14 @@ pub fn split(_comp: COMP, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2
             regs: COMP2 { _rb: PhantomData },
         },
     )
+}
+
+pub trait ComparatorSplit {
+    fn split(self, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2>);
+}
+
+impl ComparatorSplit for COMP {
+    fn split(self, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2>) {
+        split(self, rcc)
+    }
 }
