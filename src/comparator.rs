@@ -287,13 +287,24 @@ macro_rules! comparator_ext {
 comparator_ext!(COMP1, Comparator<COMP1>);
 comparator_ext!(COMP2, Comparator<COMP2>);
 
-pub struct WindowComparator {
-    comp1: Comparator<COMP1>,
-    comp2: Comparator<COMP2>,
+/// Uses two comparators to implement a window comparator.
+/// See Figure 69 in RM0444 Rev 5.
+pub struct WindowComparator<U, L> {
+    pub upper: Comparator<U>,
+    pub lower: Comparator<L>,
 }
 
-// TODO: impl for (COMP2, COMP1), (COMP2, COMP3), (COMP3, COMP2)
-pub trait WindowComparatorExt {
+pub trait WindowComparatorExt<UC, LC> {
+    /// Uses two comparators to implement a window comparator.
+    /// See Figure 69 in RM0444 Rev 5.
+    fn init<I: PositiveInput<UC>, L: NegativeInput<LC>, U: NegativeInput<UC>>(
+        &mut self,
+        input: I,
+        lower_threshold: L,
+        upper_threshold: U,
+        config: Config,
+    );
+
     /// Returns `true` if the input is between the lower and upper thresholds
     fn output(&self) -> bool;
     /// Returns `true` if the input is above the lower threshold
@@ -302,52 +313,52 @@ pub trait WindowComparatorExt {
     fn disable(&self);
 }
 
-/// Uses both Comparator 1 and Comparator 2 to implement a window comparator.
-/// See Figure 69 in RM0444 Rev 5.
-pub fn window_comparator<
-    P: PositiveInput<COMP1>,
-    L: NegativeInput<COMP2>,
-    U: NegativeInput<COMP1>,
->(
-    comp: COMP,
-    input: P,
-    lower_threshold: L,
-    upper_threshold: U,
-    config: Config,
-    rcc: &mut Rcc,
-) -> WindowComparator {
-    let (mut comp1, mut comp2) = split(comp, rcc);
+macro_rules! window_comparator {
+    ($UPPER:ident, $LOWER:ident, $LOTHR:expr) => {
+        impl WindowComparatorExt<$UPPER, $LOWER> for WindowComparator<$UPPER, $LOWER> {
+            fn init<
+                I: PositiveInput<$UPPER>,
+                L: NegativeInput<$LOWER>,
+                U: NegativeInput<$UPPER>,
+            >(
+                &mut self,
+                input: I,
+                lower_threshold: L,
+                upper_threshold: U,
+                config: Config,
+            ) {
+                let mut configu = config.clone();
+                configu.output_xor = true;
+                self.upper.init(input, upper_threshold, configu);
 
-    let mut config1 = config.clone();
-    config1.output_xor = true;
-    comp1.init(input, upper_threshold, config1);
+                let mut configl = config;
+                configl.output_xor = false;
+                self.lower.init($LOTHR, lower_threshold, configl);
+            }
 
-    let mut config2 = config;
-    config2.output_xor = false;
-    comp2.init(Comp1InP, lower_threshold, config2);
+            fn output(&self) -> bool {
+                self.upper.output()
+            }
 
-    WindowComparator { comp1, comp2 }
+            fn above_lower(&self) -> bool {
+                self.lower.output()
+            }
+
+            fn enable(&self) {
+                self.upper.enable();
+                self.lower.enable();
+            }
+
+            fn disable(&self) {
+                self.upper.disable();
+                self.lower.disable();
+            }
+        }
+    };
 }
 
-impl WindowComparator {
-    pub fn output(&self) -> bool {
-        self.comp1.output()
-    }
-
-    pub fn above_lower(&self) -> bool {
-        self.comp2.output()
-    }
-
-    pub fn enable(&self) {
-        self.comp1.enable();
-        self.comp2.enable();
-    }
-
-    pub fn disable(&self) {
-        self.comp1.disable();
-        self.comp2.disable();
-    }
-}
+window_comparator!(COMP1, COMP2, Comp1InP);
+window_comparator!(COMP2, COMP1, Comp2InP);
 
 pub fn split(_comp: COMP, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2>) {
     // Enable COMP clocks
