@@ -2,7 +2,6 @@
 
 use core::marker::PhantomData;
 
-#[cfg(feature = "dac")]
 use crate::analog::dac;
 use crate::gpio::*;
 use crate::rcc::Rcc;
@@ -219,14 +218,14 @@ macro_rules! dac_input {
     };
 }
 
-#[cfg(feature = "dac")]
+#[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 dac_input!(COMP1, dac::Channel1<dac::Enabled>, 0b0100);
-#[cfg(feature = "dac")]
+#[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 dac_input!(COMP1, dac::Channel2<dac::Enabled>, 0b0101);
 
-#[cfg(feature = "dac")]
+#[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 dac_input!(COMP2, dac::Channel1<dac::Enabled>, 0b0100);
-#[cfg(feature = "dac")]
+#[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 dac_input!(COMP2, dac::Channel2<dac::Enabled>, 0b0101);
 
 pub struct Comparator<C> {
