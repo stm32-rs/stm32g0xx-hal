@@ -3,10 +3,11 @@
 use core::marker::PhantomData;
 
 use crate::analog::dac;
+use crate::exti::{Event as ExtiEvent, ExtiExt};
 use crate::gpio::*;
 use crate::rcc::Rcc;
 use crate::stm32::comp::{COMP1_CSR, COMP2_CSR};
-use crate::stm32::COMP;
+use crate::stm32::{COMP, EXTI};
 
 pub struct COMP1 {
     _rb: PhantomData<()>,
@@ -243,12 +244,14 @@ pub trait ComparatorExt<COMP> {
     fn enable(&self);
     fn disable(&self);
     fn output_pin<P: OutputPin<COMP>>(&self, pin: P);
-    //fn listen(&self, exti: &mut ) TODO
-    //fn unlisten(&self, exti: &mut)
+    fn listen(&self, edge: SignalEdge, exti: &EXTI);
+    fn unlisten(&self, exti: &EXTI);
+    fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool;
+    fn unpend(&self, exti: &EXTI);
 }
 
 macro_rules! comparator_ext {
-    ($COMP:ty, $Comparator:ty) => {
+    ($COMP:ty, $Comparator:ty, $Event:expr) => {
         impl ComparatorExt<$COMP> for $Comparator {
             fn init<P: PositiveInput<$COMP>, N: NegativeInput<$COMP>>(
                 &mut self,
@@ -285,12 +288,30 @@ macro_rules! comparator_ext {
             fn output_pin<P: OutputPin<$COMP>>(&self, pin: P) {
                 pin.setup();
             }
+
+            // TODO: Does the COMP need to be disabled when this is enabled?
+            /// Enables raising the `ADC_COMP` interrupt at the specified signal edge
+            fn listen(&self, edge: SignalEdge, exti: &EXTI) {
+                exti.listen($Event, edge);
+            }
+
+            fn unlisten(&self, exti: &EXTI) {
+                exti.unlisten($Event);
+            }
+
+            fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool {
+                exti.is_pending($Event, edge)
+            }
+
+            fn unpend(&self, exti: &EXTI) {
+                exti.unpend($Event);
+            }
         }
     };
 }
 
-comparator_ext!(COMP1, Comparator<COMP1>);
-comparator_ext!(COMP2, Comparator<COMP2>);
+comparator_ext!(COMP1, Comparator<COMP1>, ExtiEvent::COMP1);
+comparator_ext!(COMP2, Comparator<COMP2>, ExtiEvent::COMP2);
 
 /// Uses two comparators to implement a window comparator.
 /// See Figure 69 in RM0444 Rev 5.
@@ -312,10 +333,15 @@ pub trait WindowComparatorExt<UC, LC> {
 
     /// Returns `true` if the input is between the lower and upper thresholds
     fn output(&self) -> bool;
+    fn output_pin<P: OutputPin<UC>>(&self, pin: P);
     /// Returns `true` if the input is above the lower threshold
     fn above_lower(&self) -> bool;
     fn enable(&self);
     fn disable(&self);
+    fn listen(&self, edge: SignalEdge, exti: &mut EXTI);
+    fn unlisten(&self, exti: &mut EXTI);
+    fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool;
+    fn unpend(&self, exti: &EXTI);
 }
 
 macro_rules! window_comparator {
@@ -345,6 +371,10 @@ macro_rules! window_comparator {
                 self.upper.output()
             }
 
+            fn output_pin<P: OutputPin<$UPPER>>(&self, pin: P) {
+                self.upper.output_pin(pin)
+            }
+
             fn above_lower(&self) -> bool {
                 self.lower.output()
             }
@@ -357,6 +387,24 @@ macro_rules! window_comparator {
             fn disable(&self) {
                 self.upper.disable();
                 self.lower.disable();
+            }
+
+            // TODO: Does the COMP need to be disabled when this is enabled?
+            /// Enables raising the `ADC_COMP` interrupt at the specified signal edge
+            fn listen(&self, edge: SignalEdge, exti: &mut EXTI) {
+                self.upper.listen(edge, exti)
+            }
+
+            fn unlisten(&self, exti: &mut EXTI) {
+                self.upper.unlisten(exti)
+            }
+
+            fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool {
+                self.upper.is_pending(edge, exti)
+            }
+
+            fn unpend(&self, exti: &EXTI) {
+                self.upper.unpend(exti)
             }
         }
     };
