@@ -242,6 +242,7 @@ pub trait ComparatorExt<COMP> {
     fn output(&self) -> bool;
     fn enable(&self);
     fn disable(&self);
+    fn output_pin<P: OutputPin<COMP>>(&self, pin: P);
     //fn listen(&self, exti: &mut ) TODO
     //fn unlisten(&self, exti: &mut)
 }
@@ -279,6 +280,10 @@ macro_rules! comparator_ext {
 
             fn disable(&self) {
                 self.regs.csr().modify(|_, w| w.en().clear_bit());
+            }
+
+            fn output_pin<P: OutputPin<$COMP>>(&self, pin: P) {
+                pin.setup();
             }
         }
     };
@@ -387,3 +392,39 @@ impl ComparatorSplit for COMP {
         split(self, rcc)
     }
 }
+
+pub trait OutputPin<COMP> {
+    fn setup(&self);
+}
+
+macro_rules! output_pin {
+    ($COMP:ident, $pin:ty) => {
+        impl OutputPin<$COMP> for $pin {
+            fn setup(&self) {
+                self.set_alt_mode(AltFunction::AF7)
+            }
+        }
+    };
+}
+
+output_pin!(COMP1, gpioa::PA0<Output<PushPull>>);
+output_pin!(COMP1, gpioa::PA0<Output<OpenDrain>>);
+output_pin!(COMP1, gpioa::PA6<Output<PushPull>>);
+output_pin!(COMP1, gpioa::PA6<Output<OpenDrain>>);
+output_pin!(COMP1, gpioa::PA11<Output<PushPull>>);
+output_pin!(COMP1, gpioa::PA11<Output<OpenDrain>>);
+output_pin!(COMP1, gpiob::PB0<Output<PushPull>>);
+output_pin!(COMP1, gpiob::PB0<Output<OpenDrain>>);
+output_pin!(COMP1, gpiob::PB10<Output<PushPull>>);
+output_pin!(COMP1, gpiob::PB10<Output<OpenDrain>>);
+
+output_pin!(COMP2, gpioa::PA2<Output<PushPull>>);
+output_pin!(COMP2, gpioa::PA2<Output<OpenDrain>>);
+output_pin!(COMP2, gpioa::PA7<Output<PushPull>>);
+output_pin!(COMP2, gpioa::PA7<Output<OpenDrain>>);
+output_pin!(COMP2, gpioa::PA12<Output<PushPull>>);
+output_pin!(COMP2, gpioa::PA12<Output<OpenDrain>>);
+output_pin!(COMP2, gpiob::PB5<Output<PushPull>>);
+output_pin!(COMP2, gpiob::PB5<Output<OpenDrain>>);
+output_pin!(COMP2, gpiob::PB11<Output<PushPull>>);
+output_pin!(COMP2, gpiob::PB11<Output<OpenDrain>>);
