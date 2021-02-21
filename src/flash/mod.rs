@@ -19,17 +19,18 @@ const FLASH_KEY1: u32 = 0x4567_0123;
 const FLASH_KEY2: u32 = 0xCDEF_89AB;
 
 impl FlashPage {
+    /// This gives the starting address of a flash page in physical address
     pub const fn to_address(&self) -> usize {
         FLASH_START + self.0 * PAGE_SIZE as usize
     }
 }
 
 pub trait FlashExt {
+    /// Unlocks Flash memory for erasure and writing
     fn unlock(self) -> core::result::Result<UnlockedFlash, FLASH>;
 }
 
 impl FlashExt for FLASH {
-    /// Unlocks Flash memory for erasure and writing
     fn unlock(self) -> core::result::Result<UnlockedFlash, FLASH> {
         // Wait, while the memory interface is busy.
         while self.sr.read().bsy().bit_is_set() {}
@@ -47,6 +48,7 @@ impl FlashExt for FLASH {
     }
 }
 
+/// Handle for an unlocked flash on which operations can be performed
 pub struct UnlockedFlash {
     f: FLASH,
 }
