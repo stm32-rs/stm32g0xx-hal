@@ -253,6 +253,7 @@ pub trait ComparatorExt<COMP> {
 macro_rules! comparator_ext {
     ($COMP:ty, $Comparator:ty, $Event:expr) => {
         impl ComparatorExt<$COMP> for $Comparator {
+            // TODO: Require init before any other functions?
             fn init<P: PositiveInput<$COMP>, N: NegativeInput<$COMP>>(
                 &mut self,
                 positive_input: P,
@@ -271,6 +272,7 @@ macro_rules! comparator_ext {
                         .winout()
                         .bit(config.output_xor)
                 });
+                // TODO: Delay for comp scaler bridge voltage stabilization?
             }
 
             fn output(&self) -> bool {
@@ -279,6 +281,7 @@ macro_rules! comparator_ext {
 
             fn enable(&self) {
                 self.regs.csr().modify(|_, w| w.en().set_bit());
+                // TODO: Startup delay?
             }
 
             fn disable(&self) {
@@ -390,6 +393,7 @@ macro_rules! window_comparator {
             }
 
             // TODO: Does the COMP need to be disabled when this is enabled?
+            // TODO: Do EXTI functions need to act on both comparators (like in ST HAL)?
             /// Enables raising the `ADC_COMP` interrupt at the specified signal edge
             fn listen(&self, edge: SignalEdge, exti: &mut EXTI) {
                 self.upper.listen(edge, exti)
@@ -414,10 +418,10 @@ window_comparator!(COMP1, COMP2, Comp1InP);
 window_comparator!(COMP2, COMP1, Comp2InP);
 
 pub fn split(_comp: COMP, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2>) {
-    // Enable COMP clocks
+    // Enable COMP, SYSCFG, VREFBUF clocks
     rcc.rb.apbenr2.modify(|_, w| w.syscfgen().set_bit());
 
-    // Reset COMP
+    // Reset COMP, SYSCFG, VREFBUF
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().set_bit());
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().clear_bit());
 
