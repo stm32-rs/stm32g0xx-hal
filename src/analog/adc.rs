@@ -68,6 +68,17 @@ impl Adc {
         }
     }
 
+    /// Runs the calibration routine on the ADC
+    ///
+    /// Wait for tADCVREG_SETUP (20us on STM32G071x8) after calling `new()`
+    /// before calibrating, to wait for the ADC voltage regulator to stabilize.
+    ///
+    /// Do not call if an ADC reading is ongoing.
+    pub fn calibrate(&mut self) {
+        self.rb.cr.modify(|_, w| w.adcal().set_bit());
+        while self.rb.cr.read().adcal().bit_is_set() {}
+    }
+
     /// Set the Adc sampling time
     pub fn set_sample_time(&mut self, t_samp: SampleTime) {
         self.sample_time = t_samp;
