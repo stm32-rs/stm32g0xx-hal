@@ -18,6 +18,7 @@ pub use crate::dma::DmaExt as _;
 // pub use crate::dma::ReadDma as _;
 // pub use crate::dma::WriteDma as _;
 pub use crate::exti::ExtiExt as _;
+pub use crate::flash::FlashExt as _;
 pub use crate::gpio::GpioExt as _;
 pub use crate::i2c::I2cExt as _;
 pub use crate::rcc::LSCOExt as _;
