@@ -8,6 +8,7 @@ use crate::gpio::*;
 use crate::rcc::Rcc;
 use crate::stm32::comp::{COMP1_CSR, COMP2_CSR};
 use crate::stm32::{COMP, EXTI};
+use crate::time::Hertz;
 
 pub struct COMP1 {
     _rb: PhantomData<()>,
@@ -231,6 +232,7 @@ dac_input!(COMP2, dac::Channel2<dac::Enabled>, 0b0101);
 
 pub struct Comparator<C> {
     regs: C,
+    pclk: Hertz,
 }
 
 pub trait ComparatorExt<COMP> {
@@ -262,6 +264,9 @@ macro_rules! comparator_ext {
             ) {
                 positive_input.setup(&self.regs);
                 negative_input.setup(&self.regs);
+                // Delay for scaler voltage bridge initialization for certain negative inputs
+                let voltage_scaler_delay = self.pclk.0 / (1_000_000 / 200); // 200us
+                cortex_m::asm::delay(voltage_scaler_delay);
                 self.regs.csr().modify(|_, w| unsafe {
                     w.hyst()
                         .bits(config.hysteresis as u8)
@@ -272,7 +277,6 @@ macro_rules! comparator_ext {
                         .winout()
                         .bit(config.output_xor)
                 });
-                // TODO: Delay for comp scaler bridge voltage stabilization?
             }
 
             fn output(&self) -> bool {
@@ -281,7 +285,6 @@ macro_rules! comparator_ext {
 
             fn enable(&self) {
                 self.regs.csr().modify(|_, w| w.en().set_bit());
-                // TODO: Startup delay?
             }
 
             fn disable(&self) {
@@ -425,12 +428,17 @@ pub fn split(_comp: COMP, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().set_bit());
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().clear_bit());
 
+    // Used to calculate delays for initialization
+    let pclk = rcc.clocks.apb_clk;
+
     (
         Comparator {
             regs: COMP1 { _rb: PhantomData },
+            pclk,
         },
         Comparator {
             regs: COMP2 { _rb: PhantomData },
+            pclk,
         },
     )
 }
