@@ -54,6 +54,10 @@ pub struct Adc {
     precision: Precision,
 }
 
+/// Contains the calibration factors for the ADC which can be reused with [`Adc::set_calibration()`]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct CalibrationFactor(pub u8);
+
 impl Adc {
     pub fn new(adc: ADC, rcc: &mut Rcc) -> Self {
         // Enable ADC clocks
@@ -70,13 +74,37 @@ impl Adc {
 
     /// Runs the calibration routine on the ADC
     ///
-    /// Wait for tADCVREG_SETUP (20us on STM32G071x8) after calling `new()`
-    /// before calibrating, to wait for the ADC voltage regulator to stabilize.
+    /// Wait for tADCVREG_SETUP (20us on STM32G071x8) after calling [`Self::new()`] before calibrating, to wait for the
+    /// ADC voltage regulator to stabilize.
     ///
     /// Do not call if an ADC reading is ongoing.
     pub fn calibrate(&mut self) {
         self.rb.cr.modify(|_, w| w.adcal().set_bit());
         while self.rb.cr.read().adcal().bit_is_set() {}
+    }
+
+    /// Returns the calibration factors used by the ADC
+    ///
+    /// The ADC does not have a factory-stored calibration, [`Self::calibrate()`] must be run before calling this
+    /// for the returned value to be useful.
+    ///
+    /// The ADC loses its calibration factors when Standby or Vbat mode is entered. Saving and restoring the calibration
+    /// factors can be used to recalibrate the ADC after waking up from sleep more quickly than re-running calibraiton.
+    /// Note that VDDA changes and to a lesser extent temperature changes affect the ADC operating conditions and
+    /// calibration should be run again for the best accuracy.
+    pub fn get_calibration(&self) -> CalibrationFactor {
+        CalibrationFactor(self.rb.calfact.read().calfact().bits())
+    }
+
+    /// Writes the calibration factors used by the ADC
+    ///
+    /// See [`Self::get_calibration()`].
+    ///
+    /// Do not call if an ADC reading is ongoing.
+    pub fn set_calibration(&mut self, calfact: CalibrationFactor) {
+        self.rb
+            .calfact
+            .write(|w| unsafe { w.calfact().bits(calfact.0) });
     }
 
     /// Set the Adc sampling time
