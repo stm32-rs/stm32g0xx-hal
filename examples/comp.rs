@@ -20,27 +20,28 @@ fn main() -> ! {
 
     let gpioa = dp.GPIOA.split(&mut rcc);
 
-    let (mut comp1, mut comp2) = dp.COMP.split(&mut rcc);
+    let (comp1, comp2) = dp.COMP.split(&mut rcc);
 
     let pa1 = gpioa.pa1.into_analog();
     let pa0 = gpioa.pa0.into_analog();
-    comp1.init(pa1, pa0, Config::default());
-    comp1.enable();
+    let comp1 = comp1.comparator(pa1, pa0, Config::default(), &rcc.clocks);
+    let comp1 = comp1.enable();
     let mut led1 = gpioa.pa5.into_push_pull_output();
 
     let pa3 = gpioa.pa3.into_analog();
-    comp2.init(
+    let comp2 = comp2.comparator(
         pa3,
         RefintInput::VRefintM12,
         Config::default()
             .hysteresis(Hysteresis::High)
             .output_inverted(),
+        &rcc.clocks,
     );
-    comp2.enable();
     let led2 = gpioa.pa2.into_push_pull_output();
     // Configure PA2 to the comparator's alternate function so it gets
     // changed directly by the comparator.
     comp2.output_pin(led2);
+    let _comp2 = comp2.enable();
 
     loop {
         match comp1.output() {

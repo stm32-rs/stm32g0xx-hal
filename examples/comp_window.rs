@@ -8,7 +8,7 @@ extern crate cortex_m_rt as rt;
 extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
-use hal::comparator::{Config, Hysteresis, RefintInput, WindowComparator};
+use hal::comparator::{self, Config, Hysteresis, RefintInput};
 use hal::prelude::*;
 use hal::stm32;
 use rt::entry;
@@ -22,15 +22,15 @@ fn main() -> ! {
 
     let pa1 = gpioa.pa1.into_analog();
 
-    let (upper, lower) = dp.COMP.split(&mut rcc);
-    let mut comp = WindowComparator { upper, lower };
-    comp.init(
+    let comp = comparator::window_comparator12(
+        dp.COMP,
         pa1,
         RefintInput::VRefintM14,
         RefintInput::VRefintM34,
         Config::default().hysteresis(Hysteresis::Medium),
+        &mut rcc,
     );
-    comp.enable();
+    let comp = comp.enable();
 
     let mut led1 = gpioa.pa5.into_push_pull_output();
     let mut led2 = gpioa.pa6.into_push_pull_output();

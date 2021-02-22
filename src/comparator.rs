@@ -5,10 +5,19 @@ use core::marker::PhantomData;
 use crate::analog::dac;
 use crate::exti::{Event as ExtiEvent, ExtiExt};
 use crate::gpio::*;
-use crate::rcc::Rcc;
+use crate::rcc::{Clocks, Rcc};
 use crate::stm32::comp::{COMP1_CSR, COMP2_CSR};
 use crate::stm32::{COMP, EXTI};
-use crate::time::Hertz;
+
+/// Enabled Comparator (type state)
+pub struct Enabled;
+
+/// Disabled Comparator (type state)
+pub struct Disabled;
+
+pub trait ED {}
+impl ED for Enabled {}
+impl ED for Disabled {}
 
 pub struct COMP1 {
     _rb: PhantomData<()>,
@@ -230,44 +239,38 @@ dac_input!(COMP2, dac::Channel1<dac::Enabled>, 0b0100);
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 dac_input!(COMP2, dac::Channel2<dac::Enabled>, 0b0101);
 
-pub struct Comparator<C> {
+pub struct Comparator<C, ED> {
     regs: C,
-    sysclk: Hertz,
+    _enabled: PhantomData<ED>,
 }
 
 pub trait ComparatorExt<COMP> {
-    fn init<P: PositiveInput<COMP>, N: NegativeInput<COMP>>(
-        &mut self,
+    /// Initializes a comparator
+    fn comparator<P: PositiveInput<COMP>, N: NegativeInput<COMP>>(
+        self,
         positive_input: P,
         negative_input: N,
         config: Config,
-    );
-    fn output(&self) -> bool;
-    fn enable(&self);
-    fn disable(&self);
-    fn output_pin<P: OutputPin<COMP>>(&self, pin: P);
-    fn listen(&self, edge: SignalEdge, exti: &EXTI);
-    fn unlisten(&self, exti: &EXTI);
-    fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool;
-    fn unpend(&self, exti: &EXTI);
+        clocks: &Clocks,
+    ) -> Comparator<COMP, Disabled>;
 }
 
-macro_rules! comparator_ext {
-    ($COMP:ty, $Comparator:ty, $Event:expr) => {
-        impl ComparatorExt<$COMP> for $Comparator {
-            // TODO: Require init before any other functions?
-            fn init<P: PositiveInput<$COMP>, N: NegativeInput<$COMP>>(
-                &mut self,
+macro_rules! impl_comparator {
+    ($COMP:ty, $comp:ident, $Event:expr) => {
+        impl ComparatorExt<$COMP> for $COMP {
+            fn comparator<P: PositiveInput<$COMP>, N: NegativeInput<$COMP>>(
+                self,
                 positive_input: P,
                 negative_input: N,
                 config: Config,
-            ) {
-                positive_input.setup(&self.regs);
-                negative_input.setup(&self.regs);
+                clocks: &Clocks,
+            ) -> Comparator<$COMP, Disabled> {
+                positive_input.setup(&self);
+                negative_input.setup(&self);
                 // Delay for scaler voltage bridge initialization for certain negative inputs
-                let voltage_scaler_delay = self.sysclk.0 / (1_000_000 / 200); // 200us
+                let voltage_scaler_delay = clocks.sys_clk.0 / (1_000_000 / 200); // 200us
                 cortex_m::asm::delay(voltage_scaler_delay);
-                self.regs.csr().modify(|_, w| unsafe {
+                self.csr().modify(|_, w| unsafe {
                     w.hyst()
                         .bits(config.hysteresis as u8)
                         .polarity()
@@ -277,150 +280,234 @@ macro_rules! comparator_ext {
                         .winout()
                         .bit(config.output_xor)
                 });
+
+                Comparator {
+                    regs: self,
+                    _enabled: PhantomData,
+                }
+            }
+        }
+
+        impl Comparator<$COMP, Disabled> {
+            /// Initializes a comparator
+            pub fn $comp<P: PositiveInput<$COMP>, N: NegativeInput<$COMP>>(
+                comp: $COMP,
+                positive_input: P,
+                negative_input: N,
+                config: Config,
+                clocks: &Clocks,
+            ) -> Self {
+                comp.comparator(positive_input, negative_input, config, clocks)
             }
 
-            fn output(&self) -> bool {
+            /// Enables the comparator
+            pub fn enable(self) -> Comparator<$COMP, Enabled> {
+                self.regs.csr().modify(|_, w| w.en().set_bit());
+                Comparator {
+                    regs: self.regs,
+                    _enabled: PhantomData,
+                }
+            }
+
+            /// Enables raising the `ADC_COMP` interrupt at the specified output signal edge
+            pub fn listen(&self, edge: SignalEdge, exti: &EXTI) {
+                exti.listen($Event, edge);
+            }
+        }
+
+        impl Comparator<$COMP, Enabled> {
+            /// Returns the value of the output of the comparator
+            pub fn output(&self) -> bool {
                 self.regs.csr().read().value().bit_is_set()
             }
 
-            fn enable(&self) {
-                self.regs.csr().modify(|_, w| w.en().set_bit());
-            }
-
-            fn disable(&self) {
+            /// Disables the comparator
+            pub fn disable(self) -> Comparator<$COMP, Disabled> {
                 self.regs.csr().modify(|_, w| w.en().clear_bit());
+                Comparator {
+                    regs: self.regs,
+                    _enabled: PhantomData,
+                }
             }
+        }
 
-            fn output_pin<P: OutputPin<$COMP>>(&self, pin: P) {
-                pin.setup();
-            }
-
-            // TODO: Does the COMP need to be disabled when this is enabled?
-            /// Enables raising the `ADC_COMP` interrupt at the specified signal edge
-            fn listen(&self, edge: SignalEdge, exti: &EXTI) {
-                exti.listen($Event, edge);
-            }
-
-            fn unlisten(&self, exti: &EXTI) {
+        impl<ED> Comparator<$COMP, ED> {
+            /// Disables raising interrupts for the output signal
+            pub fn unlisten(&self, exti: &EXTI) {
                 exti.unlisten($Event);
             }
 
-            fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool {
+            /// Returns `true` if the output signal interrupt is pending for the `edge`
+            pub fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool {
                 exti.is_pending($Event, edge)
             }
 
-            fn unpend(&self, exti: &EXTI) {
+            /// Unpends the output signal interrupt
+            pub fn unpend(&self, exti: &EXTI) {
                 exti.unpend($Event);
+            }
+
+            /// Configures a GPIO pin to output the signal of the comparator
+            ///
+            /// Multiple GPIO pins may be configured as the output simultaneously.
+            pub fn output_pin<P: OutputPin<$COMP>>(&self, pin: P) {
+                pin.setup();
             }
         }
     };
 }
 
-comparator_ext!(COMP1, Comparator<COMP1>, ExtiEvent::COMP1);
-comparator_ext!(COMP2, Comparator<COMP2>, ExtiEvent::COMP2);
+impl_comparator!(COMP1, comp1, ExtiEvent::COMP1);
+impl_comparator!(COMP2, comp2, ExtiEvent::COMP2);
 
 /// Uses two comparators to implement a window comparator.
 /// See Figure 69 in RM0444 Rev 5.
-pub struct WindowComparator<U, L> {
-    pub upper: Comparator<U>,
-    pub lower: Comparator<L>,
+pub struct WindowComparator<U, L, ED> {
+    pub upper: Comparator<U, ED>,
+    pub lower: Comparator<L, ED>,
 }
 
 pub trait WindowComparatorExt<UC, LC> {
-    /// Uses two comparators to implement a window comparator.
-    /// See Figure 69 in RM0444 Rev 5.
-    fn init<I: PositiveInput<UC>, L: NegativeInput<LC>, U: NegativeInput<UC>>(
-        &mut self,
+    /// Uses two comparators to implement a window comparator
+    ///
+    /// See Figure 69 in RM0444 Rev 5. Ignores and overrides the `output_xor` setting in `config`.
+    fn window_comparator<I: PositiveInput<UC>, L: NegativeInput<LC>, U: NegativeInput<UC>>(
+        self,
         input: I,
         lower_threshold: L,
         upper_threshold: U,
         config: Config,
-    );
-
-    /// Returns `true` if the input is between the lower and upper thresholds
-    fn output(&self) -> bool;
-    fn output_pin<P: OutputPin<UC>>(&self, pin: P);
-    /// Returns `true` if the input is above the lower threshold
-    fn above_lower(&self) -> bool;
-    fn enable(&self);
-    fn disable(&self);
-    fn listen(&self, edge: SignalEdge, exti: &mut EXTI);
-    fn unlisten(&self, exti: &mut EXTI);
-    fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool;
-    fn unpend(&self, exti: &EXTI);
+        clocks: &Clocks,
+    ) -> WindowComparator<UC, LC, Disabled>;
 }
 
-macro_rules! window_comparator {
+macro_rules! impl_window_comparator {
     ($UPPER:ident, $LOWER:ident, $LOTHR:expr) => {
-        impl WindowComparatorExt<$UPPER, $LOWER> for WindowComparator<$UPPER, $LOWER> {
-            fn init<
+        impl WindowComparatorExt<$UPPER, $LOWER> for ($UPPER, $LOWER) {
+            fn window_comparator<
                 I: PositiveInput<$UPPER>,
                 L: NegativeInput<$LOWER>,
                 U: NegativeInput<$UPPER>,
             >(
-                &mut self,
+                self,
                 input: I,
                 lower_threshold: L,
                 upper_threshold: U,
                 config: Config,
-            ) {
+                clocks: &Clocks,
+            ) -> WindowComparator<$UPPER, $LOWER, Disabled> {
+                let (upper, lower) = self;
+
                 let mut configu = config.clone();
                 configu.output_xor = true;
-                self.upper.init(input, upper_threshold, configu);
+                let upper = upper.comparator(input, upper_threshold, configu, clocks);
 
                 let mut configl = config;
                 configl.output_xor = false;
-                self.lower.init($LOTHR, lower_threshold, configl);
+                let lower = lower.comparator($LOTHR, lower_threshold, configl, clocks);
+
+                WindowComparator { upper, lower }
+            }
+        }
+
+        impl WindowComparator<$UPPER, $LOWER, Disabled> {
+            /// Enables the comparator
+            pub fn enable(self) -> WindowComparator<$UPPER, $LOWER, Enabled> {
+                WindowComparator {
+                    upper: self.upper.enable(),
+                    lower: self.lower.enable(),
+                }
             }
 
-            fn output(&self) -> bool {
+            /// Enables raising the `ADC_COMP` interrupt at the specified signal edge
+            pub fn listen(&self, edge: SignalEdge, exti: &mut EXTI) {
+                self.upper.listen(edge, exti)
+            }
+        }
+
+        impl WindowComparator<$UPPER, $LOWER, Enabled> {
+            /// Disables the comparator
+            pub fn disable(self) -> WindowComparator<$UPPER, $LOWER, Disabled> {
+                WindowComparator {
+                    upper: self.upper.disable(),
+                    lower: self.lower.disable(),
+                }
+            }
+
+            /// Returns the value of the output of the comparator
+            pub fn output(&self) -> bool {
                 self.upper.output()
             }
 
-            fn output_pin<P: OutputPin<$UPPER>>(&self, pin: P) {
+            /// Returns `true` if the input signal is above the lower threshold
+            pub fn above_lower(&self) -> bool {
+                self.lower.output()
+            }
+        }
+
+        impl<ED> WindowComparator<$UPPER, $LOWER, ED> {
+            /// Configures a GPIO pin to output the signal of the comparator
+            ///
+            /// Multiple GPIO pins may be configured as the output simultaneously.
+            pub fn output_pin<P: OutputPin<$UPPER>>(&self, pin: P) {
                 self.upper.output_pin(pin)
             }
 
-            fn above_lower(&self) -> bool {
-                self.lower.output()
-            }
-
-            fn enable(&self) {
-                self.upper.enable();
-                self.lower.enable();
-            }
-
-            fn disable(&self) {
-                self.upper.disable();
-                self.lower.disable();
-            }
-
-            // TODO: Does the COMP need to be disabled when this is enabled?
-            // TODO: Do EXTI functions need to act on both comparators (like in ST HAL)?
-            /// Enables raising the `ADC_COMP` interrupt at the specified signal edge
-            fn listen(&self, edge: SignalEdge, exti: &mut EXTI) {
-                self.upper.listen(edge, exti)
-            }
-
-            fn unlisten(&self, exti: &mut EXTI) {
+            /// Disables raising interrupts for the output signal
+            pub fn unlisten(&self, exti: &mut EXTI) {
                 self.upper.unlisten(exti)
             }
 
-            fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool {
+            /// Returns `true` if the output signal interrupt is pending for the `edge`
+            pub fn is_pending(&self, edge: SignalEdge, exti: &EXTI) -> bool {
                 self.upper.is_pending(edge, exti)
             }
 
-            fn unpend(&self, exti: &EXTI) {
+            /// Unpends the output signal interrupt
+            pub fn unpend(&self, exti: &EXTI) {
                 self.upper.unpend(exti)
             }
         }
     };
 }
 
-window_comparator!(COMP1, COMP2, Comp1InP);
-window_comparator!(COMP2, COMP1, Comp2InP);
+impl_window_comparator!(COMP1, COMP2, Comp1InP);
+impl_window_comparator!(COMP2, COMP1, Comp2InP);
 
-pub fn split(_comp: COMP, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2>) {
+pub fn window_comparator12<
+    I: PositiveInput<COMP1>,
+    L: NegativeInput<COMP2>,
+    U: NegativeInput<COMP1>,
+>(
+    comp: COMP,
+    input: I,
+    lower_threshold: L,
+    upper_threshold: U,
+    config: Config,
+    rcc: &mut Rcc,
+) -> WindowComparator<COMP1, COMP2, Disabled> {
+    let (comp1, comp2) = comp.split(rcc);
+    (comp1, comp2).window_comparator(input, lower_threshold, upper_threshold, config, &rcc.clocks)
+}
+
+pub fn window_comparator21<
+    I: PositiveInput<COMP2>,
+    L: NegativeInput<COMP1>,
+    U: NegativeInput<COMP2>,
+>(
+    comp: COMP,
+    input: I,
+    lower_threshold: L,
+    upper_threshold: U,
+    config: Config,
+    rcc: &mut Rcc,
+) -> WindowComparator<COMP2, COMP1, Disabled> {
+    let (comp1, comp2) = comp.split(rcc);
+    (comp2, comp1).window_comparator(input, lower_threshold, upper_threshold, config, &rcc.clocks)
+}
+
+/// Enables the comparator peripheral, and splits the [`COMP`] into independent [`COMP1`] and [`COMP2`]
+pub fn split(_comp: COMP, rcc: &mut Rcc) -> (COMP1, COMP2) {
     // Enable COMP, SYSCFG, VREFBUF clocks
     rcc.rb.apbenr2.modify(|_, w| w.syscfgen().set_bit());
 
@@ -428,27 +515,16 @@ pub fn split(_comp: COMP, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().set_bit());
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().clear_bit());
 
-    // Used to calculate delays for initialization
-    let sysclk = rcc.clocks.core_clk;
-
-    (
-        Comparator {
-            regs: COMP1 { _rb: PhantomData },
-            sysclk,
-        },
-        Comparator {
-            regs: COMP2 { _rb: PhantomData },
-            sysclk,
-        },
-    )
+    (COMP1 { _rb: PhantomData }, COMP2 { _rb: PhantomData })
 }
 
 pub trait ComparatorSplit {
-    fn split(self, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2>);
+    /// Enables the comparator peripheral, and splits the [`COMP`] into independent [`COMP1`] and [`COMP2`]
+    fn split(self, rcc: &mut Rcc) -> (COMP1, COMP2);
 }
 
 impl ComparatorSplit for COMP {
-    fn split(self, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2>) {
+    fn split(self, rcc: &mut Rcc) -> (COMP1, COMP2) {
         split(self, rcc)
     }
 }
