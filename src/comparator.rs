@@ -211,7 +211,7 @@ refint_input!(COMP2);
 
 macro_rules! dac_input {
     ($COMP:ident, $channel:ty, $bits:expr) => {
-        impl NegativeInput<$COMP> for $channel {
+        impl NegativeInput<$COMP> for &$channel {
             fn setup(&self, comp: &$COMP) {
                 comp.csr().modify(|_, w| unsafe { w.inmsel().bits($bits) })
             }
