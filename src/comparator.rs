@@ -232,7 +232,7 @@ dac_input!(COMP2, dac::Channel2<dac::Enabled>, 0b0101);
 
 pub struct Comparator<C> {
     regs: C,
-    pclk: Hertz,
+    sysclk: Hertz,
 }
 
 pub trait ComparatorExt<COMP> {
@@ -265,7 +265,7 @@ macro_rules! comparator_ext {
                 positive_input.setup(&self.regs);
                 negative_input.setup(&self.regs);
                 // Delay for scaler voltage bridge initialization for certain negative inputs
-                let voltage_scaler_delay = self.pclk.0 / (1_000_000 / 200); // 200us
+                let voltage_scaler_delay = self.sysclk.0 / (1_000_000 / 200); // 200us
                 cortex_m::asm::delay(voltage_scaler_delay);
                 self.regs.csr().modify(|_, w| unsafe {
                     w.hyst()
@@ -429,16 +429,16 @@ pub fn split(_comp: COMP, rcc: &mut Rcc) -> (Comparator<COMP1>, Comparator<COMP2
     rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().clear_bit());
 
     // Used to calculate delays for initialization
-    let pclk = rcc.clocks.apb_clk;
+    let sysclk = rcc.clocks.core_clk;
 
     (
         Comparator {
             regs: COMP1 { _rb: PhantomData },
-            pclk,
+            sysclk,
         },
         Comparator {
             regs: COMP2 { _rb: PhantomData },
-            pclk,
+            sysclk,
         },
     )
 }
