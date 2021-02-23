@@ -221,7 +221,7 @@ refint_input!(COMP2);
 
 macro_rules! dac_input {
     ($COMP:ident, $channel:ty, $bits:expr) => {
-        impl NegativeInput<$COMP> for &$channel {
+        impl<ED> NegativeInput<$COMP> for &$channel {
             fn setup(&self, comp: &$COMP) {
                 comp.csr().modify(|_, w| unsafe { w.inmsel().bits($bits) })
             }
@@ -230,14 +230,14 @@ macro_rules! dac_input {
 }
 
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
-dac_input!(COMP1, dac::Channel1<dac::Enabled>, 0b0100);
+dac_input!(COMP1, dac::Channel1<ED>, 0b0100);
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
-dac_input!(COMP1, dac::Channel2<dac::Enabled>, 0b0101);
+dac_input!(COMP1, dac::Channel2<ED>, 0b0101);
 
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
-dac_input!(COMP2, dac::Channel1<dac::Enabled>, 0b0100);
+dac_input!(COMP2, dac::Channel1<ED>, 0b0100);
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
-dac_input!(COMP2, dac::Channel2<dac::Enabled>, 0b0101);
+dac_input!(COMP2, dac::Channel2<ED>, 0b0101);
 
 pub struct Comparator<C, ED> {
     regs: C,
