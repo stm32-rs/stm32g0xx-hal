@@ -20,7 +20,6 @@ macro_rules! stopwatches {
                     rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
                     rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
                     rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().clear_bit());
-                    tim.cr1.modify(|_, w| w.urs().set_bit());
                     tim.cr1.modify(|_, w| w.cen().set_bit());
                     Stopwatch {
                         tim,
@@ -28,6 +27,10 @@ macro_rules! stopwatches {
                     }
                 }
 
+                /// Overrides the counter clock input frequency
+                ///
+                /// Useful if the APB Timer Clock changes after the `Stopwatch` is created or
+                /// to deliberately speed up or slow down the `Stopwatch` from actual measured time.
                 pub fn set_clock<T>(&mut self, clk: T)
                 where
                     T: Into<Hertz>,
@@ -35,6 +38,14 @@ macro_rules! stopwatches {
                     let clk = clk.into();
                     assert!(clk.0 > 1_000_000);
                     self.clk = clk;
+                }
+
+                /// Set the prescaler which divides the input clock frequency before the counter
+                ///
+                /// The counter frequency is equal to the input clock divided by the prescaler + 1.
+                pub fn set_prescaler(&mut self, prescaler: u16) {
+                    self.tim.psc.write(|w| unsafe { w.psc().bits(prescaler) });
+                    self.tim.egr.write(|w| w.ug().set_bit());
                 }
 
                 pub fn reset(&mut self) {
