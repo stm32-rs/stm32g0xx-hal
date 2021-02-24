@@ -46,6 +46,32 @@ pub enum SampleTime {
     T_160 = 0b111,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ClockSource {
+    Pclk(PclkDiv),
+    Async(AsyncClockDiv),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PclkDiv {
+    PclkD1 = 3,
+    PclkD2 = 1,
+    PclkD4 = 2,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AsyncClockDiv {
+    AsyncD1 = 0,
+    AsyncD2 = 1,
+    AsyncD4 = 2,
+    AsyncD8 = 3,
+    AsyncD16 = 4,
+    AsyncD32 = 5,
+    AsyncD64 = 6,
+    AsyncD128 = 7,
+    AsyncD256 = 8,
+}
+
 /// Analog to Digital converter interface
 pub struct Adc {
     rb: ADC,
@@ -69,6 +95,21 @@ impl Adc {
             sample_time: SampleTime::T_2,
             align: Align::Right,
             precision: Precision::B_12,
+        }
+    }
+
+    pub fn set_clock_source(&mut self, clock_source: ClockSource) {
+        match clock_source {
+            ClockSource::Pclk(div) => self
+                .rb
+                .cfgr2
+                .modify(|_, w| unsafe { w.ckmode().bits(div as u8) }),
+            ClockSource::Async(div) => {
+                self.rb.cfgr2.modify(|_, w| unsafe { w.ckmode().bits(0) });
+                self.rb
+                    .ccr
+                    .modify(|_, w| unsafe { w.presc().bits(div as u8) });
+            }
         }
     }
 
