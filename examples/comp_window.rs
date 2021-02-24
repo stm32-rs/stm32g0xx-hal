@@ -8,7 +8,7 @@ extern crate cortex_m_rt as rt;
 extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
-use hal::comparator::{self, Config, Hysteresis, RefintInput};
+use hal::analog::comparator::{self, Config, Hysteresis, RefintInput};
 use hal::prelude::*;
 use hal::stm32;
 use rt::entry;
