@@ -111,7 +111,7 @@ macro_rules! dac {
                 pub fn enable(self) -> $CX<Enabled> {
                     let dac = unsafe { &(*DAC::ptr()) };
 
-                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(0) });
+                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(1) });
                     dac.dac_cr.modify(|_, w| w.$en().set_bit());
 
                     $CX {
@@ -122,7 +122,7 @@ macro_rules! dac {
                 pub fn enable_unbuffered(self) -> $CX<EnabledUnbuffered> {
                     let dac = unsafe { &(*DAC::ptr()) };
 
-                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(2) });
+                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(3) });
                     dac.dac_cr.modify(|_, w| w.$en().set_bit());
 
                     $CX {
@@ -133,7 +133,7 @@ macro_rules! dac {
                 pub fn enable_generator(self, config: GeneratorConfig) -> $CX<WaveGenerator> {
                     let dac = unsafe { &(*DAC::ptr()) };
 
-                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(0) });
+                    dac.dac_mcr.modify(|_, w| unsafe { w.$mode().bits(1) });
                     dac.dac_cr.modify(|_, w| unsafe {
                         w.$wave().bits(config.mode);
                         w.$ten().set_bit();
