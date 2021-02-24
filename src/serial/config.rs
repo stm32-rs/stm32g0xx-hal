@@ -60,6 +60,7 @@ pub struct BasicConfig {
     pub(crate) wordlength: WordLength,
     pub(crate) parity: Parity,
     pub(crate) stopbits: StopBits,
+    pub(crate) swap: bool,
 }
 
 #[derive(PartialEq, PartialOrd, Clone, Copy)]
@@ -68,6 +69,7 @@ pub struct FullConfig {
     pub(crate) wordlength: WordLength,
     pub(crate) parity: Parity,
     pub(crate) stopbits: StopBits,
+    pub(crate) swap: bool,
     pub(crate) fifo_enable: bool,
     pub(crate) tx_fifo_threshold: FifoThreshold,
     pub(crate) rx_fifo_threshold: FifoThreshold,
@@ -112,6 +114,14 @@ impl BasicConfig {
         self.stopbits = stopbits;
         self
     }
+
+    /// Swap the Tx/Rx pins
+    ///
+    /// The peripheral will transmit on the pin given as the `rx` argument.
+    pub fn swap_pins(mut self) -> Self {
+        self.swap = true;
+        self
+    }
 }
 
 impl FullConfig {
@@ -147,6 +157,14 @@ impl FullConfig {
 
     pub fn stopbits(mut self, stopbits: StopBits) -> Self {
         self.stopbits = stopbits;
+        self
+    }
+
+    /// Swap the Tx/Rx pins
+    ///
+    /// The peripheral will transmit on the pin given as the `rx` argument.
+    pub fn swap_pins(mut self) -> Self {
+        self.swap = true;
         self
     }
 
@@ -194,6 +212,7 @@ impl Default for BasicConfig {
             wordlength: WordLength::DataBits8,
             parity: Parity::ParityNone,
             stopbits: StopBits::STOP1,
+            swap: false,
         }
     }
 }
@@ -206,6 +225,7 @@ impl Default for FullConfig {
             wordlength: WordLength::DataBits8,
             parity: Parity::ParityNone,
             stopbits: StopBits::STOP1,
+            swap: false,
             fifo_enable: false,
             tx_fifo_threshold: FifoThreshold::FIFO_8_BYTES,
             rx_fifo_threshold: FifoThreshold::FIFO_8_BYTES,

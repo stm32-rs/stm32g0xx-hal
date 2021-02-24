@@ -380,12 +380,15 @@ macro_rules! uart_basic {
                         .bit(config.parity == Parity::ParityOdd)
                 });
                 usart.cr2.write(|w| unsafe {
-                    w.stop().bits(match config.stopbits {
-                        StopBits::STOP1 => 0b00,
-                        StopBits::STOP0P5 => 0b01,
-                        StopBits::STOP2 => 0b10,
-                        StopBits::STOP1P5 => 0b11,
-                    })
+                    w.stop()
+                        .bits(match config.stopbits {
+                            StopBits::STOP1 => 0b00,
+                            StopBits::STOP0P5 => 0b01,
+                            StopBits::STOP2 => 0b10,
+                            StopBits::STOP1P5 => 0b11,
+                        })
+                        .swap()
+                        .bit(config.swap)
                 });
 
                 // Enable USART
@@ -490,9 +493,12 @@ macro_rules! uart_full {
                 usart.cr2.reset();
                 usart.cr3.reset();
 
-                usart
-                    .cr2
-                    .write(|w| unsafe { w.stop().bits(config.stopbits.bits()) });
+                usart.cr2.write(|w| unsafe {
+                    w.stop()
+                        .bits(config.stopbits.bits())
+                        .swap()
+                        .bit(config.swap)
+                });
 
                 if let Some(timeout) = config.receiver_timeout {
                     usart.cr1.write(|w| w.rtoie().set_bit());
