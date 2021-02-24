@@ -12,7 +12,7 @@ pub struct Stopwatch<TIM> {
 }
 
 macro_rules! stopwatches {
-    ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
+    ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident ),)+) => {
         $(
             impl Stopwatch<$TIM> {
                 pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
@@ -65,12 +65,7 @@ macro_rules! stopwatches {
                 }
 
                 pub fn now(&self) -> Instant {
-                    let _high = 0;
-                    $(
-                        let _high = self.tim.cnt.read().$cnt_h().bits() as u32;
-                    )*
-                    let low = self.tim.cnt.read().$cnt().bits() as u32;
-                    Instant(low | (_high << 16))
+                    Instant(self.tim.cnt.read().bits())
                 }
 
                 pub fn elapsed(&self, ts: Instant) -> MicroSecond {
@@ -100,21 +95,21 @@ macro_rules! stopwatches {
 }
 
 stopwatches! {
-    TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2, cnt),
-    TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1, cnt_l, cnt_h),
-    TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2, cnt),
-    TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2, cnt),
-    TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2, cnt),
+    TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2),
+    TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1),
+    TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2),
+    TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2),
+    TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2),
 }
 
 #[cfg(feature = "stm32g0x1")]
 stopwatches! {
-    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1, cnt_l, cnt_h),
+    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 stopwatches! {
-    TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1, cnt),
-    TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1, cnt),
-    TIM15: (tim15, tim15en, tim15rst, apbenr2, apbrstr2, cnt),
+    TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1),
+    TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1),
+    TIM15: (tim15, tim15en, tim15rst, apbenr2, apbrstr2),
 }
