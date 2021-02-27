@@ -13,6 +13,7 @@ use hal::rcc::{Config, LSCOSrc, MCOSrc, Prescaler};
 use hal::stm32;
 use rt::entry;
 
+#[allow(clippy::empty_loop)]
 #[entry]
 fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
