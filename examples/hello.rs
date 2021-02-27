@@ -11,6 +11,7 @@ extern crate stm32g0xx_hal as hal;
 use cortex_m_semihosting::hprintln;
 use rt::entry;
 
+#[allow(clippy::empty_loop)]
 #[entry]
 fn main() -> ! {
     hprintln!("Hello, STM32G0!").unwrap();

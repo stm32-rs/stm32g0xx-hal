@@ -16,6 +16,7 @@ use hal::rcc::{Config, SysClockSrc};
 use hal::stm32;
 use rt::entry;
 
+#[allow(clippy::empty_loop)]
 #[entry]
 fn main() -> ! {
     let cp = cortex_m::Peripherals::take().expect("cannot take core peripherals");

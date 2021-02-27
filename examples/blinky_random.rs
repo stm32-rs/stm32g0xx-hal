@@ -44,6 +44,7 @@ fn main() -> ! {
     }
 }
 
+#[allow(clippy::empty_loop)]
 #[exception]
 fn HardFault(ef: &ExceptionFrame) -> ! {
     hprintln!("Hard fault {:#?}", ef).unwrap();
