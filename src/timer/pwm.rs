@@ -56,7 +56,7 @@ macro_rules! pwm {
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
                 let ratio = rcc.clocks.apb_tim_clk / freq.into();
                 let psc = (ratio - 1) / 0xffff;
-                let arr = ratio / (psc + 1);
+                let arr = ratio / (psc + 1) - 1;
                 tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
                 tim.arr.write(|w| unsafe { w.$arr().bits(arr as u16) });
                 $(
