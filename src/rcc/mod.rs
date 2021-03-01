@@ -235,7 +235,7 @@ impl Rcc {
                 self.rb
                     .pllsyscfgr
                     .write(move |w| unsafe { w.pllq().bits(div - 1) });
-                let req = freq / div as u32;
+                let req = pll_freq / div as u32;
                 Some(req.hz())
             }
             _ => None,
@@ -246,7 +246,7 @@ impl Rcc {
                 self.rb
                     .pllsyscfgr
                     .write(move |w| unsafe { w.pllp().bits(div - 1) });
-                let req = freq / div as u32;
+                let req = pll_freq / div as u32;
                 Some(req.hz())
             }
             _ => None,
