@@ -39,6 +39,7 @@ timer_pins!(TIM1, [
     (Channel4, PA11<DefaultMode>, AltFunction::AF2),
     (Channel4, PC11<DefaultMode>, AltFunction::AF2),
 ]);
+
 // Inverted pins
 timer_pins!(TIM1, [
     (Channel1, PA7<DefaultMode>, AltFunction::AF2),
@@ -99,6 +100,7 @@ timer_pins!(TIM15, [
     (Channel2, PB15<DefaultMode>, AltFunction::AF5),
     (Channel2, PC2<DefaultMode>, AltFunction::AF2),
 ]);
+
 // Inverted pins
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 timer_pins!(TIM15, [
@@ -112,6 +114,7 @@ timer_pins!(TIM16, [
     (Channel1, PB8<DefaultMode>, AltFunction::AF2),
     (Channel1, PD0<DefaultMode>, AltFunction::AF2),
 ]);
+
 // Inverted pins
 timer_pins!(TIM16, [
     (Channel1, PB6<DefaultMode>, AltFunction::AF2),
@@ -122,6 +125,7 @@ timer_pins!(TIM17, [
     (Channel1, PB9<DefaultMode>, AltFunction::AF2),
     (Channel1, PD1<DefaultMode>, AltFunction::AF2),
 ]);
+
 //  Inverted pins
 timer_pins!(TIM17, [
     (Channel1, PB7<DefaultMode>, AltFunction::AF2),
