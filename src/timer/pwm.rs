@@ -107,9 +107,18 @@ macro_rules! pwm_hal {
             }
         )+
     };
+}
 
-    ($($TIMX:ident:
-        ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident $(,$moe:ident)*),)+
+macro_rules! pwm_advanced_hal {
+    ($($TIMX:ident: (
+        $CH:ty,
+        $ccxe:ident $(: $ccxne:ident)*,
+        $ccmrx_output:ident,
+        $ocxpe:ident,
+        $ocxm:ident,
+        $ccrx:ident
+        $(, $moe:ident)*
+    ) ,)+
     ) => {
         $(
             impl hal::PwmPin for PwmPin<$TIMX, $CH> {
@@ -126,6 +135,9 @@ macro_rules! pwm_hal {
                         let tim = &*$TIMX::ptr();
                         tim.$ccmrx_output().modify(|_, w| w.$ocxpe().set_bit().$ocxm().bits(6));
                         tim.ccer.modify(|_, w| w.$ccxe().set_bit());
+                        $(
+                            tim.ccer.modify(|_, w| w.$ccxne().bit(true));
+                        )*
                         $(
                             tim.bdtr.modify(|_, w| w.$moe().set_bit());
                         )*
@@ -148,14 +160,19 @@ macro_rules! pwm_hal {
     };
 }
 
-pwm_hal! {
-    TIM1:  (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-    TIM1:  (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, moe),
-    TIM1:  (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, moe),
+pwm_advanced_hal! {
+    TIM1:  (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+    TIM1:  (Channel2, cc2e: cc2ne, ccmr1_output, oc2pe, oc2m, ccr2, moe),
+    TIM1:  (Channel3, cc3e: cc3ne, ccmr2_output, oc3pe, oc3m, ccr3, moe),
     TIM1:  (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, moe),
     TIM14: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
-    TIM16: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-    TIM17: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+    TIM16: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+    TIM17: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr1, moe),
+}
+
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+pwm_advanced_hal! {
+    TIM15: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
 #[cfg(feature = "stm32g0x1")]
@@ -164,18 +181,10 @@ pwm_hal! {
     TIM2: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM2: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
     TIM2: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
-}
-
-pwm_hal! {
     TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
     TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
     TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
-}
-
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-pwm_hal! {
-    TIM15: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
 pwm! {
