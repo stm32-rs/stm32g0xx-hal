@@ -138,6 +138,12 @@ opm_hal! {
     TIM2: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4, arr_l, arr_h),
 }
 
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+opm_hal! {
+    TIM15: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1, arr),
+    TIM15: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2, arr),
+}
+
 opm! {
     TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst),
     TIM3: (apbenr1, apbrstr1, tim3, tim3en, tim3rst),
