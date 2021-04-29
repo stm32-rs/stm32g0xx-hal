@@ -168,7 +168,7 @@ pub trait Channel: private::Channel {
     }
 
     /// Set the word size.
-    fn set_word_size<W>(&mut self, wsize: WordSize) {
+    fn set_word_size(&mut self, wsize: WordSize) {
         self.ch().cr.modify(|_, w| unsafe {
             w.psize().bits(wsize as u8);
             w.msize().bits(wsize as u8)

@@ -72,6 +72,20 @@ pub enum AsyncClockDiv {
     AsyncD256 = 8,
 }
 
+/// ADC injected trigger source selection
+#[derive(Copy, Clone, PartialEq)]
+pub enum InjTrigSource {
+    TRG_0 = 0b000,   // TIM1_TRGO2
+    TRG_1 = 0b001,   // TIM1_CC4
+    TRG_2 = 0b010,   // TIM2_TRGO
+    TRG_3 = 0b011,   // TIM3_TRGO
+    TRG_4 = 0b100,   // TIM15_TRGO
+    TRG_5 = 0b101,   // TIM6_TRGO
+    TRG_6 = 0b110,   // TIM4_TRGO
+    TRG_7 = 0b111,   // EXTI11
+}
+
+
 /// Analog to Digital converter interface
 pub struct Adc {
     rb: ADC,
@@ -178,6 +192,44 @@ impl Adc {
     pub fn release(self) -> ADC {
         self.rb
     }
+
+    /// The nuber of bits, the oversampling result is shifted in bits at the end of oversampling
+    pub fn set_oversamling_shift(&mut self, nrbits:u8) {
+        self.rb.cfgr2.modify(|_, w| unsafe {w.ovss().bits(nrbits)});
+    }
+
+    /// Oversampling of adc according to datasheet of stm32g0, when oversampling is enabled
+    /// 000: 2x
+    /// 001: 4x
+    /// 010: 8x
+    /// 011: 16x
+    /// 100: 32x
+    /// 101: 64x
+    /// 110: 128x
+    /// 111: 256x
+
+    pub fn set_oversamling_ratio(&mut self, multyply:u8) {
+        self.rb.cfgr2.modify(|_, w| unsafe {w.ovsr().bits(multyply)});
+    }
+
+    pub fn oversamling_enable(&mut self) {
+        self.rb.cfgr2.modify(|_, w| unsafe {w.ovse().set_bit()});
+    }
+
+    pub fn start_injected(&mut self) {
+        self.rb.cr.modify(|_,w|  w.adstart().set_bit());
+        // ADSTART bit is cleared to 0 bevor using this function
+        // enable self.rb.isr.eos() flag is set after each converstion
+        self.rb.ier.modify(|_, w| w.eocie().set_bit()); // end of sequence interupt enable
+    }
+
+
+    pub fn stop_injected(&mut self) {  // ?????? or is it reset after each conversion?
+        // ADSTART bit is cleared to 0 bevor using this function
+        // disable EOS interrupt 
+        // maybe self.rb.cr.adstp().set_bit() must be performed before interrupt is disabled + wait abortion
+        self.rb.ier.modify(|_, w| w.eocie().clear_bit()); // end of sequence interupt disable
+    }
 }
 
 pub trait AdcExt {
@@ -189,6 +241,83 @@ impl AdcExt for ADC {
         Adc::new(self, rcc)
     }
 }
+
+pub trait InjectMode<ADC, Pin: Channel<ADC>> {
+    /// Error type returned by ADC methods
+    type Error;
+    fn prepare_injected(&mut self, _pin: &mut Pin, triger_source: InjTrigSource);
+}
+
+impl<PIN> InjectMode<Adc, PIN> for Adc
+where
+    // WORD: From<u16>,
+    PIN: Channel<Adc, ID = u8>,
+{
+    type Error = ();
+
+    fn prepare_injected(&mut self, _pin: &mut PIN, triger_source: InjTrigSource){
+        // set the clock mode to synchronous one 
+        // self.rb.cfgr2.ckmode().bits(CLCOKMODE)   // CLOCKMODE = 01 or 10 for PCLK/2 or PCLK/4
+
+        
+        // self.set_injected_trigger_source(triger_source as InjTrigSource);
+        self.rb.cfgr1.modify(|_, w| unsafe {
+            w.exten()
+                .bits(1)
+                .extsel()
+                .bits(triger_source as u8)
+        });
+
+        self.rb.cfgr1.modify(|_, w| unsafe {
+            w.res()   // set ADC resolution bits (ADEN must be =0)
+                .bits(self.precision as u8)
+                .align()    // set alignment bit is  (ADSTART must be 0)
+                .bit(self.align == Align::Left)
+        });
+
+        self.power_up();
+
+        self.rb
+            .smpr  // set sampling time set 1 (ADSTART must be 0) 
+            .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
+
+        self.rb
+            .chselr()  // set activ channel acording chapter 15.12.9 (ADC_CFGR1; CHSELRMOD=0)
+            .modify(|_, w| unsafe { w.chsel().bits(1 << PIN::channel()) });
+
+    }
+
+    
+}
+
+pub trait DmaMode<ADC> {
+    /// Error type returned by ADC methods
+    type Error;
+    fn dma_enable(&mut self, enable: bool);
+    fn dma_circualr_mode(&mut self, enable: bool);
+}
+
+impl DmaMode<Adc> for Adc {
+
+    type Error = ();
+
+    fn dma_enable(&mut self, enable: bool) {
+        if enable {
+            self.rb.cfgr1.modify(|_,w| w.dmaen().set_bit());   //  enable dma beeing called
+        } else {
+            self.rb.cfgr1.modify(|_,w| w.dmaen().clear_bit());   //  disable dma beeing called
+        }
+    }
+    
+    fn dma_circualr_mode(&mut self, enable: bool) {
+        if enable {
+            self.rb.cfgr1.modify(|_,w| w.dmacfg().set_bit());  // activate circular mode
+        } else {
+            self.rb.cfgr1.modify(|_,w| w.dmacfg().clear_bit());  // disable circular mode
+        }
+    }
+}
+
 
 impl<WORD, PIN> OneShot<Adc, WORD, PIN> for Adc
 where
