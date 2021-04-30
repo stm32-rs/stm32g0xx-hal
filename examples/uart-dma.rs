@@ -7,7 +7,7 @@ extern crate stm32g0xx_hal as hal;
 
 use core::fmt::Write;
 
-use hal::dma::{self, Channel, Target, Event};
+use hal::dma::{self, Channel, Event, Target};
 use hal::prelude::*;
 use hal::serial::*;
 use hal::stm32;
@@ -59,12 +59,11 @@ fn main() -> ! {
     tx.enable_dma();
     dma.ch1.enable();
 
-
     // Create a second buffer to send after the first dma transfer has completed
     let mut tx_buffer2: [u8; 23] = *b"Transfer complete {0}!\n";
     let tx_dma_buf_addr: u32 = tx_buffer2.as_ptr() as u32;
 
-    let mut delay = dp.TIM1.delay(& mut rcc);
+    let mut delay = dp.TIM1.delay(&mut rcc);
 
     loop {
         if dma.ch1.event_occurred(Event::TransferComplete) {
@@ -81,7 +80,6 @@ fn main() -> ! {
             dma.ch1.disable();
 
             led.toggle().unwrap();
-
 
             dma.ch1.set_memory_address(tx_dma_buf_addr, true);
             dma.ch1.set_transfer_length(tx_buffer2.len() as u16);
