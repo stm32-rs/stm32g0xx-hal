@@ -168,6 +168,13 @@ macro_rules! uart_shared {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.cr1.modify(|_, w| w.rxneie().clear_bit());
             }
+
+            /// Return true if the rx register is not empty (and can be read)
+            pub fn is_rxne(&self) -> bool {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr.read().rxne().bit_is_set()
+            }
+
         }
 
         impl<Config> hal::serial::Read<u8> for Rx<$USARTX, Config> {
@@ -219,6 +226,13 @@ macro_rules! uart_shared {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.cr1.modify(|_, w| w.txeie().clear_bit());
             }
+
+            /// Return true if the tx register is empty (and can accept data)
+            pub fn is_txe(&self) -> bool {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr.read().txe().bit_is_set()
+            }
+
         }
 
         impl<Config> hal::serial::Write<u8> for Tx<$USARTX, Config> {
