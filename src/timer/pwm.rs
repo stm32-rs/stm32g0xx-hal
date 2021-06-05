@@ -71,6 +71,7 @@ macro_rules! pwm {
     }
 }
 
+#[cfg(feature = "stm32g0x1")]
 macro_rules! pwm_hal {
     ($($TIMX:ident:
         ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident),)+
