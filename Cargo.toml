@@ -38,12 +38,13 @@ version = "1.0.2"
 cortex-m-rt = "0.6.10"
 cortex-m-rtic = "0.5.5"
 cortex-m-semihosting = "0.3.5"
+embedded-graphics = "0.5"
+embedded-sdmmc = "0.2.1"
+infrared =  "0.11.0"
 panic-halt = "0.2.0"
 panic-semihosting = "0.5.3"
-embedded-sdmmc = "0.2.1"
-st7735-lcd = "0.6.1"
-embedded-graphics = "0.5"
 smart-leds = {git = "https://github.com/smart-leds-rs/smart-leds"}
+st7735-lcd = "0.6.1"
 ws2812-spi = {git = "https://github.com/smart-leds-rs/ws2812-spi-rs"}
 
 [features]
