@@ -1,4 +1,4 @@
-/* Linker script for the STM32G071RB */
+/* Linker script for the NUCLEO-G071RB (STM32G071RB) */
 MEMORY
 {
   FLASH : ORIGIN = 0x08000000, LENGTH = 128K

@@ -3,7 +3,6 @@
 // command run: cargo run --example adc_ext_trig_double_dma_serial --features stm32g031
 
 #![deny(warnings)]
-// #![deny(unsafe_code)]
 #![no_main]
 #![no_std]
 
@@ -40,7 +39,7 @@ const BUFFER_SIZE: u16 = 4;
 static G_DMA_BUFFER_ADDR: Mutex<RefCell<Option<u32>>> = Mutex::new(RefCell::new(None));
 
 #[interrupt]
-fn DMA_CHANNEL1() {
+unsafe fn DMA_CHANNEL1() {
     static mut DMA: Option<hal::dma::Channels> = None;
     static mut DMA_BUFFER_ADDR: Option<u32> = None;
 
