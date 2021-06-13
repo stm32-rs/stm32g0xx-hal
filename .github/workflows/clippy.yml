@@ -1,6 +1,6 @@
 on:
   push:
-    branches: [ staging, trying, master ]
+    branches: [ staging, trying, main ]
   pull_request:
 
 name: Clippy check
