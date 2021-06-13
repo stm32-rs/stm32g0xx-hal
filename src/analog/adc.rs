@@ -216,7 +216,7 @@ impl Adc {
     }
 
     pub fn oversamling_enable(&mut self) {
-        self.rb.cfgr2.modify(|_, w| { w.ovse().set_bit() });
+        self.rb.cfgr2.modify(|_, w| w.ovse().set_bit());
     }
 
     pub fn start_injected(&mut self) {
