@@ -21,7 +21,7 @@ use infrared::{protocols::Nec, Sender};
 use rtic::app;
 
 const IR_SAMPLERATE: Hertz = Hertz(20_000);
-const STOBE_COMMAND: NecCommand = NecCommand {
+const STROBE_COMMAND: NecCommand = NecCommand {
     addr: 0,
     cmd: 15,
     repeat: false,
@@ -73,7 +73,7 @@ const APP: () = {
     fn button_click(ctx: button_click::Context) {
         ctx.resources
             .transmitter
-            .load(&STOBE_COMMAND)
+            .load(&STROBE_COMMAND)
             .expect("failed to send IR command");
         ctx.resources.exti.unpend(Event::GPIO13);
     }
