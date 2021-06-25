@@ -46,6 +46,19 @@ pub enum SampleTime {
     T_160 = 0b111,
 }
 
+// ADC Oversampling ratio
+#[derive(Copy, Clone, PartialEq)]
+pub enum OversamplingRatio {
+    X_2 = 0b000,
+    X_4 = 0b001,
+    X_8 = 0b010,
+    X_16 = 0b011,
+    X_32 = 0b100,
+    X_64 = 0b101,
+    X_128 = 0b110,
+    X_256 = 0b111,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ClockSource {
     Pclk(PclkDiv),
@@ -111,6 +124,7 @@ impl Adc {
         }
     }
 
+    /// Sets ADC source
     pub fn set_clock_source(&mut self, clock_source: ClockSource) {
         match clock_source {
             ClockSource::Pclk(div) => self
@@ -176,22 +190,6 @@ impl Adc {
         self.precision = precision;
     }
 
-    fn power_up(&mut self) {
-        self.rb.isr.modify(|_, w| w.adrdy().set_bit());
-        self.rb.cr.modify(|_, w| w.aden().set_bit());
-        while self.rb.isr.read().adrdy().bit_is_clear() {}
-    }
-
-    fn power_down(&mut self) {
-        self.rb.cr.modify(|_, w| w.addis().set_bit());
-        self.rb.isr.modify(|_, w| w.adrdy().set_bit());
-        while self.rb.cr.read().aden().bit_is_set() {}
-    }
-
-    pub fn release(self) -> ADC {
-        self.rb
-    }
-
     /// The nuber of bits, the oversampling result is shifted in bits at the end of oversampling
     pub fn set_oversamling_shift(&mut self, nrbits: u8) {
         self.rb
@@ -200,23 +198,14 @@ impl Adc {
     }
 
     /// Oversampling of adc according to datasheet of stm32g0, when oversampling is enabled
-    /// 000: 2x
-    /// 001: 4x
-    /// 010: 8x
-    /// 011: 16x
-    /// 100: 32x
-    /// 101: 64x
-    /// 110: 128x
-    /// 111: 256x
-
-    pub fn set_oversamling_ratio(&mut self, multyply: u8) {
+    pub fn set_oversamling_ratio(&mut self, ratio: OversamplingRatio) {
         self.rb
             .cfgr2
-            .modify(|_, w| unsafe { w.ovsr().bits(multyply) });
+            .modify(|_, w| unsafe { w.ovsr().bits(ratio as u8) });
     }
 
-    pub fn oversamling_enable(&mut self) {
-        self.rb.cfgr2.modify(|_, w| w.ovse().set_bit());
+    pub fn oversamling_enable(&mut self, enable: bool) {
+        self.rb.cfgr2.modify(|_, w| w.ovse().bit(enable));
     }
 
     pub fn start_injected(&mut self) {
@@ -232,6 +221,22 @@ impl Adc {
         // disable EOS interrupt
         // maybe self.rb.cr.adstp().set_bit() must be performed before interrupt is disabled + wait abortion
         self.rb.ier.modify(|_, w| w.eocie().clear_bit()); // end of sequence interupt disable
+    }
+
+    pub fn release(self) -> ADC {
+        self.rb
+    }
+
+    fn power_up(&mut self) {
+        self.rb.isr.modify(|_, w| w.adrdy().set_bit());
+        self.rb.cr.modify(|_, w| w.aden().set_bit());
+        while self.rb.isr.read().adrdy().bit_is_clear() {}
+    }
+
+    fn power_down(&mut self) {
+        self.rb.cr.modify(|_, w| w.addis().set_bit());
+        self.rb.isr.modify(|_, w| w.adrdy().set_bit());
+        while self.rb.cr.read().aden().bit_is_set() {}
     }
 }
 

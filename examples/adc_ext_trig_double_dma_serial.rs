@@ -15,6 +15,7 @@ extern crate panic_halt;
 extern crate stm32g0;
 extern crate stm32g0xx_hal as hal;
 
+use hal::analog::adc;
 use hal::prelude::*;
 use hal::serial::*;
 use hal::stm32;
@@ -62,24 +63,22 @@ unsafe fn DMA_CHANNEL1() {
     // Address is in byte, value in 2Bytes, this is why second dma buffer ist added with BUFFER_SIZE
     // and not BUFFER_SIZE/2
 
-    unsafe {
-        let dma = &(*stm32g0::stm32g031::DMA::ptr());
-        let htif1 = dma.isr.read().htif1().bit();
-        let tcif1 = dma.isr.read().tcif1().bit();
-        // set the global clear bit of DMA channel1
-        dma.ifcr.write(|w| w.cgif1().set_bit());
+    let dma = &(*stm32g0::stm32g031::DMA::ptr());
+    let htif1 = dma.isr.read().htif1().bit();
+    let tcif1 = dma.isr.read().tcif1().bit();
+    // set the global clear bit of DMA channel1
+    dma.ifcr.write(|w| w.cgif1().set_bit());
 
-        dma_ch.ch2.disable();
-        dma_ch.ch2.set_transfer_length(BUFFER_SIZE as u16);
-        if htif1 == true {
-            dma_ch.ch2.set_memory_address(tx_dma_buf_first_addr, true);
-            dma_ch.ch2.enable();
-            // hprintln!("DMA_CHANNEL1 half transfer compleated {:?} {:?}", htif1, tx_dma_buf_first_addr).unwrap();
-        } else if tcif1 == true {
-            dma_ch.ch2.set_memory_address(tx_dma_buf_second_addr, true);
-            dma_ch.ch2.enable();
-            // hprintln!("DMA_CHANNEL1 transfer compleated {:?}  {:?}", tcif1, tx_dma_buf_second_addr).unwrap();
-        }
+    dma_ch.ch2.disable();
+    dma_ch.ch2.set_transfer_length(BUFFER_SIZE as u16);
+    if htif1 == true {
+        dma_ch.ch2.set_memory_address(tx_dma_buf_first_addr, true);
+        dma_ch.ch2.enable();
+        // hprintln!("DMA_CHANNEL1 half transfer compleated {:?} {:?}", htif1, tx_dma_buf_first_addr).unwrap();
+    } else if tcif1 == true {
+        dma_ch.ch2.set_memory_address(tx_dma_buf_second_addr, true);
+        dma_ch.ch2.enable();
+        // hprintln!("DMA_CHANNEL1 transfer compleated {:?}  {:?}", tcif1, tx_dma_buf_second_addr).unwrap();
     }
 }
 
@@ -167,9 +166,9 @@ fn main() -> ! {
     let u = u_raw.saturating_sub(32) as f32 / 4_096_f32 * 3.3;
     hprintln!("u: {:.4} V ", u).unwrap();
 
-    adc.set_oversamling_ratio(3);
+    adc.set_oversamling_ratio(adc::OversamplingRatio::X_16);
     adc.set_oversamling_shift(4);
-    adc.oversamling_enable();
+    adc.oversamling_enable(true);
     adc.prepare_injected(&mut pa3, InjTrigSource::TRG_2);
     adc.start_injected();
 
