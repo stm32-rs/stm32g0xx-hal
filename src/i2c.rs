@@ -202,10 +202,6 @@ macro_rules! i2c {
                 let timing_bits = config.timing_bits(rcc.clocks.apb_clk);
                 i2c.timingr.write(|w| unsafe { w.bits(timing_bits) });
 
-                // Enable pins
-                sda.setup();
-                scl.setup();
-
                 // Enable the I2C processing
                 i2c.cr1.modify(|_, w| unsafe {
                     w.pe()
@@ -215,6 +211,10 @@ macro_rules! i2c {
                         .anfoff()
                         .bit(!config.analog_filter)
                 });
+
+                // Enable pins
+                sda.setup();
+                scl.setup();
 
                 I2c { i2c, sda, scl }
             }
