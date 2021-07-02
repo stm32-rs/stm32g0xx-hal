@@ -256,9 +256,9 @@ impl Adc {
             vdda_mv
         };
 
-        self.read(pin).and_then(|raw: u32| {
+        self.read(pin).map(|raw: u32| {
             let adc_mv = (vdda_mv * raw) >> 12;
-            Ok(adc_mv as u16)
+            adc_mv as u16
         })
     }
 
