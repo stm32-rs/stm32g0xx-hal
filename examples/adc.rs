@@ -43,6 +43,6 @@ fn main() -> ! {
         let u_raw: u32 = adc.read(&mut adc_pin).expect("adc read failed");
         let u_mv = adc.read_voltage(&mut adc_pin).expect("adc read failed");
 
-        hprintln!("U raw: {} | U: {} mV | t: {}°C",u_raw,  u_mv, temp / 42).unwrap();
+        hprintln!("U raw: {} | U: {} mV | t: {}°C", u_raw, u_mv, temp / 42).unwrap();
     }
 }
