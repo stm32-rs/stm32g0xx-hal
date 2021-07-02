@@ -37,10 +37,10 @@ macro_rules! opm {
             where
                 PIN: TimerPin<$TIMX>,
             {
-                pin.setup();
                 rcc.rb.$apbXenr.modify(|_, w| w.$timXen().set_bit());
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().set_bit());
                 rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
+                pin.setup();
                 Opm {
                     rb: tim,
                     clk: rcc.clocks.apb_tim_clk,

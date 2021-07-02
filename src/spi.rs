@@ -117,8 +117,6 @@ macro_rules! spi {
             PINS: Pins<$SPIX>,
             T: Into<Hertz>
             {
-                pins.setup();
-
                 // Enable clock for SPI
                 rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().set_bit());
                 rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().set_bit());
@@ -144,6 +142,9 @@ macro_rules! spi {
                 spi.cr2.write(|w| unsafe {
                     w.frxth().set_bit().ds().bits(0b111).ssoe().clear_bit()
                 });
+
+                // Enable pins
+                pins.setup();
 
                 spi.cr1.write(|w| unsafe {
                     w.cpha()
@@ -171,7 +172,6 @@ macro_rules! spi {
                         .spe()
                         .set_bit()
                 });
-
 
                 Spi { spi, pins }
             }

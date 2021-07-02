@@ -102,16 +102,6 @@ pub enum Hysteresis {
     High = 0b11,
 }
 
-// TODO
-// pub enum Blanking {
-//     None,
-//     Tim1Oc4(),
-//     Tim1Oc5(),
-//     Tim2Oc3(),
-//     Tim3Oc3(),
-//     Tim15Oc2()<
-// }
-
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum PowerMode {
     HighSpeed = 0b00,

@@ -188,10 +188,6 @@ macro_rules! i2c {
                 SDA: SDAPin<$I2CX>,
                 SCL: SCLPin<$I2CX>,
             {
-
-                sda.setup();
-                scl.setup();
-
                 // Enable clock for I2C
                 rcc.rb.apbenr1.modify(|_, w| w.$i2cxen().set_bit());
 
@@ -205,6 +201,10 @@ macro_rules! i2c {
                 // Setup protocol timings
                 let timing_bits = config.timing_bits(rcc.clocks.apb_clk);
                 i2c.timingr.write(|w| unsafe { w.bits(timing_bits) });
+
+                // Enable pins
+                sda.setup();
+                scl.setup();
 
                 // Enable the I2C processing
                 i2c.cr1.modify(|_, w| unsafe {
