@@ -58,6 +58,7 @@ pub mod rcc;
 #[cfg(any(feature = "stm32g041", feature = "stm32g081"))]
 pub mod rng;
 pub mod rtc;
+pub mod power;
 pub mod serial;
 pub mod spi;
 pub mod time;
