@@ -315,6 +315,16 @@ impl Rcc {
     pub(crate) fn enable_power_control(&self) {
         self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
     }
+
+    pub(crate) fn enable_adc(&self) {
+        self.rb.apbenr2.modify(|_, w| w.adcen().set_bit());
+    }
+
+    pub(crate) fn enable_crc(&self) {
+        self.rb.ahbenr.modify(|_, w| w.crcen().set_bit());
+        self.rb.ahbrstr.modify(|_, w| w.crcrst().set_bit());
+        self.rb.ahbrstr.modify(|_, w| w.crcrst().clear_bit());
+    }
 }
 
 /// Extension trait that constrains the `RCC` peripheral

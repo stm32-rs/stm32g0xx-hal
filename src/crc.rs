@@ -31,11 +31,7 @@ pub trait CrcExt {
 
 impl CrcExt for CRC {
     fn constrain(self, rcc: &mut Rcc) -> Config {
-        // Enable power to CRC unit
-        rcc.rb.ahbenr.modify(|_, w| w.crcen().set_bit());
-        // Reset CRC unit
-        rcc.rb.ahbrstr.modify(|_, w| w.crcrst().set_bit());
-        rcc.rb.ahbrstr.modify(|_, w| w.crcrst().clear_bit());
+        rcc.enable_crc();
 
         // Default values
         Config {
