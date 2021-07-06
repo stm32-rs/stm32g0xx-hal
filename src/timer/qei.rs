@@ -42,7 +42,6 @@ macro_rules! qei {
         $(
             impl<PINS> Qei<$TIMX, PINS> where PINS: QeiPins<$TIMX> {
                 fn $tim(tim: $TIMX, pins: PINS, rcc: &mut Rcc) -> Self {
-                    pins.setup();
                     // enable and reset peripheral to a clean slate state
                     rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
                     rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
@@ -71,6 +70,8 @@ macro_rules! qei {
                             .cc2np()
                             .clear_bit()
                     });
+
+                    pins.setup();
 
                     tim.cr1.write(|w| w.cen().set_bit());
                     Qei { tim, pins }

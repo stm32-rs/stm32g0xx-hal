@@ -362,9 +362,6 @@ macro_rules! uart_basic {
                 TX: TxPin<$USARTX>,
                 RX: RxPin<$USARTX>,
             {
-                tx.setup();
-                rx.setup();
-
                 // Enable clock for USART
                 rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
                 let clk = rcc.clocks.apb_clk.0 as u64;
@@ -404,6 +401,10 @@ macro_rules! uart_basic {
                         .swap()
                         .bit(config.swap)
                 });
+
+                // Enable pins
+                tx.setup();
+                rx.setup();
 
                 // Enable USART
                 usart.cr1.modify(|_, w| w.ue().set_bit());
@@ -491,9 +492,6 @@ macro_rules! uart_full {
                 TX: TxPin<$USARTX>,
                 RX: RxPin<$USARTX>,
             {
-                tx.setup();
-                rx.setup();
-
                 // Enable clock for USART
                 rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
 
@@ -549,6 +547,9 @@ macro_rules! uart_full {
                         .fifoen()
                         .bit(config.fifo_enable)
                 });
+
+                tx.setup();
+                rx.setup();
 
                 Ok(Serial {
                     tx: Tx {
