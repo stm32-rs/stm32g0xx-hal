@@ -326,7 +326,6 @@ macro_rules! uart_shared {
                 });
             }
         }
-
     }
 }
 

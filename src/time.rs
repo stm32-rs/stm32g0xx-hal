@@ -217,6 +217,12 @@ impl Add for MicroSecond {
     }
 }
 
+impl From<Second> for MicroSecond {
+    fn from(period: Second) -> MicroSecond {
+        MicroSecond(period.0 * 1_000_000)
+    }
+}
+
 impl From<Hertz> for MicroSecond {
     fn from(freq: Hertz) -> MicroSecond {
         assert!(freq.0 <= 1_000_000);

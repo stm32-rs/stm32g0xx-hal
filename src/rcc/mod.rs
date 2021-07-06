@@ -192,19 +192,6 @@ impl Rcc {
         }
     }
 
-    pub fn enable_low_power_mode(&self) {
-        assert!(self.clocks.sys_clk.0 <= 2_000_000);
-        self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
-        let pwr = unsafe { &(*PWR::ptr()) };
-        pwr.cr1.modify(|_, w| w.lpr().set_bit());
-    }
-
-    pub fn disable_low_power_mode(&self) {
-        self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
-        let pwr = unsafe { &(*PWR::ptr()) };
-        pwr.cr1.modify(|_, w| w.lpr().clear_bit());
-    }
-
     fn config_pll(&self, pll_cfg: PllConfig) -> PLLClocks {
         assert!(pll_cfg.m > 0 && pll_cfg.m <= 8);
         assert!(pll_cfg.r > 1 && pll_cfg.r <= 8);
@@ -323,6 +310,20 @@ impl Rcc {
                 .bdrst()
                 .clear_bit()
         });
+    }
+
+    pub(crate) fn enable_power_control(&self) {
+        self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
+    }
+
+    pub(crate) fn enable_adc(&self) {
+        self.rb.apbenr2.modify(|_, w| w.adcen().set_bit());
+    }
+
+    pub(crate) fn enable_crc(&self) {
+        self.rb.ahbenr.modify(|_, w| w.crcen().set_bit());
+        self.rb.ahbrstr.modify(|_, w| w.crcrst().set_bit());
+        self.rb.ahbrstr.modify(|_, w| w.crcrst().clear_bit());
     }
 }
 

@@ -116,7 +116,8 @@ pub struct CalibrationFactor(pub u8);
 impl Adc {
     pub fn new(adc: ADC, rcc: &mut Rcc) -> Self {
         // Enable ADC clocks
-        rcc.rb.apbenr2.modify(|_, w| w.adcen().set_bit());
+        rcc.enable_adc();
+
         adc.cr.modify(|_, w| w.advregen().set_bit());
 
         Self {

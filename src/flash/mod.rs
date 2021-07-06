@@ -189,7 +189,7 @@ impl WriteErase for UnlockedFlash {
 
         let mut chunks = aligned_data.chunks_exact(mem::size_of::<Self::NativeType>());
 
-        while let Some(exact_chunk) = chunks.next() {
+        for exact_chunk in &mut chunks {
             // Write chunks
             let native = &[Self::NativeType::from_ne_bytes(
                 exact_chunk.try_into().unwrap(),
