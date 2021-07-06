@@ -166,9 +166,9 @@ fn main() -> ! {
     let u = u_raw.saturating_sub(32) as f32 / 4_096_f32 * 3.3;
     hprintln!("u: {:.4} V ", u).unwrap();
 
-    adc.set_oversamling_ratio(adc::OversamplingRatio::X_16);
-    adc.set_oversamling_shift(4);
-    adc.oversamling_enable(true);
+    adc.set_oversampling_ratio(adc::OversamplingRatio::X_16);
+    adc.set_oversampling_shift(4);
+    adc.oversampling_enable(true);
     adc.prepare_injected(&mut pa3, InjTrigSource::TRG_2);
     adc.start_injected();
 

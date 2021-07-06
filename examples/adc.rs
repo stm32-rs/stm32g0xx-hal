@@ -26,9 +26,9 @@ fn main() -> ! {
     let mut adc = dp.ADC.constrain(&mut rcc);
     adc.set_sample_time(SampleTime::T_80);
     adc.set_precision(Precision::B_12);
-    adc.set_oversamling_ratio(OversamplingRatio::X_16);
-    adc.set_oversamling_shift(16);
-    adc.oversamling_enable(true);
+    adc.set_oversampling_ratio(OversamplingRatio::X_16);
+    adc.set_oversampling_shift(16);
+    adc.oversampling_enable(true);
 
     delay.delay(20.us()); // Wait for ADC voltage regulator to stabilize
     adc.calibrate();

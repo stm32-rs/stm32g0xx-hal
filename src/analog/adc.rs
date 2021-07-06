@@ -196,20 +196,20 @@ impl Adc {
     }
 
     /// The nuber of bits, the oversampling result is shifted in bits at the end of oversampling
-    pub fn set_oversamling_shift(&mut self, nrbits: u8) {
+    pub fn set_oversampling_shift(&mut self, nrbits: u8) {
         self.rb
             .cfgr2
             .modify(|_, w| unsafe { w.ovss().bits(nrbits) });
     }
 
     /// Oversampling of adc according to datasheet of stm32g0, when oversampling is enabled
-    pub fn set_oversamling_ratio(&mut self, ratio: OversamplingRatio) {
+    pub fn set_oversampling_ratio(&mut self, ratio: OversamplingRatio) {
         self.rb
             .cfgr2
             .modify(|_, w| unsafe { w.ovsr().bits(ratio as u8) });
     }
 
-    pub fn oversamling_enable(&mut self, enable: bool) {
+    pub fn oversampling_enable(&mut self, enable: bool) {
         self.rb.cfgr2.modify(|_, w| w.ovse().bit(enable));
     }
 
