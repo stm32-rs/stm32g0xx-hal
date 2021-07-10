@@ -123,7 +123,7 @@ macro_rules! mco {
                 }
 
                 fn release(self) -> $PIN {
-                    self.into()
+                    self.into_analog()
                 }
             }
         )+
