@@ -110,7 +110,7 @@ macro_rules! spi {
                 }
 
                 fn release(self) -> Self {
-                    self.into()
+                    self.into_analog()
                 }
             }
         )*
@@ -121,7 +121,7 @@ macro_rules! spi {
                 }
 
                 fn release(self) -> Self {
-                    self.into()
+                    self.into_analog()
                 }
             }
         )*
@@ -132,7 +132,7 @@ macro_rules! spi {
                 }
 
                 fn release(self) -> Self {
-                    self.into()
+                    self.into_analog()
                 }
             }
         )*

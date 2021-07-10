@@ -95,13 +95,11 @@ pub struct Serial<USART, Config> {
 // Serial TX pin
 pub trait TxPin<USART> {
     fn setup(&self);
-    fn release(self) -> Self;
 }
 
 // Serial RX pin
 pub trait RxPin<USART> {
     fn setup(&self);
-    fn release(self) -> Self;
 }
 
 pub trait SerialExt<USART, Config> {
@@ -147,10 +145,6 @@ macro_rules! uart_shared {
                 fn setup(&self) {
                     self.set_alt_mode($TAF)
                 }
-
-                fn release(self) -> Self {
-                    self.into()
-                }
             }
         )+
 
@@ -158,10 +152,6 @@ macro_rules! uart_shared {
             impl<MODE> RxPin<$USARTX> for $PRX<MODE> {
                 fn setup(&self) {
                     self.set_alt_mode($RAF)
-                }
-
-                fn release(self) -> Self {
-                    self.into()
                 }
             }
         )+

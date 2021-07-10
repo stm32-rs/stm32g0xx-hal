@@ -524,7 +524,7 @@ pub trait OutputPin<COMP> {
     fn release(self) -> Self;
 }
 
-macro_rules! output_pin {
+macro_rules! output_pin_push_pull {
     ($COMP:ident, $pin:ty) => {
         impl OutputPin<$COMP> for $pin {
             fn setup(&self) {
@@ -532,30 +532,44 @@ macro_rules! output_pin {
             }
 
             fn release(self) -> Self {
-                self.into()
+                self.into_push_pull_output()
             }
         }
     };
 }
 
-output_pin!(COMP1, gpioa::PA0<Output<PushPull>>);
-output_pin!(COMP1, gpioa::PA0<Output<OpenDrain>>);
-output_pin!(COMP1, gpioa::PA6<Output<PushPull>>);
-output_pin!(COMP1, gpioa::PA6<Output<OpenDrain>>);
-output_pin!(COMP1, gpioa::PA11<Output<PushPull>>);
-output_pin!(COMP1, gpioa::PA11<Output<OpenDrain>>);
-output_pin!(COMP1, gpiob::PB0<Output<PushPull>>);
-output_pin!(COMP1, gpiob::PB0<Output<OpenDrain>>);
-output_pin!(COMP1, gpiob::PB10<Output<PushPull>>);
-output_pin!(COMP1, gpiob::PB10<Output<OpenDrain>>);
+macro_rules! output_pin_open_drain {
+    ($COMP:ident, $pin:ty) => {
+        impl OutputPin<$COMP> for $pin {
+            fn setup(&self) {
+                self.set_alt_mode(AltFunction::AF7)
+            }
 
-output_pin!(COMP2, gpioa::PA2<Output<PushPull>>);
-output_pin!(COMP2, gpioa::PA2<Output<OpenDrain>>);
-output_pin!(COMP2, gpioa::PA7<Output<PushPull>>);
-output_pin!(COMP2, gpioa::PA7<Output<OpenDrain>>);
-output_pin!(COMP2, gpioa::PA12<Output<PushPull>>);
-output_pin!(COMP2, gpioa::PA12<Output<OpenDrain>>);
-output_pin!(COMP2, gpiob::PB5<Output<PushPull>>);
-output_pin!(COMP2, gpiob::PB5<Output<OpenDrain>>);
-output_pin!(COMP2, gpiob::PB11<Output<PushPull>>);
-output_pin!(COMP2, gpiob::PB11<Output<OpenDrain>>);
+            fn release(self) -> Self {
+                self.into_open_drain_output()
+            }
+        }
+    };
+}
+
+output_pin_push_pull!(COMP1, gpioa::PA0<Output<PushPull>>);
+output_pin_open_drain!(COMP1, gpioa::PA0<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, gpioa::PA6<Output<PushPull>>);
+output_pin_open_drain!(COMP1, gpioa::PA6<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, gpioa::PA11<Output<PushPull>>);
+output_pin_open_drain!(COMP1, gpioa::PA11<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, gpiob::PB0<Output<PushPull>>);
+output_pin_open_drain!(COMP1, gpiob::PB0<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, gpiob::PB10<Output<PushPull>>);
+output_pin_open_drain!(COMP1, gpiob::PB10<Output<OpenDrain>>);
+
+output_pin_push_pull!(COMP2, gpioa::PA2<Output<PushPull>>);
+output_pin_open_drain!(COMP2, gpioa::PA2<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, gpioa::PA7<Output<PushPull>>);
+output_pin_open_drain!(COMP2, gpioa::PA7<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, gpioa::PA12<Output<PushPull>>);
+output_pin_open_drain!(COMP2, gpioa::PA12<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, gpiob::PB5<Output<PushPull>>);
+output_pin_open_drain!(COMP2, gpiob::PB5<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, gpiob::PB11<Output<PushPull>>);
+output_pin_open_drain!(COMP2, gpiob::PB11<Output<OpenDrain>>);

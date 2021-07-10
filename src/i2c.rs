@@ -159,7 +159,7 @@ macro_rules! i2c {
                 }
 
                 fn release(self) -> Self {
-                    self.into()
+                    self.into_open_drain_output()
                 }
             }
         )+
@@ -171,7 +171,7 @@ macro_rules! i2c {
                 }
 
                 fn release(self) -> Self {
-                    self.into()
+                    self.into_open_drain_output()
                 }
             }
         )+

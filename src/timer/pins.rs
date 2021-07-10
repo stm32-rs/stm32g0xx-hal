@@ -25,7 +25,7 @@ macro_rules! timer_pins {
                 }
 
                 fn release(self) -> Self {
-                    self.into()
+                    self.into_analog()
                 }
             }
         )+
