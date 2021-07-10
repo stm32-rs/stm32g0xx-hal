@@ -82,11 +82,13 @@ pub struct I2c<I2C, SDA, SCL> {
 // I2C SDA pin
 pub trait SDAPin<I2C> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 // I2C SCL pin
 pub trait SCLPin<I2C> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 // I2C error
@@ -155,6 +157,10 @@ macro_rules! i2c {
                 fn setup(&self) {
                     self.set_alt_mode(AltFunction::AF6)
                 }
+
+                fn release(self) -> Self {
+                    self.into_open_drain_output()
+                }
             }
         )+
 
@@ -162,6 +168,10 @@ macro_rules! i2c {
             impl SCLPin<$I2CX> for $PSCL {
                 fn setup(&self) {
                     self.set_alt_mode(AltFunction::AF6)
+                }
+
+                fn release(self) -> Self {
+                    self.into_open_drain_output()
                 }
             }
         )+
@@ -182,7 +192,10 @@ macro_rules! i2c {
             }
         }
 
-        impl<SDA, SCL> I2c<$I2CX, SDA, SCL> {
+        impl<SDA, SCL> I2c<$I2CX, SDA, SCL> where
+            SDA: SDAPin<$I2CX>,
+            SCL: SCLPin<$I2CX>
+        {
             pub fn $i2cx(i2c: $I2CX, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> Self
             where
                 SDA: SDAPin<$I2CX>,
@@ -220,7 +233,7 @@ macro_rules! i2c {
             }
 
             pub fn release(self) -> ($I2CX, SDA, SCL) {
-                (self.i2c, self.sda, self.scl)
+                (self.i2c, self.sda.release(), self.scl.release())
             }
         }
 

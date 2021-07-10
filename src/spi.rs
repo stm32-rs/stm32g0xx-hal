@@ -25,18 +25,22 @@ pub struct NoMosi;
 
 pub trait Pins<SPI> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 pub trait PinSck<SPI> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 pub trait PinMiso<SPI> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 pub trait PinMosi<SPI> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 impl<SPI, SCK, MISO, MOSI> Pins<SPI> for (SCK, MISO, MOSI)
@@ -49,6 +53,10 @@ where
         self.0.setup();
         self.1.setup();
         self.2.setup();
+    }
+
+    fn release(self) -> Self {
+        (self.0.release(), self.1.release(), self.2.release())
     }
 }
 
@@ -73,20 +81,36 @@ macro_rules! spi {
     ) => {
         impl PinSck<$SPIX> for NoSck {
             fn setup(&self) {}
+
+            fn release(self) -> Self {
+                self
+            }
         }
 
         impl PinMiso<$SPIX> for NoMiso {
             fn setup(&self) {}
+
+            fn release(self) -> Self {
+                self
+            }
         }
 
         impl PinMosi<$SPIX> for NoMosi {
             fn setup(&self) {}
+
+            fn release(self) -> Self {
+                self
+            }
         }
 
         $(
             impl PinSck<$SPIX> for $SCK {
                 fn setup(&self) {
                     self.set_alt_mode($SCK_AF);
+                }
+
+                fn release(self) -> Self {
+                    self.into_analog()
                 }
             }
         )*
@@ -95,6 +119,10 @@ macro_rules! spi {
                 fn setup(&self) {
                     self.set_alt_mode($MISO_AF);
                 }
+
+                fn release(self) -> Self {
+                    self.into_analog()
+                }
             }
         )*
         $(
@@ -102,10 +130,14 @@ macro_rules! spi {
                 fn setup(&self) {
                     self.set_alt_mode($MOSI_AF);
                 }
+
+                fn release(self) -> Self {
+                    self.into_analog()
+                }
             }
         )*
 
-        impl<PINS> Spi<$SPIX, PINS> {
+        impl<PINS: Pins<$SPIX>> Spi<$SPIX, PINS> {
             pub fn $spiX<T>(
                 spi: $SPIX,
                 pins: PINS,
@@ -114,7 +146,6 @@ macro_rules! spi {
                 rcc: &mut Rcc
             ) -> Self
             where
-            PINS: Pins<$SPIX>,
             T: Into<Hertz>
             {
                 // Enable clock for SPI
@@ -177,7 +208,7 @@ macro_rules! spi {
             }
 
             pub fn release(self) -> ($SPIX, PINS) {
-                (self.spi, self.pins)
+                (self.spi, self.pins.release())
             }
         }
 
