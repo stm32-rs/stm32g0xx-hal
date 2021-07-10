@@ -71,7 +71,7 @@ macro_rules! stopwatches {
                 pub fn elapsed(&self, ts: Instant) -> MicroSecond {
                     let now = self.now().0;
                     let cycles = now.wrapping_sub(ts.0);
-                    self.clk.duration(cycles << self.tim.psc.read().bits())
+                    self.clk.duration(cycles * (1 + self.tim.psc.read().bits()))
                 }
 
                 pub fn trace<F>(&self, mut closure: F) -> MicroSecond
@@ -81,7 +81,7 @@ macro_rules! stopwatches {
                     let started = self.now().0;
                     closure();
                     let now = self.now().0;
-                    self.clk.duration(now.wrapping_sub(started) << self.tim.psc.read().bits())
+                    self.clk.duration(now.wrapping_sub(started) * (1 + self.tim.psc.read().bits()))
                 }
             }
 
