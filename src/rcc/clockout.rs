@@ -20,7 +20,7 @@ impl Lsco {
     }
 
     pub fn release(self) -> LscoPin {
-        self.pin.into()
+        self.pin.into_analog()
     }
 }
 
