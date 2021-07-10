@@ -521,6 +521,7 @@ impl ComparatorSplit for COMP {
 
 pub trait OutputPin<COMP> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 macro_rules! output_pin {
@@ -528,6 +529,10 @@ macro_rules! output_pin {
         impl OutputPin<$COMP> for $pin {
             fn setup(&self) {
                 self.set_alt_mode(AltFunction::AF7)
+            }
+
+            fn release(self) -> Self {
+                self.into()
             }
         }
     };

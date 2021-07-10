@@ -11,6 +11,7 @@ pub trait TimerPin<TIM> {
     type Channel;
 
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 macro_rules! timer_pins {
@@ -21,6 +22,10 @@ macro_rules! timer_pins {
 
                 fn setup(&self) {
                     self.set_alt_mode($af_mode);
+                }
+
+                fn release(self) -> Self {
+                    self.into()
                 }
             }
         )+

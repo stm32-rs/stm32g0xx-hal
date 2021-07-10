@@ -25,6 +25,7 @@ pub struct NoMosi;
 
 pub trait Pins<SPI> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 pub trait PinSck<SPI> {
@@ -49,6 +50,10 @@ where
         self.0.setup();
         self.1.setup();
         self.2.setup();
+    }
+
+    fn release(self) -> Self {
+        (self.0.into(), self.1.into(), self.2.into())
     }
 }
 
@@ -105,7 +110,7 @@ macro_rules! spi {
             }
         )*
 
-        impl<PINS> Spi<$SPIX, PINS> {
+        impl<PINS: Pins<$SPIX>> Spi<$SPIX, PINS> {
             pub fn $spiX<T>(
                 spi: $SPIX,
                 pins: PINS,
@@ -114,7 +119,6 @@ macro_rules! spi {
                 rcc: &mut Rcc
             ) -> Self
             where
-            PINS: Pins<$SPIX>,
             T: Into<Hertz>
             {
                 // Enable clock for SPI
@@ -177,7 +181,7 @@ macro_rules! spi {
             }
 
             pub fn release(self) -> ($SPIX, PINS) {
-                (self.spi, self.pins)
+                (self.spi, self.pins.release())
             }
         }
 
