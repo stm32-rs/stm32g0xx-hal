@@ -31,8 +31,6 @@ fn main() -> ! {
     #[cfg(feature = "stm32g0x0")]
     let mut stopwatch = dp.TIM3.stopwatch(&mut rcc);
 
-    stopwatch.set_prescaler(0);
-
     let elapsed_us = stopwatch.trace(|| {
         delay.delay(100.us());
     });
