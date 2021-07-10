@@ -140,7 +140,6 @@ macro_rules! uart_shared {
         tx: [ $(($PTX:ident, $TAF:expr),)+ ],
         rx: [ $(($PRX:ident, $RAF:expr),)+ ]) => {
 
-
         $(
             impl<MODE> TxPin<$USARTX> for $PTX<MODE> {
                 fn setup(&self) {
@@ -640,6 +639,7 @@ rx: [
     (PB7, AltFunction::AF0),
     (PC5, AltFunction::AF1),
 ]);
+
 uart_shared!(USART2, USART2_RX, USART2_TX,
     tx: [
         (PA2, AltFunction::AF1),

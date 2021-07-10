@@ -20,7 +20,7 @@ impl Lsco {
     }
 
     pub fn release(self) -> LscoPin {
-        self.pin
+        self.pin.into_analog()
     }
 }
 
@@ -52,7 +52,10 @@ pub struct Mco<PIN> {
     src_bits: u8,
 }
 
-impl<PIN> Mco<PIN> {
+impl<PIN> Mco<PIN>
+where
+    PIN: MCOExt<PIN>,
+{
     pub fn enable(&self) {
         let rcc = unsafe { &(*RCC::ptr()) };
         rcc.cfgr
@@ -65,12 +68,13 @@ impl<PIN> Mco<PIN> {
     }
 
     pub fn release(self) -> PIN {
-        self.pin
+        self.pin.release()
     }
 }
 
 pub trait MCOExt<PIN> {
     fn mco(self, src: MCOSrc, psc: Prescaler, rcc: &mut Rcc) -> Mco<PIN>;
+    fn release(self) -> PIN;
 }
 
 macro_rules! mco {
@@ -116,6 +120,10 @@ macro_rules! mco {
 
                     self.set_alt_mode(AltFunction::AF0);
                     Mco { src_bits, pin: self }
+                }
+
+                fn release(self) -> $PIN {
+                    self.into_analog()
                 }
             }
         )+

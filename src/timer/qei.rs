@@ -17,6 +17,7 @@ pub struct Qei<TIM, PINS> {
 
 pub trait QeiPins<TIM> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 impl<TIM, P1, P2> QeiPins<TIM> for (P1, P2)
@@ -27,6 +28,10 @@ where
     fn setup(&self) {
         self.0.setup();
         self.1.setup();
+    }
+
+    fn release(self) -> Self {
+        (self.0.release(), self.1.release())
     }
 }
 
@@ -78,7 +83,7 @@ macro_rules! qei {
                 }
 
                 pub fn release(self) -> ($TIMX, PINS) {
-                    (self.tim, self.pins)
+                    (self.tim, self.pins.release())
                 }
             }
 
