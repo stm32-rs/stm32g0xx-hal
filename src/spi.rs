@@ -315,7 +315,7 @@ spi!(
     miso: [
         (PA3<DefaultMode>, AltFunction::AF0),
         (PA9<DefaultMode>, AltFunction::AF4),
-        (PB2<DefaultMode>, AltFunction::AF2),
+        (PB2<DefaultMode>, AltFunction::AF1),
         (PB6<DefaultMode>, AltFunction::AF4),
         (PB14<DefaultMode>, AltFunction::AF0),
         (PC2<DefaultMode>, AltFunction::AF1),
