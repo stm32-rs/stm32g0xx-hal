@@ -39,17 +39,18 @@ fn main() -> ! {
     let mut ws = ws2812::Ws2812::new(spi);
 
     let mut cnt: usize = 0;
-    let mut data: [RGB<u8>; 8] = [RGB::default(); 8];
+    let mut data: [RGB<u8>; 64] = [RGB::default(); 64];
     loop {
         for (idx, color) in data.iter_mut().enumerate() {
-            *color = match (cnt + idx) % 3 {
-                0 => RGB { r: 255, g: 0, b: 0 },
-                1 => RGB { r: 0, g: 255, b: 0 },
-                _ => RGB { r: 0, g: 0, b: 255 },
+            *color = match (cnt + idx) % 8 {
+                0 => RGB { r: 8, g: 0, b: 0 },
+                1 => RGB { r: 0, g: 4, b: 0 },
+                2 => RGB { r: 0, g: 0, b: 2 },
+                _ => RGB { r: 0, g: 0, b: 0 },
             };
         }
         ws.write(data.iter().cloned()).unwrap();
         cnt += 1;
-        delay.delay(200.ms());
+        delay.delay(50.ms());
     }
 }
