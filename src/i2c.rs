@@ -309,7 +309,9 @@ macro_rules! i2c {
                     *byte = self.i2c.rxdr.read().rxdata().bits();
                 }
 
-                // automatic STOP
+                // Wait for STOP
+                busy_wait!(self.i2c, stopf, bit_is_set);
+                self.i2c.icr.write(|w| w.stopcf().set_bit());
 
                 Ok(())
             }
@@ -344,7 +346,9 @@ macro_rules! i2c {
                     self.i2c.txdr.write(|w| unsafe { w.txdata().bits(*byte) });
                 }
 
-                // automatic STOP
+                // Wait for STOP
+                busy_wait!(self.i2c, stopf, bit_is_set);
+                self.i2c.icr.write(|w| w.stopcf().set_bit());
 
                 Ok(())
             }
@@ -385,7 +389,9 @@ macro_rules! i2c {
                     *byte = self.i2c.rxdr.read().rxdata().bits();
                 }
 
-                // automatic STOP
+                // Wait for STOP
+                busy_wait!(self.i2c, stopf, bit_is_set);
+                self.i2c.icr.write(|w| w.stopcf().set_bit());
 
                 Ok(())
             }
