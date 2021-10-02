@@ -97,11 +97,8 @@ macro_rules! opm_hal {
                     tim.ccer.modify(|_, w| w.$ccxe().clear_bit());
                 }
 
-                pub fn set_delay<T>(&mut self, delay: T)
-                where
-                    T: Into<MicroSecond>
-                {
-                    self.delay = delay.into();
+                pub fn set_delay(&mut self, delay: MicroSecond) {
+                    self.delay = delay;
                     self.setup();
                 }
 
