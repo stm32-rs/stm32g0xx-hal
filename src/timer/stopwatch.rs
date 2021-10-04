@@ -1,4 +1,4 @@
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, Instant, MicroSecond};
 
@@ -12,14 +12,14 @@ pub struct Stopwatch<TIM> {
 }
 
 macro_rules! stopwatches {
-    ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident ),)+) => {
+    ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident),)+) => {
         $(
             impl Stopwatch<$TIM> {
                 pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
                     assert!(rcc.clocks.apb_tim_clk.0 > 1_000_000);
-                    rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
-                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
-                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().clear_bit());
+                    $TIM::enable(rcc);
+                    $TIM::reset(rcc);
+
                     tim.cr1.modify(|_, w| w.cen().set_bit());
                     Stopwatch {
                         tim,
@@ -95,21 +95,21 @@ macro_rules! stopwatches {
 }
 
 stopwatches! {
-    TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2),
-    TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1),
-    TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2),
-    TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2),
-    TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2),
+    TIM1: (tim1, tim1en, tim1rst),
+    TIM3: (tim3, tim3en, tim3rst),
+    TIM14: (tim14, tim14en, tim14rst),
+    TIM16: (tim16, tim16en, tim16rst),
+    TIM17: (tim17, tim17en, tim17rst),
 }
 
 #[cfg(feature = "stm32g0x1")]
 stopwatches! {
-    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1),
+    TIM2: (tim2, tim2en, tim2rst),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 stopwatches! {
-    TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1),
-    TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1),
-    TIM15: (tim15, tim15en, tim15rst, apbenr2, apbrstr2),
+    TIM6: (tim6, tim6en, tim6rst),
+    TIM7: (tim7, tim7en, tim7rst),
+    TIM15: (tim15, tim15en, tim15rst),
 }

@@ -1,5 +1,5 @@
 //! Timers
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
 use cortex_m::peripheral::syst::SystClkSource;
@@ -7,6 +7,7 @@ use cortex_m::peripheral::SYST;
 use hal::timer::{CountDown, Periodic};
 use void::Void;
 
+pub mod delay;
 pub mod opm;
 pub mod pins;
 pub mod pwm;
@@ -88,12 +89,28 @@ impl Periodic for Timer<SYST> {}
 macro_rules! timers {
     ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
         $(
+            impl Enable for $TIM {
+                fn enable(rcc: &mut Rcc){
+                    rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
+                }
+
+                fn disable(rcc: &mut Rcc) {
+                    rcc.rb.$apbenr.modify(|_, w| w.$timXen().clear_bit());
+                }
+            }
+
+            impl Reset for $TIM {
+                fn reset(rcc: &mut Rcc){
+                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
+                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().clear_bit());
+                }
+            }
+
             impl Timer<$TIM> {
                 /// Configures a TIM peripheral as a periodic count down timer
                 pub fn $tim<T>(tim: $TIM, rcc: &mut Rcc) -> Self {
-                    rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
-                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
-                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().clear_bit());
+                    $TIM::enable(rcc);
+                    $TIM::reset(rcc);
 
                     Timer {
                         tim,

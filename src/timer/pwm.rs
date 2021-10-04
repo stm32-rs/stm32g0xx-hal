@@ -1,7 +1,7 @@
 //! # Pulse Width Modulation
 use core::marker::PhantomData;
 
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::Hertz;
 use crate::timer::pins::TimerPin;
@@ -36,7 +36,7 @@ impl<TIM> Pwm<TIM> {
 }
 
 macro_rules! pwm {
-    ($($TIMX:ident: ($apbXenr:ident, $apbXrstr:ident, $timX:ident, $timXen:ident, $timXrst:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
+    ($($TIMX:ident: ($timX:ident, $timXen:ident, $timXrst:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
         $(
             impl PwmExt for $TIMX {
                 fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
@@ -51,9 +51,9 @@ macro_rules! pwm {
             where
                 T: Into<Hertz>,
             {
-                rcc.rb.$apbXenr.modify(|_, w| w.$timXen().set_bit());
-                rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().set_bit());
-                rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
+                $TIMX::enable(rcc);
+                $TIMX::reset(rcc);
+
                 let ratio = rcc.clocks.apb_tim_clk / freq.into();
                 let psc = (ratio - 1) / 0xffff;
                 let arr = ratio / (psc + 1) - 1;
@@ -189,19 +189,19 @@ pwm_hal! {
 }
 
 pwm! {
-    TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst, arr),
-    TIM3: (apbenr1, apbrstr1, tim3, tim3en, tim3rst, arr_l, arr_h),
-    TIM14: (apbenr2, apbrstr2, tim14, tim14en, tim14rst, arr),
-    TIM16: (apbenr2, apbrstr2, tim16, tim16en, tim16rst, arr),
-    TIM17: (apbenr2, apbrstr2, tim17, tim17en, tim17rst, arr),
+    TIM1: (tim1, tim1en, tim1rst, arr),
+    TIM3: (tim3, tim3en, tim3rst, arr_l, arr_h),
+    TIM14: (tim14, tim14en, tim14rst, arr),
+    TIM16: (tim16, tim16en, tim16rst, arr),
+    TIM17: (tim17, tim17en, tim17rst, arr),
 }
 
 #[cfg(feature = "stm32g0x1")]
 pwm! {
-    TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst, arr_l, arr_h),
+    TIM2: (tim2, tim2en, tim2rst, arr_l, arr_h),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 pwm! {
-    TIM15: (apbenr2, apbrstr2, tim15, tim15en, tim15rst, arr),
+    TIM15: (tim15, tim15en, tim15rst, arr),
 }
