@@ -12,7 +12,7 @@ pub struct Stopwatch<TIM> {
 }
 
 macro_rules! stopwatches {
-    ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident),)+) => {
+    ($($TIM:ident: ($tim:ident),)+) => {
         $(
             impl Stopwatch<$TIM> {
                 pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
