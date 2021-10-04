@@ -12,7 +12,7 @@ pub struct Stopwatch<TIM> {
 }
 
 macro_rules! stopwatches {
-    ($($TIM:ident: ($tim:ident),)+) => {
+    ($($TIM:ident: $tim:ident,)+) => {
         $(
             impl Stopwatch<$TIM> {
                 pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
@@ -95,21 +95,21 @@ macro_rules! stopwatches {
 }
 
 stopwatches! {
-    TIM1: (tim1, tim1en, tim1rst),
-    TIM3: (tim3, tim3en, tim3rst),
-    TIM14: (tim14, tim14en, tim14rst),
-    TIM16: (tim16, tim16en, tim16rst),
-    TIM17: (tim17, tim17en, tim17rst),
+    TIM1: tim1,
+    TIM3: tim3,
+    TIM14: tim14,
+    TIM16: tim16,
+    TIM17: tim17,
 }
 
 #[cfg(feature = "stm32g0x1")]
 stopwatches! {
-    TIM2: (tim2, tim2en, tim2rst),
+    TIM2: tim2,
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 stopwatches! {
-    TIM6: (tim6, tim6en, tim6rst),
-    TIM7: (tim7, tim7en, tim7rst),
-    TIM15: (tim15, tim15en, tim15rst),
+    TIM6: tim6,
+    TIM7: tim7,
+    TIM15: tim15,
 }

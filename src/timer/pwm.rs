@@ -36,7 +36,7 @@ impl<TIM> Pwm<TIM> {
 }
 
 macro_rules! pwm {
-    ($($TIMX:ident: ($timX:ident, $timXen:ident, $timXrst:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
+    ($($TIMX:ident: ($timX:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
         $(
             impl PwmExt for $TIMX {
                 fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
@@ -189,19 +189,19 @@ pwm_hal! {
 }
 
 pwm! {
-    TIM1: (tim1, tim1en, tim1rst, arr),
-    TIM3: (tim3, tim3en, tim3rst, arr_l, arr_h),
-    TIM14: (tim14, tim14en, tim14rst, arr),
-    TIM16: (tim16, tim16en, tim16rst, arr),
-    TIM17: (tim17, tim17en, tim17rst, arr),
+    TIM1: (tim1, arr),
+    TIM3: (tim3, arr_l, arr_h),
+    TIM14: (tim14, arr),
+    TIM16: (tim16, arr),
+    TIM17: (tim17, arr),
 }
 
 #[cfg(feature = "stm32g0x1")]
 pwm! {
-    TIM2: (tim2, tim2en, tim2rst, arr_l, arr_h),
+    TIM2: (tim2, arr_l, arr_h),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 pwm! {
-    TIM15: (tim15, tim15en, tim15rst, arr),
+    TIM15: (tim15, arr),
 }

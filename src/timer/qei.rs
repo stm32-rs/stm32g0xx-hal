@@ -43,7 +43,7 @@ where
 }
 
 macro_rules! qei {
-    ($($TIMX:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $arr:ident, $cnt:ident),)+) => {
+    ($($TIMX:ident: ($tim:ident, $arr:ident, $cnt:ident),)+) => {
         $(
             impl<PINS> Qei<$TIMX, PINS> where PINS: QeiPins<$TIMX> {
                 fn $tim(tim: $TIMX, pins: PINS, rcc: &mut Rcc) -> Self {
@@ -112,11 +112,11 @@ macro_rules! qei {
 }
 
 qei! {
-    TIM1: (tim1,  tim1en, tim1rst, arr, cnt),
-    TIM3: (tim3,  tim3en, tim3rst, arr_l, cnt_l),
+    TIM1: (tim1, arr, cnt),
+    TIM3: (tim3, arr_l, cnt_l),
 }
 
 #[cfg(feature = "stm32g0x1")]
 qei! {
-    TIM2: (tim2,  tim2en, tim2rst, arr_l, cnt_l),
+    TIM2: (tim2, arr_l, cnt_l),
 }
