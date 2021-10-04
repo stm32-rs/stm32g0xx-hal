@@ -189,7 +189,7 @@ macro_rules! i2c {
         impl Reset for $I2CX {
             fn reset(rcc: &mut Rcc){
                 rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().set_bit());
-            rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().clear_bit());
+                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().clear_bit());
             }
         }
 
