@@ -1,6 +1,6 @@
 //! Quadrature Encoder Interface
 use crate::hal::{self, Direction};
-use crate::rcc::Rcc;
+use crate::rcc::*;
 
 #[cfg(feature = "stm32g0x1")]
 use crate::stm32::{TIM1, TIM2, TIM3};
@@ -43,14 +43,13 @@ where
 }
 
 macro_rules! qei {
-    ($($TIMX:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident, $arr:ident, $cnt:ident),)+) => {
+    ($($TIMX:ident: ($tim:ident, $arr:ident, $cnt:ident),)+) => {
         $(
             impl<PINS> Qei<$TIMX, PINS> where PINS: QeiPins<$TIMX> {
                 fn $tim(tim: $TIMX, pins: PINS, rcc: &mut Rcc) -> Self {
                     // enable and reset peripheral to a clean slate state
-                    rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
-                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
-                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().clear_bit());
+                    $TIMX::enable(rcc);
+                    $TIMX::reset(rcc);
 
                     // Configure TxC1 and TxC2 as captures
                     tim.ccmr1_output().write(|w| unsafe {
@@ -113,11 +112,11 @@ macro_rules! qei {
 }
 
 qei! {
-    TIM1: (tim1,  tim1en, tim1rst, apbenr2, apbrstr2, arr, cnt),
-    TIM3: (tim3,  tim3en, tim3rst, apbenr1, apbrstr1, arr_l, cnt_l),
+    TIM1: (tim1, arr, cnt),
+    TIM3: (tim3, arr_l, cnt_l),
 }
 
 #[cfg(feature = "stm32g0x1")]
 qei! {
-    TIM2: (tim2,  tim2en, tim2rst, apbenr1, apbrstr1, arr_l, cnt_l),
+    TIM2: (tim2, arr_l, cnt_l),
 }

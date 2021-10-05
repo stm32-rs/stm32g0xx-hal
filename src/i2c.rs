@@ -3,7 +3,7 @@ use hal::blocking::i2c::{Read, Write, WriteRead};
 
 use crate::gpio::{gpioa::*, gpiob::*};
 use crate::gpio::{AltFunction, OpenDrain, Output};
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::{I2C1, I2C2};
 use crate::time::Hertz;
 use core::cmp;
@@ -176,6 +176,23 @@ macro_rules! i2c {
             }
         )+
 
+        impl Enable for $I2CX {
+            fn enable(rcc: &mut Rcc){
+                rcc.rb.apbenr1.modify(|_, w| w.$i2cxen().set_bit());
+            }
+
+            fn disable(rcc: &mut Rcc) {
+                rcc.rb.apbenr1.modify(|_, w| w.$i2cxen().clear_bit());
+            }
+        }
+
+        impl Reset for $I2CX {
+            fn reset(rcc: &mut Rcc){
+                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().set_bit());
+                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().clear_bit());
+            }
+        }
+
         impl I2cExt<$I2CX> for $I2CX {
             fn i2c<SDA, SCL>(
                 self,
@@ -201,12 +218,8 @@ macro_rules! i2c {
                 SDA: SDAPin<$I2CX>,
                 SCL: SCLPin<$I2CX>,
             {
-                // Enable clock for I2C
-                rcc.rb.apbenr1.modify(|_, w| w.$i2cxen().set_bit());
-
-                // Reset I2C
-                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().set_bit());
-                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().clear_bit());
+                $I2CX::enable(rcc);
+                $I2CX::reset(rcc);
 
                 // Make sure the I2C unit is disabled so we can configure it
                 i2c.cr1.modify(|_, w| w.pe().clear_bit());

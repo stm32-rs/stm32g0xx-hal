@@ -1,5 +1,5 @@
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*, AltFunction, DefaultMode};
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
 use core::ptr;
@@ -137,6 +137,23 @@ macro_rules! spi {
             }
         )*
 
+        impl Enable for $SPIX {
+            fn enable(rcc: &mut Rcc){
+                rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().set_bit());
+            }
+
+            fn disable(rcc: &mut Rcc) {
+                rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().clear_bit());
+            }
+        }
+
+        impl Reset for $SPIX {
+            fn reset(rcc: &mut Rcc){
+                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().set_bit());
+                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().clear_bit());
+            }
+        }
+
         impl<PINS: Pins<$SPIX>> Spi<$SPIX, PINS> {
             pub fn $spiX<T>(
                 spi: $SPIX,
@@ -148,10 +165,8 @@ macro_rules! spi {
             where
             T: Into<Hertz>
             {
-                // Enable clock for SPI
-                rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().set_bit());
-                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().set_bit());
-                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().clear_bit());
+                $SPIX::enable(rcc);
+                $SPIX::reset(rcc);
 
                 // disable SS output
                 spi.cr2.write(|w| w.ssoe().clear_bit());

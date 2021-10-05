@@ -347,3 +347,14 @@ impl RccExt for RCC {
         self.constrain().freeze(rcc_cfg)
     }
 }
+
+/// Enable/disable peripheral
+pub trait Enable {
+    fn enable(rcc: &mut Rcc);
+    fn disable(rcc: &mut Rcc);
+}
+
+/// Reset peripheral
+pub trait Reset {
+    fn reset(rcc: &mut Rcc);
+}
