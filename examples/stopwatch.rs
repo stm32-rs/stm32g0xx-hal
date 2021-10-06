@@ -42,28 +42,20 @@ fn main() -> ! {
     });
     hprintln!("Timer: 100 us -> {} us", elapsed_us.0).unwrap();
 
-    let elapsed_us = stopwatch.trace(|| {
-        let x = calc_something();
-        assert!(x > 0);
-    });
+    let elapsed_us = stopwatch.trace(calc_something);
     hprintln!("Calc @ 16 MHz: {} us", elapsed_us.0).unwrap();
 
     let rcc = rcc.freeze(Config::new(SysClockSrc::PLL));
     stopwatch.set_clock(rcc.clocks.apb_tim_clk);
 
-    let elapsed_us = stopwatch.trace(|| {
-        let x = calc_something();
-        assert!(x > 0);
-    });
+    let elapsed_us = stopwatch.trace(calc_something);
     hprintln!("Calc @ 64 MHz: {} us", elapsed_us.0).unwrap();
 
     loop {}
 }
 
-fn calc_something() -> u32 {
-    let mut result = 0;
-    for i in 1..1000 {
-        result = (result + i) / 3
+fn calc_something() {
+    for _ in 1..100_500 {
+        cortex_m::asm::nop();
     }
-    result
 }

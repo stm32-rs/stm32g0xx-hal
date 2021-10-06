@@ -8,6 +8,7 @@ use crate::timer::pins::TimerPin;
 use crate::timer::*;
 
 pub struct Pwm<TIM> {
+    clk: Hertz,
     tim: PhantomData<TIM>,
 }
 
@@ -47,24 +48,33 @@ macro_rules! pwm {
                 }
             }
 
-            fn $timX<T>(tim: $TIMX, freq: T, rcc: &mut Rcc) -> Pwm<$TIMX>
-            where
-                T: Into<Hertz>,
-            {
+            fn $timX<F: Into<Hertz>>(_tim: $TIMX, freq: F, rcc: &mut Rcc) -> Pwm<$TIMX> {
                 $TIMX::enable(rcc);
                 $TIMX::reset(rcc);
 
-                let ratio = rcc.clocks.apb_tim_clk / freq.into();
-                let psc = (ratio - 1) / 0xffff;
-                let arr = ratio / (psc + 1) - 1;
-                tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
-                tim.arr.write(|w| unsafe { w.$arr().bits(arr as u16) });
-                $(
-                    tim.arr.modify(|_, w| unsafe { w.$arr_h().bits((arr >> 16) as u16) });
-                )*
-                tim.cr1.write(|w| w.cen().set_bit());
-                Pwm {
-                    tim: PhantomData
+                let mut pwm = Pwm::<$TIMX> {
+                    clk: rcc.clocks.apb_tim_clk,
+                    tim: PhantomData,
+                };
+                pwm.set_freq(freq);
+                pwm
+            }
+
+            impl Pwm<$TIMX> {
+                pub fn set_freq<F: Into<Hertz>>(&mut self, freq: F) {
+                    let ratio = self.clk / freq.into();
+                    let psc = (ratio - 1) / 0xffff;
+                    let arr = ratio / (psc + 1) - 1;
+
+                    unsafe {
+                        let tim = &*$TIMX::ptr();
+                        tim.psc.write(|w| w.psc().bits(psc as u16));
+                        tim.arr.write(|w| w.$arr().bits(arr as u16));
+                        $(
+                            tim.arr.modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
+                        )*
+                        tim.cr1.write(|w| w.cen().set_bit())
+                    }
                 }
             }
         )+
