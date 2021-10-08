@@ -14,8 +14,7 @@ pub trait OpmExt: Sized {
 pub struct OpmPin<TIM, CH> {
     tim: PhantomData<TIM>,
     channel: PhantomData<CH>,
-    clk: Hertz,
-    delay: MicroSecond,
+    delay: u32,
 }
 
 pub struct Opm<TIM> {
@@ -32,8 +31,7 @@ impl<TIM> Opm<TIM> {
         OpmPin {
             tim: PhantomData,
             channel: PhantomData,
-            clk: self.clk,
-            delay: 0.ms(),
+            delay: 1,
         }
     }
 }
@@ -42,34 +40,39 @@ macro_rules! opm {
     ($($TIMX:ident: ($timX:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
         $(
             impl OpmExt for $TIMX {
-                fn opm(self, period: MicroSecond, rcc: &mut Rcc) -> Opm<Self> {
-                    $timX(self, period, rcc)
+                fn opm(self, pulse: MicroSecond, rcc: &mut Rcc) -> Opm<Self> {
+                    $timX(self, pulse, rcc)
                 }
             }
 
-            fn $timX(tim: $TIMX, period: MicroSecond, rcc: &mut Rcc) -> Opm<$TIMX> {
+            fn $timX(_tim: $TIMX, pulse: MicroSecond, rcc: &mut Rcc) -> Opm<$TIMX> {
                 $TIMX::enable(rcc);
                 $TIMX::reset(rcc);
 
-                let cycles_per_period = rcc.clocks.apb_tim_clk / period.into();
-                let psc = (cycles_per_period - 1) / 0xffff;
-                tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
-
-                let freq = (rcc.clocks.apb_tim_clk.0 / (psc + 1)).hz();
-                let reload = period.cycles(freq);
-                unsafe {
-                    tim.arr.write(|w| w.$arr().bits(reload as u16));
-                    $(
-                        tim.arr.modify(|_, w| w.$arr_h().bits((reload >> 16) as u16));
-                    )*
-                }
-                Opm {
-                    clk: freq,
+                let mut opm = Opm::<$TIMX> {
+                    clk: rcc.clocks.apb_tim_clk,
                     tim: PhantomData,
-                }
+                };
+                opm.set_pulse(pulse);
+                opm
             }
 
             impl Opm<$TIMX> {
+                pub fn set_pulse(&mut self, pulse: MicroSecond) {
+                    let cycles_per_period = self.clk / pulse.into();
+                    let psc = (cycles_per_period - 1) / 0xffff;
+                    let freq = (self.clk.0 / (psc + 1)).hz();
+                    let reload = pulse.cycles(freq);
+                    unsafe {
+                        let tim = &*$TIMX::ptr();
+                        tim.psc.write(|w| w.psc().bits(psc as u16));
+                        tim.arr.write(|w| w.$arr().bits(reload as u16));
+                        $(
+                            tim.arr.modify(|_, w| w.$arr_h().bits((reload >> 16) as u16));
+                        )*
+                    }
+                }
+
                 pub fn generate(&mut self) {
                     let tim =  unsafe {&*$TIMX::ptr()};
                     tim.cr1.write(|w| w.opm().set_bit().cen().set_bit());
@@ -96,20 +99,19 @@ macro_rules! opm_hal {
                     tim.ccer.modify(|_, w| w.$ccxe().clear_bit());
                 }
 
-                pub fn set_delay(&mut self, delay: MicroSecond) {
+                pub fn get_max_delay(&mut self) -> u32 {
+                    unsafe { (*$TIMX::ptr()).arr.read().bits() }
+                }
+
+                pub fn set_delay(&mut self, delay: u32) {
                     self.delay = delay;
                     self.setup();
                 }
 
                 fn setup(&mut self) {
-                    let tim =  unsafe {&*$TIMX::ptr()};
-                    let compare = if self.delay.0 > 0 {
-                        self.delay.cycles(self.clk)
-                    } else {
-                        1
-                    };
                     unsafe {
-                        tim.$ccrx.write(|w| w.bits(compare));
+                        let tim = &*$TIMX::ptr();
+                        tim.$ccrx.write(|w| w.bits(self.delay));
                         tim.$ccmrx_output().modify(|_, w| w.$ocxm().bits(7).$ocxfe().set_bit());
                     }
                 }
