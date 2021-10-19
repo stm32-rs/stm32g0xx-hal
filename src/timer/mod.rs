@@ -108,7 +108,7 @@ macro_rules! timers {
 
             impl Timer<$TIM> {
                 /// Configures a TIM peripheral as a periodic count down timer
-                pub fn $tim<T>(tim: $TIM, rcc: &mut Rcc) -> Self {
+                pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
                     $TIM::enable(rcc);
                     $TIM::reset(rcc);
 
@@ -166,7 +166,7 @@ macro_rules! timers {
 
             impl TimerExt<$TIM> for $TIM {
                 fn timer(self, rcc: &mut Rcc) -> Timer<$TIM> {
-                    Timer::$tim::<$TIM>(self, rcc)
+                    Timer::$tim(self, rcc)
                 }
             }
 
