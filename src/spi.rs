@@ -221,6 +221,21 @@ macro_rules! spi {
 
                 Spi { spi, pins }
             }
+            pub fn data_size(&mut self, nr_bits:u8) {
+                self.spi.cr2.modify(|_, w| unsafe {
+                    w.ds().bits(nr_bits-1)
+                });
+            }
+            pub fn half_duplex_enable(&mut self, enable:bool) {
+                self.spi.cr1.modify(|_, w|
+                    w.bidimode().bit(enable)
+                );
+            }
+            pub fn half_duplex_oe(&mut self, enable:bool) {
+                self.spi.cr1.modify(|_, w|
+                    w.bidioe().bit(enable)
+                );
+            }
             pub fn release(self) -> ($SPIX, PINS) {
                 (self.spi, self.pins.release())
             }
