@@ -8,20 +8,20 @@ use crate::timer::pins::TimerPin;
 use crate::timer::*;
 
 pub enum OutputCompareMode {
-    FROZEN          = 0,     
-    MATCH_POS       = 1,
-    MATCH_NEG       = 2,
-    MATCH_TOGGLE    = 3,
-    FORCE_LOW       = 4,
-    FORCE_HIGH      = 5,
-    PWM_MODE1       = 6,
-    PWN_MODE2       = 7,
-    OPM_MODE1       = 8,
-    OPM_MODE2       = 9,
-    COMBINED_MODE1  = 12,
-    COMBINED_MODE2  = 13,
-    ASYNC_MODE1     = 14,
-    ASYNC_MODE2     = 15
+    Frozen = 0,
+    MatchPos = 1,
+    MatchNeg = 2,
+    MatchToggle = 3,
+    ForceLow = 4,
+    ForceHigh = 5,
+    PwmMode1 = 6,
+    PmwMode2 = 7,
+    OpmMode1 = 8,
+    OomMode2 = 9,
+    CombinedMode1 = 12,
+    CombinedMode2 = 13,
+    AsyncMode1 = 14,
+    AsyncMode2 = 15,
 }
 
 pub struct Pwm<TIM> {
@@ -40,7 +40,7 @@ pub trait PwmExt: Sized {
 }
 
 pub trait PwmPinMode {
-    fn set_compare_mode(&mut self, mode:OutputCompareMode);
+    fn set_compare_mode(&mut self, mode: OutputCompareMode);
 }
 
 impl<TIM> Pwm<TIM> {
@@ -92,7 +92,7 @@ macro_rules! pwm {
     }
 }
 
-#[cfg(any(feature = "stm32g0x1",feature = "stm32g070" ))]
+#[cfg(any(feature = "stm32g0x1", feature = "stm32g070"))]
 macro_rules! pwm_hal {
     ($($TIMX:ident:
         ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident),)+
@@ -184,7 +184,7 @@ macro_rules! pwm_advanced_hal {
                         let tim = &*$TIMX::ptr();
                         tim.$ccmrx_output().modify(|_, w| w.$ocxm().bits(mode as u8));
                     }
-                }    
+                }
             }
         )+
     };
@@ -217,14 +217,13 @@ pwm_hal! {
     TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
 }
 
-#[cfg(feature = "stm32g070" )]
+#[cfg(feature = "stm32g070")]
 pwm_hal! {
     TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
     TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
     TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
 }
-
 
 pwm! {
     TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst, arr),
