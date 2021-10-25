@@ -227,12 +227,12 @@ macro_rules! spi {
                 });
             }
             pub fn half_duplex_enable(&mut self, enable:bool) {
-                self.spi.cr1.modify(|_, w|  
+                self.spi.cr1.modify(|_, w|
                     w.bidimode().bit(enable)
                 );
             }
             pub fn half_duplex_oe(&mut self, enable:bool) {
-                self.spi.cr1.modify(|_, w|  
+                self.spi.cr1.modify(|_, w|
                     w.bidioe().bit(enable)
                 );
             }
