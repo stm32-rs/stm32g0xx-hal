@@ -46,7 +46,6 @@ pub use crate::stm32::interrupt;
 
 pub mod analog;
 pub mod crc;
-pub mod delay;
 pub mod dma;
 pub mod dmamux;
 pub mod exti;

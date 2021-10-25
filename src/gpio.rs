@@ -313,7 +313,7 @@ macro_rules! gpio {
                     pub fn listen(self, edge: SignalEdge, exti: &mut EXTI) -> $PXi<Input<Floating>> {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
+                            let _ = &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
                                 w.bits(r.bits() & !(0b11 << offset))
                             });
                             &(*$GPIOX::ptr()).moder.modify(|r, w| {

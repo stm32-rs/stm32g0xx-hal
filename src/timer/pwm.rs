@@ -1,7 +1,7 @@
 //! # Pulse Width Modulation
 use core::marker::PhantomData;
 
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::Hertz;
 use crate::timer::pins::TimerPin;
@@ -25,6 +25,7 @@ pub enum OutputCompareMode {
 }
 
 pub struct Pwm<TIM> {
+    clk: Hertz,
     tim: PhantomData<TIM>,
 }
 
@@ -57,7 +58,7 @@ impl<TIM> Pwm<TIM> {
 }
 
 macro_rules! pwm {
-    ($($TIMX:ident: ($apbXenr:ident, $apbXrstr:ident, $timX:ident, $timXen:ident, $timXrst:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
+    ($($TIMX:ident: ($timX:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
         $(
             impl PwmExt for $TIMX {
                 fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
@@ -68,24 +69,33 @@ macro_rules! pwm {
                 }
             }
 
-            fn $timX<T>(tim: $TIMX, freq: T, rcc: &mut Rcc) -> Pwm<$TIMX>
-            where
-                T: Into<Hertz>,
-            {
-                rcc.rb.$apbXenr.modify(|_, w| w.$timXen().set_bit());
-                rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().set_bit());
-                rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
-                let ratio = rcc.clocks.apb_tim_clk / freq.into();
-                let psc = (ratio - 1) / 0xffff;
-                let arr = ratio / (psc + 1) - 1;
-                tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
-                tim.arr.write(|w| unsafe { w.$arr().bits(arr as u16) });
-                $(
-                    tim.arr.modify(|_, w| unsafe { w.$arr_h().bits((arr >> 16) as u16) });
-                )*
-                tim.cr1.write(|w| w.cen().set_bit());
-                Pwm {
-                    tim: PhantomData
+            fn $timX<F: Into<Hertz>>(_tim: $TIMX, freq: F, rcc: &mut Rcc) -> Pwm<$TIMX> {
+                $TIMX::enable(rcc);
+                $TIMX::reset(rcc);
+
+                let mut pwm = Pwm::<$TIMX> {
+                    clk: rcc.clocks.apb_tim_clk,
+                    tim: PhantomData,
+                };
+                pwm.set_freq(freq);
+                pwm
+            }
+
+            impl Pwm<$TIMX> {
+                pub fn set_freq<F: Into<Hertz>>(&mut self, freq: F) {
+                    let ratio = self.clk / freq.into();
+                    let psc = (ratio - 1) / 0xffff;
+                    let arr = ratio / (psc + 1) - 1;
+
+                    unsafe {
+                        let tim = &*$TIMX::ptr();
+                        tim.psc.write(|w| w.psc().bits(psc as u16));
+                        tim.arr.write(|w| w.$arr().bits(arr as u16));
+                        $(
+                            tim.arr.modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
+                        )*
+                        tim.cr1.write(|w| w.cen().set_bit())
+                    }
                 }
             }
         )+
@@ -226,19 +236,19 @@ pwm_hal! {
 }
 
 pwm! {
-    TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst, arr),
-    TIM3: (apbenr1, apbrstr1, tim3, tim3en, tim3rst, arr_l, arr_h),
-    TIM14: (apbenr2, apbrstr2, tim14, tim14en, tim14rst, arr),
-    TIM16: (apbenr2, apbrstr2, tim16, tim16en, tim16rst, arr),
-    TIM17: (apbenr2, apbrstr2, tim17, tim17en, tim17rst, arr),
+    TIM1: (tim1, arr),
+    TIM3: (tim3, arr_l, arr_h),
+    TIM14: (tim14, arr),
+    TIM16: (tim16, arr),
+    TIM17: (tim17, arr),
 }
 
 #[cfg(feature = "stm32g0x1")]
 pwm! {
-    TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst, arr_l, arr_h),
+    TIM2: (tim2, arr_l, arr_h),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 pwm! {
-    TIM15: (apbenr2, apbrstr2, tim15, tim15en, tim15rst, arr),
+    TIM15: (tim15, arr),
 }

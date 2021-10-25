@@ -6,7 +6,7 @@ use crate::dmamux::DmaMuxIndex;
 use crate::gpio::AltFunction;
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
 use crate::prelude::*;
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::*;
 
 use cortex_m::interrupt;
@@ -332,6 +332,16 @@ macro_rules! uart_basic {
     ($USARTX:ident,
         $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
     ) => {
+        impl Enable for $USARTX {
+            fn enable(rcc: &mut Rcc) {
+                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
+            }
+
+            fn disable(rcc: &mut Rcc) {
+                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().clear_bit());
+            }
+        }
+
         impl SerialExt<$USARTX, BasicConfig> for $USARTX {
             fn usart<TX, RX>(
                 self,
@@ -361,7 +371,8 @@ macro_rules! uart_basic {
                 RX: RxPin<$USARTX>,
             {
                 // Enable clock for USART
-                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
+                $USARTX::enable(rcc);
+
                 let clk = rcc.clocks.apb_clk.0 as u64;
                 let bdr = config.baudrate.0 as u64;
                 let div = ($clk_mul * clk) / bdr;
@@ -462,6 +473,16 @@ macro_rules! uart_full {
     ($USARTX:ident,
         $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
     ) => {
+        impl Enable for $USARTX {
+            fn enable(rcc: &mut Rcc) {
+                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
+            }
+
+            fn disable(rcc: &mut Rcc) {
+                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().clear_bit());
+            }
+        }
+
         impl SerialExt<$USARTX, FullConfig> for $USARTX {
             fn usart<TX, RX>(
                 self,
@@ -491,7 +512,7 @@ macro_rules! uart_full {
                 RX: RxPin<$USARTX>,
             {
                 // Enable clock for USART
-                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
+                $USARTX::enable(rcc);
 
                 let clk = rcc.clocks.apb_clk.0 as u64;
                 let bdr = config.baudrate.0 as u64;
