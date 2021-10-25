@@ -221,7 +221,7 @@ macro_rules! spi {
 
                 Spi { spi, pins }
             }
-            
+
             pub fn data_size(&mut self, nr_bits: u8) {
                 self.spi.cr2.modify(|_, w| unsafe {
                     w.ds().bits(nr_bits-1)
