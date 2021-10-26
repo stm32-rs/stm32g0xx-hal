@@ -188,8 +188,9 @@ macro_rules! pwm_advanced_hal {
                     unsafe { (*$TIMX::ptr()).$ccrx.write(|w| w.$ccrx().bits(duty)) }
                 }
             }
+
             impl PwmPinMode for PwmPin<$TIMX, $CH>{
-                fn set_compare_mode(&mut self, mode:OutputCompareMode) {
+                fn set_compare_mode(&mut self, mode: OutputCompareMode) {
                     unsafe {
                         let tim = &*$TIMX::ptr();
                         tim.$ccmrx_output().modify(|_, w| w.$ocxm().bits(mode as u8));
