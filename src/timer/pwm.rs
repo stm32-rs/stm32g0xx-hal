@@ -7,6 +7,23 @@ use crate::time::Hertz;
 use crate::timer::pins::TimerPin;
 use crate::timer::*;
 
+pub enum OutputCompareMode {
+    Frozen = 0,
+    MatchPos = 1,
+    MatchNeg = 2,
+    MatchToggle = 3,
+    ForceLow = 4,
+    ForceHigh = 5,
+    PwmMode1 = 6,
+    PmwMode2 = 7,
+    OpmMode1 = 8,
+    OomMode2 = 9,
+    CombinedMode1 = 12,
+    CombinedMode2 = 13,
+    AsyncMode1 = 14,
+    AsyncMode2 = 15,
+}
+
 pub struct Pwm<TIM> {
     clk: Hertz,
     tim: PhantomData<TIM>,
@@ -21,6 +38,10 @@ pub trait PwmExt: Sized {
     fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
     where
         T: Into<Hertz>;
+}
+
+pub trait PwmPinMode {
+    fn set_compare_mode(&mut self, mode: OutputCompareMode);
 }
 
 impl<TIM> Pwm<TIM> {
@@ -81,7 +102,7 @@ macro_rules! pwm {
     }
 }
 
-#[cfg(feature = "stm32g0x1")]
+#[cfg(any(feature = "stm32g0x1", feature = "stm32g070"))]
 macro_rules! pwm_hal {
     ($($TIMX:ident:
         ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident),)+
@@ -167,6 +188,14 @@ macro_rules! pwm_advanced_hal {
                     unsafe { (*$TIMX::ptr()).$ccrx.write(|w| w.$ccrx().bits(duty)) }
                 }
             }
+            impl PwmPinMode for PwmPin<$TIMX, $CH>{
+                fn set_compare_mode(&mut self, mode:OutputCompareMode) {
+                    unsafe {
+                        let tim = &*$TIMX::ptr();
+                        tim.$ccmrx_output().modify(|_, w| w.$ocxm().bits(mode as u8));
+                    }
+                }
+            }
         )+
     };
 }
@@ -192,6 +221,14 @@ pwm_hal! {
     TIM2: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM2: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
     TIM2: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+}
+
+#[cfg(feature = "stm32g070")]
+pwm_hal! {
     TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
     TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
