@@ -181,6 +181,8 @@ macro_rules! timers {
                     self.tim.cr1.modify(|_, w| w.cen().clear_bit());
                     // reset counter
                     self.tim.cnt.reset();
+                    // clear interrupt flag
+                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
 
                     // Calculate counter configuration
                     let cycles = timeout.into().cycles(self.clk);
