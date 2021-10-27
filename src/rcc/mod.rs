@@ -1,8 +1,9 @@
-use crate::stm32::{FLASH, PWR, RCC};
+use crate::stm32::{rcc, FLASH, PWR, RCC};
 use crate::time::{Hertz, U32Ext};
 
 mod clockout;
 mod config;
+mod enable;
 
 pub use clockout::*;
 pub use config::*;
@@ -311,20 +312,6 @@ impl Rcc {
                 .clear_bit()
         });
     }
-
-    pub(crate) fn enable_power_control(&self) {
-        self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
-    }
-
-    pub(crate) fn enable_adc(&self) {
-        self.rb.apbenr2.modify(|_, w| w.adcen().set_bit());
-    }
-
-    pub(crate) fn enable_crc(&self) {
-        self.rb.ahbenr.modify(|_, w| w.crcen().set_bit());
-        self.rb.ahbrstr.modify(|_, w| w.crcrst().set_bit());
-        self.rb.ahbrstr.modify(|_, w| w.crcrst().clear_bit());
-    }
 }
 
 /// Extension trait that constrains the `RCC` peripheral
@@ -348,13 +335,85 @@ impl RccExt for RCC {
     }
 }
 
+/// Bus associated to peripheral
+pub trait RccBus: crate::Sealed {
+    /// Bus type;
+    type Bus;
+}
+
 /// Enable/disable peripheral
-pub trait Enable {
+pub trait Enable: RccBus {
     fn enable(rcc: &mut Rcc);
     fn disable(rcc: &mut Rcc);
 }
 
+/// Enable/disable peripheral in Sleep mode
+pub trait SMEnable: RccBus {
+    fn sleep_mode_enable(rcc: &mut Rcc);
+    fn sleep_mode_disable(rcc: &mut Rcc);
+}
+
 /// Reset peripheral
-pub trait Reset {
+pub trait Reset: RccBus {
     fn reset(rcc: &mut Rcc);
+}
+
+/// AMBA High-performance Bus  (AHB) registers
+pub struct AHB {
+    _0: (),
+}
+
+impl AHB {
+    #[inline(always)]
+    fn enr(rcc: &Rcc) -> &rcc::AHBENR {
+        &rcc.rb.ahbenr
+    }
+    #[inline(always)]
+    fn smenr(rcc: &Rcc) -> &rcc::AHBSMENR {
+        &rcc.rb.ahbsmenr
+    }
+    #[inline(always)]
+    fn rstr(rcc: &Rcc) -> &rcc::AHBRSTR {
+        &rcc.rb.ahbrstr
+    }
+}
+
+/// Advanced Peripheral Bus 1 (APB1) registers
+pub struct APB1 {
+    _0: (),
+}
+
+impl APB1 {
+    #[inline(always)]
+    fn enr(rcc: &Rcc) -> &rcc::APBENR1 {
+        &rcc.rb.apbenr1
+    }
+    #[inline(always)]
+    fn smenr(rcc: &Rcc) -> &rcc::APBSMENR1 {
+        &rcc.rb.apbsmenr1
+    }
+    #[inline(always)]
+    fn rstr(rcc: &Rcc) -> &rcc::APBRSTR1 {
+        &rcc.rb.apbrstr1
+    }
+}
+
+/// Advanced Peripheral Bus 2 (APB2) registers
+pub struct APB2 {
+    _0: (),
+}
+
+impl APB2 {
+    #[inline(always)]
+    fn enr(rcc: &Rcc) -> &rcc::APBENR2 {
+        &rcc.rb.apbenr2
+    }
+    #[inline(always)]
+    fn smenr(rcc: &Rcc) -> &rcc::APBSMENR2 {
+        &rcc.rb.apbsmenr2
+    }
+    #[inline(always)]
+    fn rstr(rcc: &Rcc) -> &rcc::APBRSTR2 {
+        &rcc.rb.apbrstr2
+    }
 }

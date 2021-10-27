@@ -2,7 +2,7 @@
 use core::ptr;
 
 use crate::gpio::*;
-use crate::rcc::Rcc;
+use crate::rcc::{Enable, Rcc};
 use crate::stm32::ADC;
 use hal::adc::{Channel, OneShot};
 
@@ -116,7 +116,7 @@ pub struct CalibrationFactor(pub u8);
 impl Adc {
     pub fn new(adc: ADC, rcc: &mut Rcc) -> Self {
         // Enable ADC clocks
-        rcc.enable_adc();
+        ADC::enable(rcc);
 
         adc.cr.modify(|_, w| w.advregen().set_bit());
 
