@@ -330,18 +330,8 @@ macro_rules! uart_shared {
 
 macro_rules! uart_basic {
     ($USARTX:ident,
-        $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
+        $usartX:ident, $clk_mul:expr
     ) => {
-        impl Enable for $USARTX {
-            fn enable(rcc: &mut Rcc) {
-                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
-            }
-
-            fn disable(rcc: &mut Rcc) {
-                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().clear_bit());
-            }
-        }
-
         impl SerialExt<$USARTX, BasicConfig> for $USARTX {
             fn usart<TX, RX>(
                 self,
@@ -471,18 +461,8 @@ macro_rules! uart_basic {
 
 macro_rules! uart_full {
     ($USARTX:ident,
-        $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
+        $usartX:ident, $clk_mul:expr
     ) => {
-        impl Enable for $USARTX {
-            fn enable(rcc: &mut Rcc) {
-                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
-            }
-
-            fn disable(rcc: &mut Rcc) {
-                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().clear_bit());
-            }
-        }
-
         impl SerialExt<$USARTX, FullConfig> for $USARTX {
             fn usart<TX, RX>(
                 self,
@@ -721,22 +701,22 @@ uart_shared!(LPUART, LPUART_RX, LPUART_TX,
     ]
 );
 
-uart_full!(USART1, usart1, apbenr2, usart1en, 1);
+uart_full!(USART1, usart1, 1);
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-uart_full!(USART2, usart2, apbenr1, usart2en, 1);
+uart_full!(USART2, usart2, 1);
 
 #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
-uart_basic!(USART2, usart2, apbenr1, usart2en, 1);
+uart_basic!(USART2, usart2, 1);
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-uart_basic!(USART3, usart3, apbenr1, usart3en, 1);
+uart_basic!(USART3, usart3, 1);
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-uart_basic!(USART4, usart4, apbenr1, usart4en, 1);
+uart_basic!(USART4, usart4, 1);
 
 // LPUART Should be given its own implementation when it needs to be used with features not present on
 // the basic feature set such as: Dual clock domain, FIFO or prescaler.
 // Or when Synchronous mode is implemented for the basic feature set, since the LP feature set does not have support.
 #[cfg(feature = "stm32g0x1")]
-uart_basic!(LPUART, lpuart, apbenr1, lpuart1en, 256);
+uart_basic!(LPUART, lpuart, 256);

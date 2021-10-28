@@ -148,7 +148,7 @@ macro_rules! busy_wait {
 }
 
 macro_rules! i2c {
-    ($I2CX:ident, $i2cx:ident, $i2cxen:ident, $i2crst:ident,
+    ($I2CX:ident, $i2cx:ident,
         sda: [ $($PSDA:ty,)+ ],
         scl: [ $($PSCL:ty,)+ ],
     ) => {
@@ -175,23 +175,6 @@ macro_rules! i2c {
                 }
             }
         )+
-
-        impl Enable for $I2CX {
-            fn enable(rcc: &mut Rcc){
-                rcc.rb.apbenr1.modify(|_, w| w.$i2cxen().set_bit());
-            }
-
-            fn disable(rcc: &mut Rcc) {
-                rcc.rb.apbenr1.modify(|_, w| w.$i2cxen().clear_bit());
-            }
-        }
-
-        impl Reset for $I2CX {
-            fn reset(rcc: &mut Rcc){
-                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().set_bit());
-                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().clear_bit());
-            }
-        }
 
         impl I2cExt<$I2CX> for $I2CX {
             fn i2c<SDA, SCL>(
@@ -415,8 +398,6 @@ macro_rules! i2c {
 i2c!(
     I2C1,
     i2c1,
-    i2c1en,
-    i2c1rst,
     sda: [
         PA10<Output<OpenDrain>>,
         PB7<Output<OpenDrain>>,
@@ -432,8 +413,6 @@ i2c!(
 i2c!(
     I2C2,
     i2c2,
-    i2c2en,
-    i2c2rst,
     sda: [
         PA12<Output<OpenDrain>>,
         PB11<Output<OpenDrain>>,

@@ -74,23 +74,6 @@ impl Pins<DAC> for (PA4<DefaultMode>, PA5<DefaultMode>) {
     type Output = (Channel1<Disabled>, Channel2<Disabled>);
 }
 
-impl Enable for DAC {
-    fn enable(rcc: &mut Rcc) {
-        rcc.rb.apbenr1.modify(|_, w| w.dac1en().set_bit());
-    }
-
-    fn disable(rcc: &mut Rcc) {
-        rcc.rb.apbenr1.modify(|_, w| w.dac1en().clear_bit());
-    }
-}
-
-impl Reset for DAC {
-    fn reset(rcc: &mut Rcc) {
-        rcc.rb.apbrstr1.modify(|_, w| w.dac1rst().set_bit());
-        rcc.rb.apbrstr1.modify(|_, w| w.dac1rst().clear_bit());
-    }
-}
-
 pub fn dac<PINS>(_dac: DAC, _pins: PINS, rcc: &mut Rcc) -> PINS::Output
 where
     PINS: Pins<DAC>,

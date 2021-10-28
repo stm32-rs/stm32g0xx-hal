@@ -48,13 +48,14 @@ st7735-lcd = "0.6.1"
 ws2812-spi = { version = "0.3.0", features = [] }
 
 [features]
+device-selected = []
 rt = ["stm32g0/rt"]
-stm32g030 = ["stm32g0/stm32g030", "stm32g0x0"]
-stm32g070 = ["stm32g0/stm32g070", "stm32g0x0"]
-stm32g031 = ["stm32g0/stm32g031", "stm32g0x1"]
-stm32g041 = ["stm32g0/stm32g041", "stm32g0x1"]
-stm32g071 = ["stm32g0/stm32g071", "stm32g0x1"]
-stm32g081 = ["stm32g0/stm32g081", "stm32g0x1"]
+stm32g030 = ["stm32g0/stm32g030", "stm32g0x0", "device-selected"]
+stm32g070 = ["stm32g0/stm32g070", "stm32g0x0", "device-selected"]
+stm32g031 = ["stm32g0/stm32g031", "stm32g0x1", "device-selected"]
+stm32g041 = ["stm32g0/stm32g041", "stm32g0x1", "device-selected"]
+stm32g071 = ["stm32g0/stm32g071", "stm32g0x1", "device-selected"]
+stm32g081 = ["stm32g0/stm32g081", "stm32g0x1", "device-selected"]
 
 stm32g0x0 = []
 stm32g0x1 = []

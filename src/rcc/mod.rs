@@ -1,8 +1,9 @@
-use crate::stm32::{FLASH, PWR, RCC};
+use crate::stm32::{rcc, FLASH, PWR, RCC};
 use crate::time::{Hertz, U32Ext};
 
 mod clockout;
 mod config;
+mod enable;
 
 pub use clockout::*;
 pub use config::*;
@@ -72,6 +73,15 @@ pub struct Rcc {
     pub(crate) rb: RCC,
 }
 
+impl core::ops::Deref for Rcc {
+    type Target = RCC;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.rb
+    }
+}
+
 impl Rcc {
     /// Apply clock configuration
     pub fn freeze(self, rcc_cfg: Config) -> Self {
@@ -111,7 +121,7 @@ impl Rcc {
                     Prescaler::Div128 => (HSI_FREQ / 128, 0b111),
                     _ => (HSI_FREQ, 0b000),
                 };
-                self.rb.cr.write(|w| unsafe { w.hsidiv().bits(div_bits) });
+                self.cr.write(|w| unsafe { w.hsidiv().bits(div_bits) });
                 (freq.hz(), 0b000)
             }
         };
@@ -150,7 +160,7 @@ impl Rcc {
             })
         }
 
-        self.rb.cfgr.modify(|_, w| unsafe {
+        self.cfgr.modify(|_, w| unsafe {
             w.hpre()
                 .bits(ahb_psc_bits)
                 .ppre()
@@ -159,7 +169,7 @@ impl Rcc {
                 .bits(sw_bits)
         });
 
-        while self.rb.cfgr.read().sws().bits() != sw_bits {}
+        while self.cfgr.read().sws().bits() != sw_bits {}
 
         Rcc {
             rb: self.rb,
@@ -197,8 +207,8 @@ impl Rcc {
         assert!(pll_cfg.r > 1 && pll_cfg.r <= 8);
 
         // Disable PLL
-        self.rb.cr.write(|w| w.pllon().clear_bit());
-        while self.rb.cr.read().pllrdy().bit_is_set() {}
+        self.cr.write(|w| w.pllon().clear_bit());
+        while self.cr.read().pllrdy().bit_is_set() {}
 
         let (freq, pll_sw_bits) = match pll_cfg.mux {
             PLLSrc::HSI => {
@@ -219,8 +229,7 @@ impl Rcc {
         let r = (pll_freq / (pll_cfg.r as u32)).hz();
         let q = match pll_cfg.q {
             Some(div) if div > 1 && div <= 8 => {
-                self.rb
-                    .pllsyscfgr
+                self.pllsyscfgr
                     .write(move |w| unsafe { w.pllq().bits(div - 1) });
                 let req = pll_freq / div as u32;
                 Some(req.hz())
@@ -230,8 +239,7 @@ impl Rcc {
 
         let p = match pll_cfg.p {
             Some(div) if div > 1 && div <= 8 => {
-                self.rb
-                    .pllsyscfgr
+                self.pllsyscfgr
                     .write(move |w| unsafe { w.pllp().bits(div - 1) });
                 let req = pll_freq / div as u32;
                 Some(req.hz())
@@ -239,7 +247,7 @@ impl Rcc {
             _ => None,
         };
 
-        self.rb.pllsyscfgr.write(move |w| unsafe {
+        self.pllsyscfgr.write(move |w| unsafe {
             w.pllsrc()
                 .bits(pll_sw_bits)
                 .pllm()
@@ -253,38 +261,35 @@ impl Rcc {
         });
 
         // Enable PLL
-        self.rb.cr.write(|w| w.pllon().set_bit());
-        while self.rb.cr.read().pllrdy().bit_is_clear() {}
+        self.cr.write(|w| w.pllon().set_bit());
+        while self.cr.read().pllrdy().bit_is_clear() {}
 
         PLLClocks { r, q, p }
     }
 
     pub(crate) fn enable_hsi(&self) {
-        self.rb.cr.write(|w| w.hsion().set_bit());
-        while self.rb.cr.read().hsirdy().bit_is_clear() {}
+        self.cr.write(|w| w.hsion().set_bit());
+        while self.cr.read().hsirdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_hse(&self, bypass: bool) {
-        self.rb
-            .cr
-            .write(|w| w.hseon().set_bit().hsebyp().bit(bypass));
-        while self.rb.cr.read().hserdy().bit_is_clear() {}
+        self.cr.write(|w| w.hseon().set_bit().hsebyp().bit(bypass));
+        while self.cr.read().hserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lse(&self, bypass: bool) {
-        self.rb
-            .bdcr
+        self.bdcr
             .write(|w| w.lseon().set_bit().lsebyp().bit(bypass));
-        while self.rb.bdcr.read().lserdy().bit_is_clear() {}
+        while self.bdcr.read().lserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lsi(&self) {
-        self.rb.csr.write(|w| w.lsion().set_bit());
-        while self.rb.csr.read().lsirdy().bit_is_clear() {}
+        self.csr.write(|w| w.lsion().set_bit());
+        while self.csr.read().lsirdy().bit_is_clear() {}
     }
 
     pub(crate) fn unlock_rtc(&self) {
-        self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
+        self.apbenr1.modify(|_, w| w.pwren().set_bit());
         let pwr = unsafe { &(*PWR::ptr()) };
         pwr.cr1.modify(|_, w| w.dbp().set_bit());
         while pwr.cr1.read().dbp().bit_is_clear() {}
@@ -296,13 +301,12 @@ impl Rcc {
             RTCSrc::HSE => self.enable_hse(false),
             RTCSrc::LSE => self.enable_lse(false),
         }
-        self.rb
-            .apbenr1
+        self.apbenr1
             .modify(|_, w| w.rtcapben().set_bit().pwren().set_bit());
-        self.rb.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
+        self.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
         self.unlock_rtc();
-        self.rb.bdcr.modify(|_, w| w.bdrst().set_bit());
-        self.rb.bdcr.modify(|_, w| unsafe {
+        self.bdcr.modify(|_, w| w.bdrst().set_bit());
+        self.bdcr.modify(|_, w| unsafe {
             w.rtcsel()
                 .bits(src as u8)
                 .rtcen()
@@ -310,20 +314,6 @@ impl Rcc {
                 .bdrst()
                 .clear_bit()
         });
-    }
-
-    pub(crate) fn enable_power_control(&self) {
-        self.rb.apbenr1.modify(|_, w| w.pwren().set_bit());
-    }
-
-    pub(crate) fn enable_adc(&self) {
-        self.rb.apbenr2.modify(|_, w| w.adcen().set_bit());
-    }
-
-    pub(crate) fn enable_crc(&self) {
-        self.rb.ahbenr.modify(|_, w| w.crcen().set_bit());
-        self.rb.ahbrstr.modify(|_, w| w.crcrst().set_bit());
-        self.rb.ahbrstr.modify(|_, w| w.crcrst().clear_bit());
     }
 }
 
@@ -348,13 +338,105 @@ impl RccExt for RCC {
     }
 }
 
+/// Bus associated to peripheral
+pub trait RccBus: crate::Sealed {
+    /// Bus type;
+    type Bus;
+}
+
 /// Enable/disable peripheral
-pub trait Enable {
+pub trait Enable: RccBus {
     fn enable(rcc: &mut Rcc);
     fn disable(rcc: &mut Rcc);
 }
 
+/// Enable/disable peripheral in Sleep mode
+pub trait SMEnable: RccBus {
+    fn sleep_mode_enable(rcc: &mut Rcc);
+    fn sleep_mode_disable(rcc: &mut Rcc);
+}
+
 /// Reset peripheral
-pub trait Reset {
+pub trait Reset: RccBus {
     fn reset(rcc: &mut Rcc);
+}
+
+/// AMBA High-performance Bus  (AHB) registers
+pub struct AHB {
+    _0: (),
+}
+
+impl AHB {
+    #[inline(always)]
+    fn enr(rcc: &Rcc) -> &rcc::AHBENR {
+        &rcc.ahbenr
+    }
+    #[inline(always)]
+    fn smenr(rcc: &Rcc) -> &rcc::AHBSMENR {
+        &rcc.ahbsmenr
+    }
+    #[inline(always)]
+    fn rstr(rcc: &Rcc) -> &rcc::AHBRSTR {
+        &rcc.ahbrstr
+    }
+}
+
+/// Advanced Peripheral Bus 1 (APB1) registers
+pub struct APB1 {
+    _0: (),
+}
+
+impl APB1 {
+    #[inline(always)]
+    fn enr(rcc: &Rcc) -> &rcc::APBENR1 {
+        &rcc.apbenr1
+    }
+    #[inline(always)]
+    fn smenr(rcc: &Rcc) -> &rcc::APBSMENR1 {
+        &rcc.apbsmenr1
+    }
+    #[inline(always)]
+    fn rstr(rcc: &Rcc) -> &rcc::APBRSTR1 {
+        &rcc.apbrstr1
+    }
+}
+
+/// Advanced Peripheral Bus 2 (APB2) registers
+pub struct APB2 {
+    _0: (),
+}
+
+impl APB2 {
+    #[inline(always)]
+    fn enr(rcc: &Rcc) -> &rcc::APBENR2 {
+        &rcc.apbenr2
+    }
+    #[inline(always)]
+    fn smenr(rcc: &Rcc) -> &rcc::APBSMENR2 {
+        &rcc.apbsmenr2
+    }
+    #[inline(always)]
+    fn rstr(rcc: &Rcc) -> &rcc::APBRSTR2 {
+        &rcc.apbrstr2
+    }
+}
+
+/// Input-Output Peripheral Bus (IOP) registers
+pub struct IOP {
+    _0: (),
+}
+
+impl IOP {
+    #[inline(always)]
+    fn enr(rcc: &Rcc) -> &rcc::IOPENR {
+        &rcc.iopenr
+    }
+    #[inline(always)]
+    fn smenr(rcc: &Rcc) -> &rcc::IOPSMENR {
+        &rcc.iopsmenr
+    }
+    #[inline(always)]
+    fn rstr(rcc: &Rcc) -> &rcc::IOPRSTR {
+        &rcc.ioprstr
+    }
 }

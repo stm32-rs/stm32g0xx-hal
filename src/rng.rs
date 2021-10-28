@@ -62,14 +62,12 @@ pub trait RngExt {
 
 impl RngExt for RNG {
     fn constrain(self, cfg: Config, rcc: &mut Rcc) -> Rng {
-        rcc.rb.ahbenr.modify(|_, w| w.rngen().set_bit());
-        rcc.rb.ahbrstr.modify(|_, w| w.rngrst().set_bit());
-        rcc.rb.ahbrstr.modify(|_, w| w.rngrst().clear_bit());
-        rcc.rb
-            .ccipr
+        rcc.ahbenr.modify(|_, w| w.rngen().set_bit());
+        rcc.ahbrstr.modify(|_, w| w.rngrst().set_bit());
+        rcc.ahbrstr.modify(|_, w| w.rngrst().clear_bit());
+        rcc.ccipr
             .modify(|_, w| unsafe { w.rngsel().bits(cfg.clk_src as u8) });
-        rcc.rb
-            .ccipr
+        rcc.ccipr
             .modify(|_, w| unsafe { w.rngdiv().bits(cfg.clk_div as u8) });
         self.cr.modify(|_, w| w.rngen().set_bit());
         Rng { rb: self }
