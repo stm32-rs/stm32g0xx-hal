@@ -75,6 +75,12 @@ bus! {
     TIM16 => (APB2, tim16en, tim16smen, tim16rst),
     TIM17 => (APB2, tim17en, tim17smen, tim17rst),
     USART1 => (APB2, usart1en, usart1smen, usart1rst),
+
+    GPIOA => (IOP, iopaen, iopasmen, ioparst),
+    GPIOB => (IOP, iopben, iopbsmen, iopbrst),
+    GPIOC => (IOP, iopcen, iopcsmen, iopcrst),
+    GPIOD => (IOP, iopden, iopdsmen, iopdrst),
+    GPIOF => (IOP, iopfen, iopfsmen, iopfrst),
 }
 
 #[cfg(any(feature = "stm32g041", feature = "stm32g081"))]

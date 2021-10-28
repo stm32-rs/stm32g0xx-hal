@@ -417,3 +417,23 @@ impl APB2 {
         &rcc.rb.apbrstr2
     }
 }
+
+/// Input-Output Peripheral Bus (IOP) registers
+pub struct IOP {
+    _0: (),
+}
+
+impl IOP {
+    #[inline(always)]
+    fn enr(rcc: &Rcc) -> &rcc::IOPENR {
+        &rcc.rb.iopenr
+    }
+    #[inline(always)]
+    fn smenr(rcc: &Rcc) -> &rcc::IOPSMENR {
+        &rcc.rb.iopsmenr
+    }
+    #[inline(always)]
+    fn rstr(rcc: &Rcc) -> &rcc::IOPRSTR {
+        &rcc.rb.ioprstr
+    }
+}
