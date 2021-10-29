@@ -41,15 +41,15 @@ macro_rules! bus_reset {
 }
 
 macro_rules! bus {
-    ($($PER:ident => ($busX:ty, $en:ident, $smen:ident, $rst:ident),)+) => {
+    ($($PER:ident => ($busX:ty, $($en:ident)?, $($smen:ident)?, $($rst:ident)?),)+) => {
         $(
             impl crate::Sealed for crate::stm32::$PER {}
             impl RccBus for crate::stm32::$PER {
                 type Bus = $busX;
             }
-            bus_enable!($PER => $en);
-            bus_smenable!($PER => $smen);
-            bus_reset!($PER => $rst);
+            $(bus_enable!($PER => $en);)?
+            $(bus_smenable!($PER => $smen);)?
+            $(bus_reset!($PER => $rst);)?
         )+
     }
 }
@@ -67,6 +67,7 @@ bus! {
     SPI2 => (APB1, spi2en, spi2smen, spi2rst),
     TIM3 => (APB1, tim3en, tim3smen, tim3rst),
     USART2 => (APB1, usart2en, usart2smen, usart2rst),
+    WWDG => (APB1, wwdgen, wwdgsmen,),
 
     ADC => (APB2, adcen, adcsmen, adcrst),
     SPI1 => (APB2, spi1en, spi1smen, spi1rst),
@@ -113,10 +114,3 @@ bus! {
     USART4 => (APB1, usart4en, usart4smen, usart4rst),
     TIM15 => (APB2, tim15en, tim15smen, tim15rst),
 }
-
-impl crate::Sealed for crate::stm32::WWDG {}
-impl RccBus for crate::stm32::WWDG {
-    type Bus = APB1;
-}
-bus_enable!(WWDG => wwdgen);
-bus_smenable!(WWDG => wwdgsmen);
