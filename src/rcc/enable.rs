@@ -11,6 +11,26 @@ macro_rules! bus_enable {
             fn disable(rcc: &mut Rcc) {
                 Self::Bus::enr(rcc).modify(|_, w| w.$en().clear_bit());
             }
+            #[inline(always)]
+            fn is_enabled() -> bool {
+                let rcc = unsafe { &*RCC::ptr() };
+                Self::Bus::enr(rcc).read().$en().bit_is_set()
+            }
+            #[inline(always)]
+            fn is_disabled() -> bool {
+                let rcc = unsafe { &*RCC::ptr() };
+                Self::Bus::enr(rcc).read().$en().bit_is_clear()
+            }
+            #[inline(always)]
+            unsafe fn enable_unchecked() {
+                let rcc = &*RCC::ptr();
+                Self::Bus::enr(rcc).modify(|_, w| w.$en().set_bit());
+            }
+            #[inline(always)]
+            unsafe fn disable_unchecked() {
+                let rcc = &*RCC::ptr();
+                Self::Bus::enr(rcc).modify(|_, w| w.$en().clear_bit());
+            }
         }
     };
 }
@@ -25,6 +45,26 @@ macro_rules! bus_smenable {
             fn sleep_mode_disable(rcc: &mut Rcc) {
                 Self::Bus::smenr(rcc).modify(|_, w| w.$smen().clear_bit());
             }
+            #[inline(always)]
+            fn is_sleep_mode_enabled() -> bool {
+                let rcc = unsafe { &*RCC::ptr() };
+                Self::Bus::smenr(rcc).read().$smen().bit_is_set()
+            }
+            #[inline(always)]
+            fn is_sleep_mode_disabled() -> bool {
+                let rcc = unsafe { &*RCC::ptr() };
+                Self::Bus::smenr(rcc).read().$smen().bit_is_clear()
+            }
+            #[inline(always)]
+            unsafe fn sleep_mode_enable_unchecked() {
+                let rcc = &*RCC::ptr();
+                Self::Bus::smenr(rcc).modify(|_, w| w.$smen().set_bit());
+            }
+            #[inline(always)]
+            unsafe fn sleep_mode_disable_unchecked() {
+                let rcc = &*RCC::ptr();
+                Self::Bus::smenr(rcc).modify(|_, w| w.$smen().clear_bit());
+            }
         }
     };
 }
@@ -33,6 +73,12 @@ macro_rules! bus_reset {
         impl Reset for crate::stm32::$PER {
             #[inline(always)]
             fn reset(rcc: &mut Rcc) {
+                Self::Bus::rstr(rcc).modify(|_, w| w.$rst().set_bit());
+                Self::Bus::rstr(rcc).modify(|_, w| w.$rst().clear_bit());
+            }
+            #[inline(always)]
+            unsafe fn reset_unchecked() {
+                let rcc = &*RCC::ptr();
                 Self::Bus::rstr(rcc).modify(|_, w| w.$rst().set_bit());
                 Self::Bus::rstr(rcc).modify(|_, w| w.$rst().clear_bit());
             }
