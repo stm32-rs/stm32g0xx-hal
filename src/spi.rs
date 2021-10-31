@@ -74,7 +74,7 @@ pub trait SpiExt<SPI>: Sized {
 }
 
 macro_rules! spi {
-    ($SPIX:ident, $spiX:ident, $apbXenr:ident, $apbXrst:ident, $spiXen:ident, $spiXrst:ident,
+    ($SPIX:ident, $spiX:ident,
         sck: [ $(($SCK:ty, $SCK_AF:expr),)+ ],
         miso: [ $(($MISO:ty, $MISO_AF:expr),)+ ],
         mosi: [ $(($MOSI:ty, $MOSI_AF:expr),)+ ],
@@ -136,23 +136,6 @@ macro_rules! spi {
                 }
             }
         )*
-
-        impl Enable for $SPIX {
-            fn enable(rcc: &mut Rcc){
-                rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().set_bit());
-            }
-
-            fn disable(rcc: &mut Rcc) {
-                rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().clear_bit());
-            }
-        }
-
-        impl Reset for $SPIX {
-            fn reset(rcc: &mut Rcc){
-                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().set_bit());
-                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().clear_bit());
-            }
-        }
 
         impl<PINS: Pins<$SPIX>> Spi<$SPIX, PINS> {
             pub fn $spiX<T>(
@@ -306,10 +289,6 @@ macro_rules! spi {
 spi!(
     SPI1,
     spi1,
-    apbenr2,
-    apbrstr2,
-    spi1en,
-    spi1rst,
     sck: [
         (PA1<DefaultMode>, AltFunction::AF0),
         (PA5<DefaultMode>, AltFunction::AF0),
@@ -334,10 +313,6 @@ spi!(
 spi!(
     SPI2,
     spi2,
-    apbenr1,
-    apbrstr1,
-    spi2en,
-    spi2rst,
     sck: [
         (PA0<DefaultMode>, AltFunction::AF0),
         (PB8<DefaultMode>, AltFunction::AF1),

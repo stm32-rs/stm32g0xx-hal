@@ -1,6 +1,6 @@
 //! Direct Memory Access Engine
 use crate::dmamux::{self, DmaMuxIndex};
-use crate::rcc::Rcc;
+use crate::rcc::{Enable, Rcc, Reset};
 use crate::stm32::{self, DMA, DMAMUX};
 
 use crate::dmamux::DmaMuxExt;
@@ -351,15 +351,14 @@ impl DmaExt for DMA {
 
     fn reset(self, rcc: &mut Rcc) -> Self {
         // reset DMA
-        rcc.rb.ahbrstr.modify(|_, w| w.dmarst().set_bit());
-        rcc.rb.ahbrstr.modify(|_, w| w.dmarst().clear_bit());
+        <DMA as Reset>::reset(rcc);
         self
     }
 
     fn split(self, rcc: &mut Rcc, dmamux: DMAMUX) -> Self::Channels {
         let muxchannels = dmamux.split();
         // enable DMA clock
-        rcc.rb.ahbenr.modify(|_, w| w.dmaen().set_bit());
+        DMA::enable(rcc);
 
         let mut channels = Channels {
             ch1: C1 {

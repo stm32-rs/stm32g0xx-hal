@@ -18,7 +18,7 @@
 
 #![deny(missing_docs)]
 
-use crate::rcc::Rcc;
+use crate::rcc::{Enable, Rcc, Reset};
 use crate::stm32::CRC;
 use core::hash::Hasher;
 use core::ptr;
@@ -31,7 +31,8 @@ pub trait CrcExt {
 
 impl CrcExt for CRC {
     fn constrain(self, rcc: &mut Rcc) -> Config {
-        rcc.enable_crc();
+        CRC::enable(rcc);
+        CRC::reset(rcc);
 
         // Default values
         Config {

@@ -1,6 +1,9 @@
 //! Power control
 
-use crate::{rcc::Rcc, stm32::PWR};
+use crate::{
+    rcc::{Enable, Rcc},
+    stm32::PWR,
+};
 
 pub enum LowPowerMode {
     StopMode1 = 0b00,
@@ -19,7 +22,7 @@ pub struct Power {
 
 impl Power {
     pub fn new(pwr: PWR, rcc: &mut Rcc) -> Self {
-        rcc.enable_power_control();
+        PWR::enable(rcc);
         Self { rb: pwr }
     }
 

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::rcc::Rcc;
+use crate::rcc::{Enable, Rcc};
 use crate::stm32::{IWDG, WWDG};
 use crate::time::{Hertz, MicroSecond};
 use hal::watchdog;
@@ -131,7 +131,7 @@ pub trait WWDGExt {
 
 impl WWDGExt for WWDG {
     fn constrain(self, rcc: &mut Rcc) -> WindowWatchdog {
-        rcc.rb.apbenr1.modify(|_, w| w.wwdgen().set_bit());
+        WWDG::enable(rcc);
         let clk = rcc.clocks.apb_clk.0 / 4096;
         WindowWatchdog {
             wwdg: self,

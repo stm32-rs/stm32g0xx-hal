@@ -72,6 +72,15 @@ impl Config {
     }
 }
 
+impl<F> From<F> for Config
+where
+    F: Into<Hertz>,
+{
+    fn from(speed: F) -> Self {
+        Config::new(speed)
+    }
+}
+
 /// I2C abstraction
 pub struct I2c<I2C, SDA, SCL> {
     i2c: I2C,
@@ -102,7 +111,13 @@ pub enum Error {
 }
 
 pub trait I2cExt<I2C> {
-    fn i2c<SDA, SCL>(self, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> I2c<I2C, SDA, SCL>
+    fn i2c<SDA, SCL>(
+        self,
+        sda: SDA,
+        scl: SCL,
+        config: impl Into<Config>,
+        rcc: &mut Rcc,
+    ) -> I2c<I2C, SDA, SCL>
     where
         SDA: SDAPin<I2C>,
         SCL: SCLPin<I2C>;
@@ -148,7 +163,7 @@ macro_rules! busy_wait {
 }
 
 macro_rules! i2c {
-    ($I2CX:ident, $i2cx:ident, $i2cxen:ident, $i2crst:ident,
+    ($I2CX:ident, $i2cx:ident,
         sda: [ $($PSDA:ty,)+ ],
         scl: [ $($PSCL:ty,)+ ],
     ) => {
@@ -176,29 +191,12 @@ macro_rules! i2c {
             }
         )+
 
-        impl Enable for $I2CX {
-            fn enable(rcc: &mut Rcc){
-                rcc.rb.apbenr1.modify(|_, w| w.$i2cxen().set_bit());
-            }
-
-            fn disable(rcc: &mut Rcc) {
-                rcc.rb.apbenr1.modify(|_, w| w.$i2cxen().clear_bit());
-            }
-        }
-
-        impl Reset for $I2CX {
-            fn reset(rcc: &mut Rcc){
-                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().set_bit());
-                rcc.rb.apbrstr1.modify(|_, w| w.$i2crst().clear_bit());
-            }
-        }
-
         impl I2cExt<$I2CX> for $I2CX {
             fn i2c<SDA, SCL>(
                 self,
                 sda: SDA,
                 scl: SCL,
-                config: Config,
+                config: impl Into<Config>,
                 rcc: &mut Rcc,
             ) -> I2c<$I2CX, SDA, SCL>
             where
@@ -213,11 +211,12 @@ macro_rules! i2c {
             SDA: SDAPin<$I2CX>,
             SCL: SCLPin<$I2CX>
         {
-            pub fn $i2cx(i2c: $I2CX, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> Self
+            pub fn $i2cx(i2c: $I2CX, sda: SDA, scl: SCL, config: impl Into<Config>, rcc: &mut Rcc) -> Self
             where
                 SDA: SDAPin<$I2CX>,
                 SCL: SCLPin<$I2CX>,
             {
+                let config = config.into();
                 $I2CX::enable(rcc);
                 $I2CX::reset(rcc);
 
@@ -415,8 +414,6 @@ macro_rules! i2c {
 i2c!(
     I2C1,
     i2c1,
-    i2c1en,
-    i2c1rst,
     sda: [
         PA10<Output<OpenDrain>>,
         PB7<Output<OpenDrain>>,
@@ -432,8 +429,6 @@ i2c!(
 i2c!(
     I2C2,
     i2c2,
-    i2c2en,
-    i2c2rst,
     sda: [
         PA12<Output<OpenDrain>>,
         PB11<Output<OpenDrain>>,
