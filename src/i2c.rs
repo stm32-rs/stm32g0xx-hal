@@ -72,6 +72,15 @@ impl Config {
     }
 }
 
+impl<F> From<F> for Config
+where
+    F: Into<Hertz>,
+{
+    fn from(speed: F) -> Self {
+        Config::new(speed)
+    }
+}
+
 /// I2C abstraction
 pub struct I2c<I2C, SDA, SCL> {
     i2c: I2C,
@@ -102,7 +111,13 @@ pub enum Error {
 }
 
 pub trait I2cExt<I2C> {
-    fn i2c<SDA, SCL>(self, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> I2c<I2C, SDA, SCL>
+    fn i2c<SDA, SCL>(
+        self,
+        sda: SDA,
+        scl: SCL,
+        config: impl Into<Config>,
+        rcc: &mut Rcc,
+    ) -> I2c<I2C, SDA, SCL>
     where
         SDA: SDAPin<I2C>,
         SCL: SCLPin<I2C>;
@@ -181,7 +196,7 @@ macro_rules! i2c {
                 self,
                 sda: SDA,
                 scl: SCL,
-                config: Config,
+                config: impl Into<Config>,
                 rcc: &mut Rcc,
             ) -> I2c<$I2CX, SDA, SCL>
             where
@@ -196,11 +211,12 @@ macro_rules! i2c {
             SDA: SDAPin<$I2CX>,
             SCL: SCLPin<$I2CX>
         {
-            pub fn $i2cx(i2c: $I2CX, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> Self
+            pub fn $i2cx(i2c: $I2CX, sda: SDA, scl: SCL, config: impl Into<Config>, rcc: &mut Rcc) -> Self
             where
                 SDA: SDAPin<$I2CX>,
                 SCL: SCLPin<$I2CX>,
             {
+                let config = config.into();
                 $I2CX::enable(rcc);
                 $I2CX::reset(rcc);
 

@@ -346,97 +346,96 @@ pub trait RccBus: crate::Sealed {
 
 /// Enable/disable peripheral
 pub trait Enable: RccBus {
+    /// Enables peripheral
     fn enable(rcc: &mut Rcc);
+
+    /// Disables peripheral
     fn disable(rcc: &mut Rcc);
+
+    /// Check if peripheral enabled
+    fn is_enabled() -> bool;
+
+    /// Check if peripheral disabled
+    fn is_disabled() -> bool;
+
+    /// # Safety
+    ///
+    /// Enables peripheral. Takes access to RCC internally
+    unsafe fn enable_unchecked();
+
+    /// # Safety
+    ///
+    /// Disables peripheral. Takes access to RCC internally
+    unsafe fn disable_unchecked();
 }
 
 /// Enable/disable peripheral in Sleep mode
 pub trait SMEnable: RccBus {
+    /// Enables peripheral
     fn sleep_mode_enable(rcc: &mut Rcc);
+
+    /// Disables peripheral
     fn sleep_mode_disable(rcc: &mut Rcc);
+
+    /// Check if peripheral enabled
+    fn is_sleep_mode_enabled() -> bool;
+
+    /// Check if peripheral disabled
+    fn is_sleep_mode_disabled() -> bool;
+
+    /// # Safety
+    ///
+    /// Enables peripheral. Takes access to RCC internally
+    unsafe fn sleep_mode_enable_unchecked();
+
+    /// # Safety
+    ///
+    /// Disables peripheral. Takes access to RCC internally
+    unsafe fn sleep_mode_disable_unchecked();
 }
 
 /// Reset peripheral
 pub trait Reset: RccBus {
+    /// Resets peripheral
     fn reset(rcc: &mut Rcc);
+
+    /// # Safety
+    ///
+    /// Resets peripheral. Takes access to RCC internally
+    unsafe fn reset_unchecked();
 }
 
-/// AMBA High-performance Bus  (AHB) registers
-pub struct AHB {
-    _0: (),
+use crate::stm32::rcc::RegisterBlock as RccRB;
+
+macro_rules! bus_struct {
+    ($($busX:ident => ($EN:ident, $en:ident, $SMEN:ident, $smen:ident, $RST:ident, $rst:ident, $doc:literal),)+) => {
+        $(
+            #[doc = $doc]
+            pub struct $busX {
+                _0: (),
+            }
+
+            impl $busX {
+                #[inline(always)]
+                fn enr(rcc: &RccRB) -> &rcc::$EN {
+                    &rcc.$en
+                }
+                #[inline(always)]
+                fn smenr(rcc: &RccRB) -> &rcc::$SMEN {
+                    &rcc.$smen
+                }
+                #[inline(always)]
+                fn rstr(rcc: &RccRB) -> &rcc::$RST {
+                    &rcc.$rst
+                }
+            }
+        )+
+    };
 }
 
-impl AHB {
-    #[inline(always)]
-    fn enr(rcc: &Rcc) -> &rcc::AHBENR {
-        &rcc.ahbenr
-    }
-    #[inline(always)]
-    fn smenr(rcc: &Rcc) -> &rcc::AHBSMENR {
-        &rcc.ahbsmenr
-    }
-    #[inline(always)]
-    fn rstr(rcc: &Rcc) -> &rcc::AHBRSTR {
-        &rcc.ahbrstr
-    }
-}
-
-/// Advanced Peripheral Bus 1 (APB1) registers
-pub struct APB1 {
-    _0: (),
-}
-
-impl APB1 {
-    #[inline(always)]
-    fn enr(rcc: &Rcc) -> &rcc::APBENR1 {
-        &rcc.apbenr1
-    }
-    #[inline(always)]
-    fn smenr(rcc: &Rcc) -> &rcc::APBSMENR1 {
-        &rcc.apbsmenr1
-    }
-    #[inline(always)]
-    fn rstr(rcc: &Rcc) -> &rcc::APBRSTR1 {
-        &rcc.apbrstr1
-    }
-}
-
-/// Advanced Peripheral Bus 2 (APB2) registers
-pub struct APB2 {
-    _0: (),
-}
-
-impl APB2 {
-    #[inline(always)]
-    fn enr(rcc: &Rcc) -> &rcc::APBENR2 {
-        &rcc.apbenr2
-    }
-    #[inline(always)]
-    fn smenr(rcc: &Rcc) -> &rcc::APBSMENR2 {
-        &rcc.apbsmenr2
-    }
-    #[inline(always)]
-    fn rstr(rcc: &Rcc) -> &rcc::APBRSTR2 {
-        &rcc.apbrstr2
-    }
-}
-
-/// Input-Output Peripheral Bus (IOP) registers
-pub struct IOP {
-    _0: (),
-}
-
-impl IOP {
-    #[inline(always)]
-    fn enr(rcc: &Rcc) -> &rcc::IOPENR {
-        &rcc.iopenr
-    }
-    #[inline(always)]
-    fn smenr(rcc: &Rcc) -> &rcc::IOPSMENR {
-        &rcc.iopsmenr
-    }
-    #[inline(always)]
-    fn rstr(rcc: &Rcc) -> &rcc::IOPRSTR {
-        &rcc.ioprstr
-    }
+bus_struct! {
+    AHB => (AHBENR, ahbenr, AHBSMENR, ahbsmenr, AHBRSTR, ahbrstr, "AMBA High-performance Bus (AHB) registers"),
+    APB1 => (APBENR1, apbenr1, APBSMENR1, apbsmenr1, APBRSTR1, apbrstr1, "Advanced Peripheral Bus 1 (APB1) registers"),
+    APB2 => (APBENR2, apbenr2, APBSMENR2, apbsmenr2, APBRSTR2, apbrstr2, "Advanced Peripheral Bus 2 (APB2) registers"),
+    IOP => (IOPENR, iopenr, IOPSMENR, iopsmenr, IOPRSTR, ioprstr, "Input-Output Peripheral Bus (IOP) registers"),
 }

@@ -2,7 +2,7 @@ use core::cmp;
 use core::mem;
 
 use crate::hal::blocking::rng;
-use crate::rcc::Rcc;
+use crate::rcc::{Enable, Rcc, Reset};
 use crate::stm32::RNG;
 
 #[derive(Clone, Copy)]
@@ -62,9 +62,8 @@ pub trait RngExt {
 
 impl RngExt for RNG {
     fn constrain(self, cfg: Config, rcc: &mut Rcc) -> Rng {
-        rcc.ahbenr.modify(|_, w| w.rngen().set_bit());
-        rcc.ahbrstr.modify(|_, w| w.rngrst().set_bit());
-        rcc.ahbrstr.modify(|_, w| w.rngrst().clear_bit());
+        RNG::enable(rcc);
+        RNG::reset(rcc);
         rcc.ccipr
             .modify(|_, w| unsafe { w.rngsel().bits(cfg.clk_src as u8) });
         rcc.ccipr
