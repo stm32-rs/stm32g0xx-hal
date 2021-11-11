@@ -2,7 +2,7 @@
 use hal::blocking::i2c::{Read, Write, WriteRead};
 
 use crate::gpio::{gpioa::*, gpiob::*};
-use crate::gpio::{AltFunction, OpenDrain, Output};
+use crate::gpio::{AltFunction, DefaultMode};
 use crate::rcc::*;
 use crate::stm32::{I2C1, I2C2};
 use crate::time::Hertz;
@@ -174,7 +174,7 @@ macro_rules! i2c {
                 }
 
                 fn release(self) -> Self {
-                    self.into_open_drain_output()
+                    self.into_analog()
                 }
             }
         )+
@@ -186,7 +186,7 @@ macro_rules! i2c {
                 }
 
                 fn release(self) -> Self {
-                    self.into_open_drain_output()
+                    self.into_analog()
                 }
             }
         )+
@@ -415,14 +415,14 @@ i2c!(
     I2C1,
     i2c1,
     sda: [
-        PA10<Output<OpenDrain>>,
-        PB7<Output<OpenDrain>>,
-        PB9<Output<OpenDrain>>,
+        PA10<DefaultMode>,
+        PB7<DefaultMode>,
+        PB9<DefaultMode>,
     ],
     scl: [
-        PA9<Output<OpenDrain>>,
-        PB6<Output<OpenDrain>>,
-        PB8<Output<OpenDrain>>,
+        PA9<DefaultMode>,
+        PB6<DefaultMode>,
+        PB8<DefaultMode>,
     ],
 );
 
@@ -430,13 +430,13 @@ i2c!(
     I2C2,
     i2c2,
     sda: [
-        PA12<Output<OpenDrain>>,
-        PB11<Output<OpenDrain>>,
-        PB14<Output<OpenDrain>>,
+        PA12<DefaultMode>,
+        PB11<DefaultMode>,
+        PB14<DefaultMode>,
     ],
     scl: [
-        PA11<Output<OpenDrain>>,
-        PB10<Output<OpenDrain>>,
-        PB13<Output<OpenDrain>>,
+        PA11<DefaultMode>,
+        PB10<DefaultMode>,
+        PB13<DefaultMode>,
     ],
 );
