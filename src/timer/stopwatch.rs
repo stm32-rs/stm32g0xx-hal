@@ -70,7 +70,7 @@ macro_rules! stopwatches {
 
                 pub fn elapsed(&self, ts: Instant) -> MicroSecond {
                     let now = self.now().0;
-                    let cycles = now.wrapping_sub(ts.0);
+                    let cycles = (now as u16).wrapping_sub(ts.0 as u16) as u32;
                     self.clk.duration(cycles * (1 + self.tim.psc.read().bits()))
                 }
 
