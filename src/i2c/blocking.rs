@@ -1,164 +1,12 @@
 //! I2C
+use crate::stm32::{I2C1, I2C2};
 use hal::blocking::i2c::{Read, Write, WriteRead};
-
 use crate::gpio::{gpioa::*, gpiob::*};
 use crate::gpio::{AltFunction, OpenDrain, Output};
+use crate::i2c::config::Config;
+use crate::i2c::{Error, I2c, I2cDirection, I2cExt, SCLPin, SDAPin};
 use crate::rcc::*;
-use crate::stm32::{I2C1, I2C2};
-use crate::time::Hertz;
-use core::cmp;
 
-pub struct Config {
-    speed: Option<Hertz>,
-    timing: Option<u32>,
-    analog_filter: bool,
-    digital_filter: u8,
-    slave_address_1: u16,
-    address_11bits: bool,
-    slave_address_2: u8,
-    slave_address_mask: SlaveAddressMask,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum SlaveAddressMask {
-    MaskNone = 0,
-    MaskOneBit,
-    MaskTwoBits,
-    MaskThreeBits,
-    MaskFourBits,
-    MaskFiveBits,
-    MaskSixBits,
-    MaskAllBits,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum I2cDirection {
-    MasterReadSlaveWrite = 0,
-    MasterWriteSlaveRead = 1,
-}
-
-impl Config {
-    pub fn new<T>(speed: T) -> Self
-    where
-        T: Into<Hertz>,
-    {
-        Config {
-            speed: Some(speed.into()),
-            timing: None,
-            analog_filter: true,
-            digital_filter: 0,
-            slave_address_1: 0,
-            address_11bits: false,
-            slave_address_2: 0,
-            slave_address_mask: SlaveAddressMask::MaskNone,
-        }
-    }
-
-    pub fn with_timing(timing: u32) -> Self {
-        Config {
-            timing: Some(timing),
-            speed: None,
-            analog_filter: true,
-            digital_filter: 0,
-            slave_address_1: 0,
-            address_11bits: false,
-            slave_address_2: 0,
-            slave_address_mask: SlaveAddressMask::MaskNone,
-        }
-    }
-
-    pub fn disable_analog_filter(mut self) -> Self {
-        self.analog_filter = false;
-        self
-    }
-
-    pub fn enable_digital_filter(mut self, cycles: u8) -> Self {
-        assert!(cycles <= 16);
-        self.digital_filter = cycles;
-        self
-    }
-
-    fn timing_bits(&self, i2c_clk: Hertz) -> u32 {
-        if let Some(bits) = self.timing {
-            return bits;
-        }
-        let speed = self.speed.unwrap();
-        let (psc, scll, sclh, sdadel, scldel) = if speed.0 <= 100_000 {
-            let psc = 3;
-            let scll = cmp::min((((i2c_clk.0 >> 1) / (psc + 1)) / speed.0) - 1, 255);
-            let sclh = scll - 4;
-            let sdadel = 2;
-            let scldel = 4;
-            (psc, scll, sclh, sdadel, scldel)
-        } else {
-            let psc = 1;
-            let scll = cmp::min((((i2c_clk.0 >> 1) / (psc + 1)) / speed.0) - 1, 255);
-            let sclh = scll - 6;
-            let sdadel = 1;
-            let scldel = 3;
-            (psc, scll, sclh, sdadel, scldel)
-        };
-        psc << 28 | scldel << 20 | sdadel << 16 | sclh << 8 | scll
-    }
-    /// Slave address 1 as 7 bit address, in range 0 .. 127
-    pub fn slave_address(&mut self, own_address: u8) {
-        //assert!(own_address < (2 ^ 7));
-        self.slave_address_1 = own_address as u16;
-        self.address_11bits = false;
-    }
-    /// Slave address 1 as 11 bit address in range 0 .. 2047
-    pub fn slave_address_11bits(&mut self, own_address: u16) {
-        //assert!(own_address < (2 ^ 11));
-        self.slave_address_1 = own_address;
-        self.address_11bits = true;
-    }
-    /// Slave address 2 as 7 bit address in range 0 .. 127.
-    /// The mask makes all slaves within the mask addressable
-    pub fn slave_address_2(&mut self, own_address: u8, mask: SlaveAddressMask) {
-        //assert!(own_address < (2 ^ 7));
-        self.slave_address_2 = own_address;
-        self.slave_address_mask = mask;
-    }
-}
-
-impl<F> From<F> for Config
-where
-    F: Into<Hertz>,
-{
-    fn from(speed: F) -> Self {
-        Config::new(speed)
-    }
-}
-
-/// I2C abstraction
-pub struct I2c<I2C, SDA, SCL> {
-    i2c: I2C,
-    sda: SDA,
-    scl: SCL,
-}
-
-/// I2C SDA pin
-pub trait SDAPin<I2C> {
-    fn setup(&self);
-    fn release(self) -> Self;
-}
-
-/// I2C SCL pin
-pub trait SCLPin<I2C> {
-    fn setup(&self);
-    fn release(self) -> Self;
-}
-
-/// I2C error
-#[derive(Debug, Clone, Copy)]
-pub enum Error {
-    Overrun,
-    Nack,
-    PECError,
-    BusError,
-    ArbitrationLost,
-    IncorrectFrameSize(usize),
-}
 pub trait I2cSlave {
     /// Enable/ disable sbc. Default sbc is switched on.
     /// For master write/read the transaction should start with sbc disabled.
@@ -179,19 +27,6 @@ pub trait I2cSlave {
     /// If the master wants more data than bytes.len()  the master will run into a timeout, This function will return Ok(())
     /// If the master wants less data than bytes.len(), the function will return  IncorrectFrameSize(bytes.len() + 1)
     fn slave_write(&mut self, bytes: &[u8]) -> Result<(), Error>;
-}
-
-pub trait I2cExt<I2C> {
-    fn i2c<SDA, SCL>(
-        self,
-        sda: SDA,
-        scl: SCL,
-        config: impl Into<Config>,
-        rcc: &mut Rcc,
-    ) -> I2c<I2C, SDA, SCL>
-    where
-        SDA: SDAPin<I2C>,
-        SCL: SCLPin<I2C>;
 }
 
 /// Sequence to flush the TXDR register. This resets the TXIS and TXE flags
