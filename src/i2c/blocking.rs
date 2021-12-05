@@ -1,11 +1,11 @@
 //! I2C
-use crate::stm32::{I2C1, I2C2};
-use hal::blocking::i2c::{Read, Write, WriteRead};
 use crate::gpio::{gpioa::*, gpiob::*};
 use crate::gpio::{AltFunction, OpenDrain, Output};
 use crate::i2c::config::Config;
 use crate::i2c::{Error, I2c, I2cDirection, I2cExt, SCLPin, SDAPin};
 use crate::rcc::*;
+use crate::stm32::{I2C1, I2C2};
+use hal::blocking::i2c::{Read, Write, WriteRead};
 
 pub trait I2cSlave {
     /// Enable/ disable sbc. Default sbc is switched on.
