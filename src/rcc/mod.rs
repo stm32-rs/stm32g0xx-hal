@@ -207,7 +207,7 @@ impl Rcc {
         assert!(pll_cfg.r > 1 && pll_cfg.r <= 8);
 
         // Disable PLL
-        self.cr.write(|w| w.pllon().clear_bit());
+        self.cr.modify(|_, w| w.pllon().clear_bit());
         while self.cr.read().pllrdy().bit_is_set() {}
 
         let (freq, pll_sw_bits) = match pll_cfg.mux {
@@ -261,30 +261,31 @@ impl Rcc {
         });
 
         // Enable PLL
-        self.cr.write(|w| w.pllon().set_bit());
+        self.cr.modify(|_, w| w.pllon().set_bit());
         while self.cr.read().pllrdy().bit_is_clear() {}
 
         PLLClocks { r, q, p }
     }
 
     pub(crate) fn enable_hsi(&self) {
-        self.cr.write(|w| w.hsion().set_bit());
+        self.cr.modify(|_, w| w.hsion().set_bit());
         while self.cr.read().hsirdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_hse(&self, bypass: bool) {
-        self.cr.write(|w| w.hseon().set_bit().hsebyp().bit(bypass));
+        self.cr
+            .modify(|_, w| w.hseon().set_bit().hsebyp().bit(bypass));
         while self.cr.read().hserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lse(&self, bypass: bool) {
         self.bdcr
-            .write(|w| w.lseon().set_bit().lsebyp().bit(bypass));
+            .modify(|_, w| w.lseon().set_bit().lsebyp().bit(bypass));
         while self.bdcr.read().lserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lsi(&self) {
-        self.csr.write(|w| w.lsion().set_bit());
+        self.csr.modify(|_, w| w.lsion().set_bit());
         while self.csr.read().lsirdy().bit_is_clear() {}
     }
 
