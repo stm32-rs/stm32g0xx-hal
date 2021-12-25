@@ -26,7 +26,7 @@ pub enum OutputCompareMode {
 
 pub struct Pwm<TIM> {
     clk: Hertz,
-    tim: PhantomData<TIM>,
+    tim: TIM,
 }
 
 pub struct PwmPin<TIM, CH> {
@@ -69,13 +69,13 @@ macro_rules! pwm {
                 }
             }
 
-            fn $timX<F: Into<Hertz>>(_tim: $TIMX, freq: F, rcc: &mut Rcc) -> Pwm<$TIMX> {
+            fn $timX<F: Into<Hertz>>(tim: $TIMX, freq: F, rcc: &mut Rcc) -> Pwm<$TIMX> {
                 $TIMX::enable(rcc);
                 $TIMX::reset(rcc);
 
                 let mut pwm = Pwm::<$TIMX> {
                     clk: rcc.clocks.apb_tim_clk,
-                    tim: PhantomData,
+                    tim,
                 };
                 pwm.set_freq(freq);
                 pwm
@@ -88,15 +88,33 @@ macro_rules! pwm {
                     let arr = ratio / (psc + 1) - 1;
 
                     unsafe {
-                        let tim = &*$TIMX::ptr();
-                        tim.psc.write(|w| w.psc().bits(psc as u16));
-                        tim.arr.write(|w| w.$arr().bits(arr as u16));
+                        self.tim.psc.write(|w| w.psc().bits(psc as u16));
+                        self.tim.arr.write(|w| w.$arr().bits(arr as u16));
                         $(
-                            tim.arr.modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
+                            self.tim.arr.modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
                         )*
-                        tim.cr1.write(|w| w.cen().set_bit())
+                        self.tim.cr1.write(|w| w.cen().set_bit())
                     }
                 }
+                /// Starts listening
+                pub fn listen(&mut self) {
+                    self.tim.dier.write(|w| w.uie().set_bit());
+                }
+
+                /// Stops listening
+                pub fn unlisten(&mut self) {
+                    self.tim.dier.write(|w| w.uie().clear_bit());
+                }
+                /// Clears interrupt flag
+                pub fn clear_irq(&mut self) {
+                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                }
+
+                /// Resets counter value
+                pub fn reset(&mut self) {
+                    self.tim.cnt.reset();
+                }
+
             }
         )+
     }
