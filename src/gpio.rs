@@ -2,6 +2,7 @@
 use core::marker::PhantomData;
 
 use crate::rcc::Rcc;
+use embedded_hal::digital::v2::PinState;
 
 /// Default pin mode
 pub type DefaultMode = Analog;
@@ -274,6 +275,14 @@ macro_rules! gpio {
                         $PXi { _mode: PhantomData }
                     }
 
+                    /// Configures the pin to operate as an open drain output
+                    /// pin with `initial_state` specifying whether the pin
+                    /// should initially be high or low
+                    pub fn into_open_drain_output_in_state(mut self, initial_state: PinState) -> $PXi<Output<OpenDrain>> {
+                        self.internal_set_state(initial_state);
+                        self.into_open_drain_output()
+                    }
+
                     /// Configures the pin to operate as an open drain output pin
                     pub fn into_open_drain_output(self) -> $PXi<Output<OpenDrain>> {
                         let offset = 2 * $i;
@@ -292,7 +301,15 @@ macro_rules! gpio {
                         $PXi { _mode: PhantomData }
                     }
 
-                    /// Configures the pin to operate as an push pull output pin
+                    /// Configures the pin to operate as a push pull output pin
+                    /// with `initial_state` specifying whether the pin should
+                    /// initially be high or low
+                    pub fn into_push_pull_output_in_state(mut self, initial_state: PinState) -> $PXi<Output<PushPull>> {
+                        self.internal_set_state(initial_state);
+                        self.into_push_pull_output()
+                    }
+
+                    /// Configures the pin to operate as a push pull output pin
                     pub fn into_push_pull_output(self) -> $PXi<Output<PushPull>> {
                         let offset = 2 * $i;
                         unsafe {
@@ -376,6 +393,19 @@ macro_rules! gpio {
                             });
                         }
                     }
+
+                    fn internal_set_state(&mut self, state: PinState) {
+                        match state {
+                            PinState::High => {
+                                // NOTE(unsafe) atomic write to a stateless register
+                                unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << $i)) };
+                            }
+                            PinState::Low => {
+                                // NOTE(unsafe) atomic write to a stateless register
+                                unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << ($i + 16))) };
+                            }
+                        }
+                    }
                 }
 
                 impl<MODE> $PXi<Output<MODE>> {
@@ -392,14 +422,12 @@ macro_rules! gpio {
                     type Error = Infallible;
 
                     fn set_high(&mut self) -> Result<(), Self::Error> {
-                        // NOTE(unsafe) atomic write to a stateless register
-                        unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << $i)) };
+                        self.internal_set_state(PinState::High);
                         Ok(())
                     }
 
                     fn set_low(&mut self) -> Result<(), Self::Error>{
-                        // NOTE(unsafe) atomic write to a stateless register
-                        unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << ($i + 16))) };
+                        self.internal_set_state(PinState::Low);
                         Ok(())
                     }
                 }

@@ -21,8 +21,8 @@ fn main() -> ! {
     let mut rcc = dp.RCC.constrain();
     let gpiob = dp.GPIOB.split(&mut rcc);
 
-    let sda = gpiob.pb7.into_open_drain_output();
-    let scl = gpiob.pb6.into_open_drain_output();
+    let sda = gpiob.pb7.into_open_drain_output_in_state(PinState::High);
+    let scl = gpiob.pb6.into_open_drain_output_in_state(PinState::High);
 
     let mut i2c = dp
         .I2C1
