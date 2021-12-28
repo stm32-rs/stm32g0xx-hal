@@ -1,4 +1,12 @@
+#[cfg(feature = "i2c-blocking")]
 pub mod blocking;
+
+#[cfg(feature = "i2c-nonblocking")]
+pub mod nonblocking;
+
+#[cfg(feature = "i2c-nonblocking")]
+pub use nonblocking::*;
+
 pub mod config;
 
 use crate::rcc::*;
@@ -14,6 +22,12 @@ pub enum SlaveAddressMask {
     MaskFiveBits,
     MaskSixBits,
     MaskAllBits,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum I2cResult<'a> {
+    Data(&'a [u8]),               // contains reference to buffer result
+    Addressed(u16, I2cDirection), // a slave is addressed by a master
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -59,8 +73,24 @@ pub trait I2cExt<I2C> {
 }
 
 /// I2C abstraction
+#[cfg(feature = "i2c-blocking")]
 pub struct I2c<I2C, SDA, SCL> {
     i2c: I2C,
     sda: SDA,
     scl: SCL,
+}
+
+#[cfg(feature = "i2c-nonblocking")]
+pub struct I2c<I2C, SDA, SCL> {
+    i2c: I2C,
+    sda: SDA,
+    scl: SCL,
+    address: u16,
+    watchdog: u16, // on each start set to 10, on each stop set to 0
+    index: usize,
+    length: usize,
+    errors: usize,            // global error counter, reset on read
+    length_write_read: usize, // for a master write_read operation this remembers the size of the read operation
+    // for a slave device this must be 0
+    data: [u8; 256], // during transfer the driver will be the owner of the buffer
 }
