@@ -57,6 +57,9 @@ pub trait I2cMaster {
 
     /// return the address of the addressed slave
     fn get_address(&self) -> u16;
+    
+    /// return a non mutable slice to the internal data, with the size of the last transaction
+    fn get_data(&self) -> &[u8];
 }
 
 pub trait I2cSlave {
@@ -78,6 +81,9 @@ pub trait I2cSlave {
 
     /// return the address of the addressed slave
     fn get_address(&self) -> u16;
+    
+    /// return a non mutable slice to the internal data, with the size of the last transaction
+    fn get_data(&self) -> &[u8]; 
 
     /// Set and enable the (7 bit) adress. To keep the interface generic, only slave address 1 can be set
     fn set_address(&mut self, address: u16);
@@ -317,7 +323,14 @@ macro_rules! i2c {
                     // Disable the watchdog
                     self.watchdog = 0;
                     if self.index == self.length {
-                        return Ok( I2cResult::Data(&self.data[0..self.length]) )
+                        // figure out the direction
+                        let direction = if isr.dir().bit_is_set()
+                            {
+                                I2cDirection::MasterReadSlaveWrite
+                            }  else  {
+                                I2cDirection::MasterWriteSlaveRead
+                            };
+                        return Ok( I2cResult::Data(self.address, direction,  &self.data[0..self.length]) )
                     } else
                     if self.index == 0 {
                         self.errors += 1;
@@ -510,9 +523,14 @@ macro_rules! i2c {
                 // in non-blocking mode the result is not yet available
                 Ok (())
             }
-
+            
             fn get_address(&self) -> u16 {
                 self.address
+            }    
+
+            /// return a non mutable slice to the internal data, with the size of the last transaction
+            fn get_data(&self) -> &[u8] {
+                &self.data[0..self.length]
             }
         }
 
@@ -583,9 +601,12 @@ macro_rules! i2c {
                 // in non-blocking mode the result is not yet available
                 Ok (())
             }
-
             fn get_address(&self) -> u16 {
                 self.address
+            }            
+            /// return a non mutable slice to the internal data, with the size of the last transaction
+            fn get_data(&self) -> &[u8] {
+                &self.data[0..self.length]
             }
         }
 
