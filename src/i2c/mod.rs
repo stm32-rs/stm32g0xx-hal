@@ -26,8 +26,8 @@ pub enum SlaveAddressMask {
 
 #[derive(Debug, Clone, Copy)]
 pub enum I2cResult<'a> {
-    Data(u16, I2cDirection,&'a [u8]), // contains address, direction and data slice reference 
-    Addressed(u16, I2cDirection), // a slave is addressed by a master
+    Data(u16, I2cDirection, &'a [u8]), // contains address, direction and data slice reference
+    Addressed(u16, I2cDirection),      // a slave is addressed by a master
 }
 
 #[derive(Debug, Clone, Copy)]
