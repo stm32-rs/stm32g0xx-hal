@@ -92,5 +92,5 @@ pub struct I2c<I2C, SDA, SCL> {
     errors: usize,            // global error counter, reset on read
     length_write_read: usize, // for a master write_read operation this remembers the size of the read operation
     // for a slave device this must be 0
-    data: [u8; 256], // during transfer the driver will be the owner of the buffer
+    data: [u8; 255], // during transfer the driver will be the owner of the buffer
 }

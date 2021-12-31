@@ -62,21 +62,21 @@ pub trait I2cMaster {
     fn get_data(&self) -> &[u8];
 }
 
+/// The MasterWriteSlaveRead  is fully under control of the master. The slave simply has to accept
+/// the amount of bytes send by the master
+/// The MasterReadSlaveWrite is onder control of the slave. The slave decides how many bytes to send
 pub trait I2cSlave {
     /// Enable/ disable sbc. Default sbc is switched on.
     /// For master write/read the transaction should start with sbc disabled.
     /// So ACK will be send on the last received byte. Then before the send phase sbc should enabled again
     fn slave_sbc(&mut self, sbc_enabled: bool);
 
-    /// Start reading the bytes, send by the master . If OK returned, all bytes are transferred
-    /// If the master want to send more bytes than the slave can recieve the slave will NACK the n+1 byte
-    /// In this case the function will return IncorrectFrameSize(bytes.len() + 1)
-    /// If the master did send a STOP before all bytes are recieve, the slave will return IncorrectFrameSize(actual nr of bytes send)
-    fn slave_read(&mut self, len: u8) -> Result<(), Error>;
-
     /// Start writing the bytes, the master want to receive. If OK returned, all bytes are transferred
     /// If the master wants more data than bytes.len()  the master will run into a timeout, This function will return Ok(())
-    /// If the master wants less data than bytes.len(), the function will return  IncorrectFrameSize(bytes.len() + 1)
+    /// If the master wants less data than bytes.len(), this function will return OK, but with the incorrect nr
+    /// of bytes  in the I2cResult
+    /// Note that this function must be called after a I2cResult::Addressed when MasterReadSlaveWrite
+    /// otherwise the bus gets blocked.
     fn slave_write(&mut self, bytes: &[u8]) -> Result<(), Error>;
 
     /// return the address of the addressed slave
@@ -215,7 +215,7 @@ macro_rules! i2c {
                     length:0,
                     errors:0,
                     length_write_read:0,
-                    data:[0_u8;256]
+                    data:[0_u8;255]
                 }
             }
             pub fn release(self) -> ($I2CX, SDA, SCL) {
@@ -322,7 +322,11 @@ macro_rules! i2c {
                     self.i2c.icr.write(|w| w.stopcf().set_bit());
                     // Disable the watchdog
                     self.watchdog = 0;
-                    if self.index == self.length {
+                    if self.index == 0 {
+                        self.errors += 1;
+                        return Err( Other(Error::Nack))
+                    } else
+                    {
                         // figure out the direction
                         let direction = if isr.dir().bit_is_set()
                             {
@@ -330,15 +334,9 @@ macro_rules! i2c {
                             }  else  {
                                 I2cDirection::MasterWriteSlaveRead
                             };
-                        return Ok( I2cResult::Data(self.address, direction,  &self.data[0..self.length]) )
-                    } else
-                    if self.index == 0 {
-                        self.errors += 1;
-                        return Err( Other(Error::Nack))
-                    } else
-                    {
-                        self.errors += 1;
-                        return Err(Other(Error::IncorrectFrameSize(self.index)))
+                        // return the actual amount of data (self.index), not the requested (self.length)
+                        // application must evaluate the size of the frame
+                        return Ok( I2cResult::Data(self.address, direction,  &self.data[0..self.index]) )
                     }
                 }else
                 if isr.tc().bit_is_set() {
@@ -405,13 +403,27 @@ macro_rules! i2c {
                     // guard against misbehavior
                     self.watchdog = 10;
 
-                    // figure out the direction
+                    // figure out the direction.
                     let direction = if isr.dir().bit_is_set()
                         {
                             I2cDirection::MasterReadSlaveWrite
                         }  else  {
+                            // Start the master write slave read transaction fully automatically here
+                            // Set the nbytes to the max size and prepare to receive bytes into `buffer`.
+                            self.length = self.data.len();
+                            self.index = 0;
+                            self.i2c.cr2.modify(|_, w| unsafe {
+                                // Set number of bytes to transfer: as many as internal buffer
+                                w.nbytes().bits(self.length as u8)
+                                // during sending nbytes automatically send a ACK, stretch clock after last byte
+                                .reload().set_bit()
+                            });
+                            // end address phase, release clock stretching
+                            self.i2c.icr.write(|w| w.addrcf().set_bit());
+                            // return result
                             I2cDirection::MasterWriteSlaveRead
                         };
+
                     // do not yet release the clock stretching here
                     return Ok(I2cResult::Addressed(current_address, direction))
                 }
@@ -573,31 +585,6 @@ macro_rules! i2c {
                 // end address phase, release clock stretching
                 self.i2c.icr.write(|w| w.addrcf().set_bit() );
 
-                // in non-blocking mode the result is not yet available
-                Ok (())
-            }
-
-
-            fn slave_read(&mut self, len:u8) -> Result<(), Error> {
-                self.length = len as usize;
-                self.index = 0;
-
-                // Set the nbytes START and prepare to receive bytes into `buffer`.
-                self.i2c.cr2.modify(|_, w| unsafe {
-                    w
-                        // Set number of bytes to transfer: maximum as all incoming bytes will be ACK'ed
-                        .nbytes().bits(len as u8)
-                        // during sending nbytes automatically send a ACK, stretch clock after last byte
-                        .reload().set_bit()
-                });
-                // end address phase, release clock stretching
-                self.i2c.icr.write(|w|
-                    w.addrcf().set_bit()
-                );
-                flush_rxdr!(self.i2c);
-                for i  in 0.. len as usize {
-                    self.data[i] = 0;
-                }
                 // in non-blocking mode the result is not yet available
                 Ok (())
             }
