@@ -593,7 +593,7 @@ macro_rules! i2c {
             }
             /// return a non mutable slice to the internal data, with the size of the last transaction
             fn get_data(&self) -> &[u8] {
-                &self.data[0..self.length]
+                &self.data[0..self.index]
             }
         }
 
