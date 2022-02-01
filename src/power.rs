@@ -6,9 +6,10 @@ use crate::{
 };
 
 pub enum LowPowerMode {
-    StopMode1 = 0b00,
-    StopMode2 = 0b01,
-    Standby = 0b11,
+    StopMode1 = 0b000,
+    StopMode2 = 0b001,
+    Standby = 0b011,
+    Shutdown = 0b111,
 }
 
 pub enum PowerMode {
