@@ -15,6 +15,7 @@ pub enum LowPowerMode {
 pub enum PowerMode {
     Run,
     LowPower(LowPowerMode),
+    UltraLowPower(LowPowerMode),
 }
 
 pub struct Power {
@@ -34,6 +35,16 @@ impl Power {
                 while !self.rb.sr2.read().reglpf().bit_is_clear() {}
             }
             PowerMode::LowPower(sm) => {
+                self.rb.cr3.modify(|_, w| w.ulpen().clear_bit());
+                self.rb
+                    .cr1
+                    .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });
+                while !self.rb.sr2.read().reglps().bit_is_set()
+                    || !self.rb.sr2.read().reglpf().bit_is_set()
+                {}
+            }
+            PowerMode::UltraLowPower(sm) => {
+                self.rb.cr3.modify(|_, w| w.ulpen().set_bit());
                 self.rb
                     .cr1
                     .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });
