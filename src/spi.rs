@@ -66,10 +66,10 @@ pub struct Spi<SPI, PINS> {
     pins: PINS,
 }
 
-pub trait SpiExt<SPI>: Sized {
-    fn spi<PINS, T>(self, pins: PINS, mode: Mode, freq: T, rcc: &mut Rcc) -> Spi<SPI, PINS>
+pub trait SpiExt: Sized {
+    fn spi<PINS, T>(self, pins: PINS, mode: Mode, freq: T, rcc: &mut Rcc) -> Spi<Self, PINS>
     where
-        PINS: Pins<SPI>,
+        PINS: Pins<Self>,
         T: Into<Hertz>;
 }
 
@@ -228,7 +228,7 @@ macro_rules! spi {
             }
         }
 
-        impl SpiExt<$SPIX> for $SPIX {
+        impl SpiExt for $SPIX {
             fn spi<PINS, T>(self, pins: PINS, mode: Mode, freq: T, rcc: &mut Rcc) -> Spi<$SPIX, PINS>
             where
                 PINS: Pins<$SPIX>,
