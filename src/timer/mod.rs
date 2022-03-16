@@ -160,8 +160,9 @@ macro_rules! timers {
                 where
                     T: Into<MicroSecond>,
                 {
-                    // pause
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                    // Pause the counter. Also set URS so that when we set UG below, it will
+                    // generate an update event *without* triggering an interrupt.
+                    self.tim.cr1.modify(|_, w| w.cen().clear_bit().urs().set_bit());
                     // reset counter
                     self.tim.cnt.reset();
                     // clear interrupt flag
@@ -174,7 +175,12 @@ macro_rules! timers {
 
                     self.tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
                     self.tim.arr.write(|w| unsafe { w.bits(arr) });
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit().urs().set_bit());
+
+                    // Generate an update event so that PSC and ARR values are copied into their
+                    // shadow registers.
+                    self.tim.egr.write(|w| w.ug().set_bit());
+
+                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
                 }
 
                 fn wait(&mut self) -> nb::Result<(), Void> {
