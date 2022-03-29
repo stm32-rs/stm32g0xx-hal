@@ -477,6 +477,10 @@ macro_rules! uart_basic {
                             StopBits::STOP2 => 0b10,
                             StopBits::STOP1P5 => 0b11,
                         })
+                        .txinv()
+                        .bit(config.inverted_tx)
+                        .rxinv()
+                        .bit(config.inverted_rx)
                         .swap()
                         .bit(config.swap)
                 });
@@ -578,6 +582,10 @@ macro_rules! uart_full {
                 usart.cr2.write(|w| unsafe {
                     w.stop()
                         .bits(config.stopbits.bits())
+                        .txinv()
+                        .bit(config.inverted_tx)
+                        .rxinv()
+                        .bit(config.inverted_rx)
                         .swap()
                         .bit(config.swap)
                 });
