@@ -453,21 +453,33 @@ macro_rules! adc_pin {
 }
 
 adc_pin! {
-    Channel0: (PA0<Analog>, 0u8),
-    Channel1: (PA1<Analog>, 1u8),
-    Channel2: (PA2<Analog>, 2u8),
-    Channel3: (PA3<Analog>, 3u8),
-    Channel4: (PA4<Analog>, 4u8),
-    Channel5: (PA5<Analog>, 5u8),
-    Channel6: (PA6<Analog>, 6u8),
-    Channel7: (PA7<Analog>, 7u8),
-    Channel8: (PB0<Analog>, 8u8),
-    Channel9: (PB1<Analog>, 9u8),
-    Channel10: (PB2<Analog>, 10u8),
-    Channel11: (PB10<Analog>, 11u8),
-    Channel11: (PB7<Analog>, 11u8),
-    Channel15: (PB11<Analog>, 15u8),
-    Channel16: (PB12<Analog>, 16u8),
-    Channel17: (PC4<Analog>, 17u8),
-    Channel18: (PC5<Analog>, 18u8),
+    Channel0: (gpioa::PA0<Analog>, 0u8),
+    Channel1: (gpioa::PA1<Analog>, 1u8),
+    Channel2: (gpioa::PA2<Analog>, 2u8),
+    Channel3: (gpioa::PA3<Analog>, 3u8),
+    Channel4: (gpioa::PA4<Analog>, 4u8),
+    Channel5: (gpioa::PA5<Analog>, 5u8),
+    Channel6: (gpioa::PA6<Analog>, 6u8),
+    Channel7: (gpioa::PA7<Analog>, 7u8),
+    Channel8: (gpiob::PB0<Analog>, 8u8),
+    Channel9: (gpiob::PB1<Analog>, 9u8),
+    Channel10: (gpiob::PB2<Analog>, 10u8),
+    Channel11: (gpiob::PB10<Analog>, 11u8),
+    Channel15: (gpiob::PB11<Analog>, 15u8),
+    Channel16: (gpiob::PB12<Analog>, 16u8),
+}
+
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041",))]
+adc_pin! {
+    Channel11: (gpiob::PB7<Analog>, 11u8),
+    Channel15: (gpioa::PA11<Analog>, 15u8),
+    Channel16: (gpioa::PA12<Analog>, 16u8),
+    Channel17: (gpioa::PA13<Analog>, 17u8),
+    Channel18: (gpioa::PA14<Analog>, 18u8),
+}
+
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081",))]
+adc_pin! {
+    Channel17: (gpioc::PC4<Analog>, 17u8),
+    Channel18: (gpioc::PC5<Analog>, 18u8),
 }
