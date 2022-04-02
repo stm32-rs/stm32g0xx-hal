@@ -106,7 +106,7 @@ pub struct Adc {
     sample_time: SampleTime,
     align: Align,
     precision: Precision,
-    vdda_mv: Option<u32>,
+    vref_cache: Option<u16>,
 }
 
 /// Contains the calibration factors for the ADC which can be reused with [`Adc::set_calibration()`]
@@ -125,7 +125,7 @@ impl Adc {
             sample_time: SampleTime::T_2,
             align: Align::Right,
             precision: Precision::B_12,
-            vdda_mv: None,
+            vref_cache: None,
         }
     }
 
@@ -228,37 +228,53 @@ impl Adc {
         self.rb.ier.modify(|_, w| w.eocie().clear_bit()); // end of sequence interupt disable
     }
 
+    /// Read actual VREF voltage using the internal reference
+    ///
+    /// If oversampling is enabled, the return value is scaled down accordingly.
+    /// The product of the return value and any ADC reading always gives correct voltage in 4096ths of mV
+    /// regardless of oversampling and shift settings provided that these settings remain the same.
+    pub fn read_vref(&mut self) -> nb::Result<u16, ()> {
+        let mut vref = VRef::new();
+        let vref_val: u32 = if vref.enabled(self) {
+            self.read(&mut vref)?
+        } else {
+            vref.enable(self);
+            let vref_val = self.read(&mut vref)?;
+            vref.disable(self);
+            vref_val
+        };
+
+        let vref_cal: u32 = unsafe {
+            // DS12766 3.13.2
+            ptr::read_volatile(0x1FFF_75AA as *const u16) as u32
+        };
+
+        // RM0454 14.9 Calculating the actual VDDA voltage using the internal reference voltage
+        // V_DDA = 3 V x VREFINT_CAL / VREFINT_DATA
+        let vref = (vref_cal * 3_000_u32 / vref_val) as u16;
+        self.vref_cache = Some(vref);
+        Ok(vref)
+    }
+
+    /// Get VREF value using cached value if possible
+    ///
+    /// See `read_vref` for more details.
+    pub fn get_vref_cached(&mut self) -> nb::Result<u16, ()> {
+        if let Some(vref) = self.vref_cache {
+            Ok(vref)
+        } else {
+            self.read_vref()
+        }
+    }
+
     pub fn read_voltage<PIN: Channel<Adc, ID = u8>>(
         &mut self,
         pin: &mut PIN,
     ) -> nb::Result<u16, ()> {
-        let vdda_mv = if let Some(vdda_mv) = self.vdda_mv {
-            vdda_mv
-        } else {
-            let mut vref = VRef::new();
-            let vref_val: u32 = if vref.enabled(self) {
-                self.read(&mut vref)?
-            } else {
-                vref.enable(self);
-                let vref_val = self.read(&mut vref)?;
-                vref.disable(self);
-                vref_val
-            };
-
-            let vref_cal: u32 = unsafe {
-                // DS12766 3.13.2
-                ptr::read_volatile(0x1FFF_75AA as *const u16) as u32
-            };
-
-            // RM0454 14.9 Calculating the actual VDDA voltage using the internal reference voltage
-            // V_DDA = 3 V x VREFINT_CAL / VREFINT_DATA
-            let vdda_mv = vref_cal * 3_000_u32 / vref_val;
-            self.vdda_mv = Some(vdda_mv);
-            vdda_mv
-        };
+        let vref = self.get_vref_cached()?;
 
         self.read(pin).map(|raw: u32| {
-            let adc_mv = (vdda_mv * raw) >> 12;
+            let adc_mv = (vref as u32 * raw) >> 12;
             adc_mv as u16
         })
     }
