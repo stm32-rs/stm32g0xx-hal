@@ -279,6 +279,30 @@ impl Adc {
         })
     }
 
+    pub fn read_temperature(&mut self) -> nb::Result<i16, ()> {
+        let mut vtemp = VTemp::new();
+        let vtemp_voltage: u16 = if vtemp.enabled(self) {
+            self.read_voltage(&mut vtemp)?
+        } else {
+            vtemp.enable(self);
+            let vtemp_voltage = self.read_voltage(&mut vtemp)?;
+            vtemp.disable(self);
+            vtemp_voltage
+        };
+
+        let ts_cal1: u32 = unsafe {
+            // DS12991 3.14.1
+            // at 3000 mV Vref+ and 30 degC
+            ptr::read_volatile(0x1FFF_75A8 as *const u16) as u32
+        };
+
+        let v30 = (3000_u32 * ts_cal1) >> 12; // mV
+                                              // 2.5 mV/degC
+        let t = 30 + (vtemp_voltage as i32 - v30 as i32) * 10 / 25;
+
+        Ok(t as i16)
+    }
+
     pub fn release(self) -> ADC {
         self.rb
     }
