@@ -11,6 +11,7 @@ use crate::stm32::*;
 
 use cortex_m::interrupt;
 use nb::block;
+use paste::paste;
 
 use crate::serial::config::*;
 /// Serial error
@@ -102,6 +103,11 @@ pub trait RxPin<USART> {
     fn setup(&self);
 }
 
+// Serial Driver Enable pin
+pub trait DePin<USART> {
+    fn setup(&self);
+}
+
 pub trait SerialExt<USART, Config> {
     fn usart<TX, RX>(
         self,
@@ -113,6 +119,19 @@ pub trait SerialExt<USART, Config> {
     where
         TX: TxPin<USART>,
         RX: RxPin<USART>;
+
+    fn usart_with_driver_enable<TX, RX, DE>(
+        self,
+        tx: TX,
+        rx: RX,
+        de: DE,
+        config: Config,
+        rcc: &mut Rcc,
+    ) -> Result<Serial<USART, Config>, InvalidConfig>
+    where
+        TX: TxPin<USART>,
+        RX: RxPin<USART>,
+        DE: DePin<USART>;
 }
 
 impl<USART, Config> fmt::Write for Serial<USART, Config>
@@ -138,7 +157,8 @@ where
 macro_rules! uart_shared {
     ($USARTX:ident, $dmamux_rx:ident, $dmamux_tx:ident,
         tx: [ $(($PTX:ident, $TAF:expr),)+ ],
-        rx: [ $(($PRX:ident, $RAF:expr),)+ ]) => {
+        rx: [ $(($PRX:ident, $RAF:expr),)+ ],
+        de: [ $(($PDE:ident, $DAF:expr),)+ ]) => {
 
         $(
             impl<MODE> TxPin<$USARTX> for $PTX<MODE> {
@@ -152,6 +172,14 @@ macro_rules! uart_shared {
             impl<MODE> RxPin<$USARTX> for $PRX<MODE> {
                 fn setup(&self) {
                     self.set_alt_mode($RAF)
+                }
+            }
+        )+
+
+        $(
+            impl<MODE> DePin<$USARTX> for $PDE<MODE> {
+                fn setup(&self) {
+                    self.set_alt_mode($DAF)
                 }
             }
         )+
@@ -332,128 +360,225 @@ macro_rules! uart_basic {
     ($USARTX:ident,
         $usartX:ident, $clk_mul:expr
     ) => {
-        impl SerialExt<$USARTX, BasicConfig> for $USARTX {
-            fn usart<TX, RX>(
-                self,
-                tx: TX,
-                rx: RX,
-                config: BasicConfig,
-                rcc: &mut Rcc,
-            ) -> Result<Serial<$USARTX, BasicConfig>, InvalidConfig>
-            where
-                TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX>,
-            {
-                Serial::$usartX(self, tx, rx, config, rcc)
-            }
-        }
+        paste! {
+            impl SerialExt<$USARTX, BasicConfig> for $USARTX {
+                fn usart<TX, RX>(
+                    self,
+                    tx: TX,
+                    rx: RX,
+                    config: BasicConfig,
+                    rcc: &mut Rcc,
+                ) -> Result<Serial<$USARTX, BasicConfig>, InvalidConfig>
+                where
+                    TX: TxPin<$USARTX>,
+                    RX: RxPin<$USARTX>,
+                {
+                    Serial::$usartX(self, tx, rx, config, rcc)
+                }
 
-        impl Serial<$USARTX, BasicConfig> {
-            pub fn $usartX<TX, RX>(
-                usart: $USARTX,
-                tx: TX,
-                rx: RX,
-                config: BasicConfig,
-                rcc: &mut Rcc,
-            ) -> Result<Self, InvalidConfig>
-            where
-                TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX>,
-            {
-                // Enable clock for USART
-                $USARTX::enable(rcc);
-
-                let clk = rcc.clocks.apb_clk.raw() as u64;
-                let bdr = config.baudrate.0 as u64;
-                let div = ($clk_mul * clk) / bdr;
-                usart.brr.write(|w| unsafe { w.bits(div as u32) });
-                // Reset other registers to disable advanced USART features
-                usart.cr2.reset();
-                usart.cr3.reset();
-
-                // Disable USART, there are many bits where UE=0 is required
-                usart.cr1.modify(|_, w| w.ue().clear_bit());
-
-                // Enable transmission and receiving
-                usart.cr1.write(|w| {
-                    w.te()
-                        .set_bit()
-                        .re()
-                        .set_bit()
-                        .m0()
-                        .bit(config.wordlength == WordLength::DataBits9)
-                        .m1()
-                        .bit(config.wordlength == WordLength::DataBits7)
-                        .pce()
-                        .bit(config.parity != Parity::ParityNone)
-                        .ps()
-                        .bit(config.parity == Parity::ParityOdd)
-                });
-                usart.cr2.write(|w| unsafe {
-                    w.stop()
-                        .bits(match config.stopbits {
-                            StopBits::STOP1 => 0b00,
-                            StopBits::STOP0P5 => 0b01,
-                            StopBits::STOP2 => 0b10,
-                            StopBits::STOP1P5 => 0b11,
-                        })
-                        .swap()
-                        .bit(config.swap)
-                });
-
-                // Enable pins
-                tx.setup();
-                rx.setup();
-
-                // Enable USART
-                usart.cr1.modify(|_, w| w.ue().set_bit());
-
-                Ok(Serial {
-                    tx: Tx {
-                        _usart: PhantomData,
-                        _config: PhantomData,
-                    },
-                    rx: Rx {
-                        _usart: PhantomData,
-                        _config: PhantomData,
-                    },
-                    usart,
-                    _config: PhantomData,
-                })
-            }
-
-            /// Starts listening for an interrupt event
-            pub fn listen(&mut self, event: Event) {
-                match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
-                    _ => {}
+                fn usart_with_driver_enable<TX, RX, DE>(
+                    self,
+                    tx: TX,
+                    rx: RX,
+                    de: DE,
+                    config: BasicConfig,
+                    rcc: &mut Rcc,
+                ) -> Result<Serial<$USARTX, BasicConfig>, InvalidConfig>
+                where
+                    TX: TxPin<$USARTX>,
+                    RX: RxPin<$USARTX>,
+                    DE: DePin<$USARTX>,
+                {
+                    Serial::[< $usartX _with_driver_enable >](self, tx, rx, de, config, rcc)
                 }
             }
 
-            /// Stop listening for an interrupt event
-            pub fn unlisten(&mut self, event: Event) {
-                match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
-                    _ => {}
+            impl Serial<$USARTX, BasicConfig> {
+                pub fn $usartX<TX, RX>(
+                    usart: $USARTX,
+                    tx: TX,
+                    rx: RX,
+                    config: BasicConfig,
+                    rcc: &mut Rcc,
+                ) -> Result<Self, InvalidConfig>
+                where
+                    TX: TxPin<$USARTX>,
+                    RX: RxPin<$USARTX>,
+                {
+                    // Enable clock for USART
+                    $USARTX::enable(rcc);
+
+                    let clk = rcc.clocks.apb_clk.raw() as u64;
+                    let bdr = config.baudrate.0 as u64;
+                    let div = ($clk_mul * clk) / bdr;
+                    usart.brr.write(|w| unsafe { w.bits(div as u32) });
+                    // Reset other registers to disable advanced USART features
+                    usart.cr2.reset();
+                    usart.cr3.reset();
+
+                    // Disable USART, there are many bits where UE=0 is required
+                    usart.cr1.modify(|_, w| w.ue().clear_bit());
+
+                    // Enable transmission and receiving
+                    usart.cr1.write(|w| {
+                        w.te()
+                            .set_bit()
+                            .re()
+                            .set_bit()
+                            .m0()
+                            .bit(config.wordlength == WordLength::DataBits9)
+                            .m1()
+                            .bit(config.wordlength == WordLength::DataBits7)
+                            .pce()
+                            .bit(config.parity != Parity::ParityNone)
+                            .ps()
+                            .bit(config.parity == Parity::ParityOdd)
+                    });
+                    usart.cr2.write(|w| unsafe {
+                        w.stop()
+                            .bits(match config.stopbits {
+                                StopBits::STOP1 => 0b00,
+                                StopBits::STOP0P5 => 0b01,
+                                StopBits::STOP2 => 0b10,
+                                StopBits::STOP1P5 => 0b11,
+                            })
+                            .swap()
+                            .bit(config.swap)
+                    });
+
+                    // Enable pins
+                    tx.setup();
+                    rx.setup();
+
+                    // Enable USART
+                    usart.cr1.modify(|_, w| w.ue().set_bit());
+
+                    Ok(Serial {
+                        tx: Tx {
+                            _usart: PhantomData,
+                            _config: PhantomData,
+                        },
+                        rx: Rx {
+                            _usart: PhantomData,
+                            _config: PhantomData,
+                        },
+                        usart,
+                        _config: PhantomData,
+                    })
                 }
-            }
 
-            /// Check if interrupt event is pending
-            pub fn is_pending(&mut self, event: Event) -> bool {
-                (self.usart.isr.read().bits() & event.val()) != 0
-            }
+                pub fn [< $usartX _with_driver_enable >]<TX, RX, DE>(
+                    usart: $USARTX,
+                    tx: TX,
+                    rx: RX,
+                    de: DE,
+                    config: BasicConfig,
+                    rcc: &mut Rcc,
+                ) -> Result<Self, InvalidConfig>
+                where
+                    TX: TxPin<$USARTX>,
+                    RX: RxPin<$USARTX>,
+                    DE: DePin<$USARTX>,
+                {
+                    // Enable clock for USART
+                    $USARTX::enable(rcc);
 
-            /// Clear pending interrupt
-            pub fn unpend(&mut self, event: Event) {
-                // mask the allowed bits
-                let mask: u32 = 0x123BFF;
-                self.usart
-                    .icr
-                    .write(|w| unsafe { w.bits(event.val() & mask) });
+                    let clk = rcc.clocks.apb_clk.raw() as u64;
+                    let bdr = config.baudrate.0 as u64;
+                    let div = ($clk_mul * clk) / bdr;
+                    usart.brr.write(|w| unsafe { w.bits(div as u32) });
+                    // Reset other registers to disable advanced USART features
+                    usart.cr2.reset();
+                    usart.cr3.reset();
+
+                    // Disable USART, there are many bits where UE=0 is required
+                    usart.cr1.modify(|_, w| w.ue().clear_bit());
+
+                    // Enable transmission and receiving
+                    usart.cr1.write(|w| {
+                        w.te()
+                            .set_bit()
+                            .re()
+                            .set_bit()
+                            .m0()
+                            .bit(config.wordlength == WordLength::DataBits9)
+                            .m1()
+                            .bit(config.wordlength == WordLength::DataBits7)
+                            .pce()
+                            .bit(config.parity != Parity::ParityNone)
+                            .ps()
+                            .bit(config.parity == Parity::ParityOdd)
+                    });
+                    usart.cr2.write(|w| unsafe {
+                        w.stop()
+                            .bits(match config.stopbits {
+                                StopBits::STOP1 => 0b00,
+                                StopBits::STOP0P5 => 0b01,
+                                StopBits::STOP2 => 0b10,
+                                StopBits::STOP1P5 => 0b11,
+                            })
+                            .swap()
+                            .bit(config.swap)
+                    });
+                    usart.cr3.write(|w| {
+                        w.dem().set_bit()
+                    });
+
+                    // Enable pins
+                    tx.setup();
+                    rx.setup();
+                    de.setup();
+
+                    // Enable USART
+                    usart.cr1.modify(|_, w| w.ue().set_bit());
+
+                    Ok(Serial {
+                        tx: Tx {
+                            _usart: PhantomData,
+                            _config: PhantomData,
+                        },
+                        rx: Rx {
+                            _usart: PhantomData,
+                            _config: PhantomData,
+                        },
+                        usart,
+                        _config: PhantomData,
+                    })
+                }
+
+                /// Starts listening for an interrupt event
+                pub fn listen(&mut self, event: Event) {
+                    match event {
+                        Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
+                        Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
+                        Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
+                        _ => {}
+                    }
+                }
+
+                /// Stop listening for an interrupt event
+                pub fn unlisten(&mut self, event: Event) {
+                    match event {
+                        Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
+                        Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
+                        Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
+                        _ => {}
+                    }
+                }
+
+                /// Check if interrupt event is pending
+                pub fn is_pending(&mut self, event: Event) -> bool {
+                    (self.usart.isr.read().bits() & event.val()) != 0
+                }
+
+                /// Clear pending interrupt
+                pub fn unpend(&mut self, event: Event) {
+                    // mask the allowed bits
+                    let mask: u32 = 0x123BFF;
+                    self.usart
+                        .icr
+                        .write(|w| unsafe { w.bits(event.val() & mask) });
+                }
             }
         }
     };
@@ -463,183 +588,295 @@ macro_rules! uart_full {
     ($USARTX:ident,
         $usartX:ident, $clk_mul:expr
     ) => {
-        impl SerialExt<$USARTX, FullConfig> for $USARTX {
-            fn usart<TX, RX>(
-                self,
-                tx: TX,
-                rx: RX,
-                config: FullConfig,
-                rcc: &mut Rcc,
-            ) -> Result<Serial<$USARTX, FullConfig>, InvalidConfig>
-            where
-                TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX>,
-            {
-                Serial::$usartX(self, tx, rx, config, rcc)
-            }
-        }
-
-        impl Serial<$USARTX, FullConfig> {
-            pub fn $usartX<TX, RX>(
-                usart: $USARTX,
-                tx: TX,
-                rx: RX,
-                config: FullConfig,
-                rcc: &mut Rcc,
-            ) -> Result<Self, InvalidConfig>
-            where
-                TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX>,
-            {
-                // Enable clock for USART
-                $USARTX::enable(rcc);
-
-                let clk = rcc.clocks.apb_clk.raw() as u64;
-                let bdr = config.baudrate.0 as u64;
-                let clk_mul = 1;
-                let div = (clk_mul * clk) / bdr;
-                usart.brr.write(|w| unsafe { w.bits(div as u32) });
-
-                usart.cr1.reset();
-                usart.cr2.reset();
-                usart.cr3.reset();
-
-                usart.cr2.write(|w| unsafe {
-                    w.stop()
-                        .bits(config.stopbits.bits())
-                        .swap()
-                        .bit(config.swap)
-                });
-
-                if let Some(timeout) = config.receiver_timeout {
-                    usart.cr1.write(|w| w.rtoie().set_bit());
-                    usart.cr2.modify(|_, w| w.rtoen().set_bit());
-                    usart.rtor.write(|w| unsafe { w.rto().bits(timeout) });
+        paste! {
+            impl SerialExt<$USARTX, FullConfig> for $USARTX {
+                fn usart<TX, RX>(
+                    self,
+                    tx: TX,
+                    rx: RX,
+                    config: FullConfig,
+                    rcc: &mut Rcc,
+                ) -> Result<Serial<$USARTX, FullConfig>, InvalidConfig>
+                where
+                    TX: TxPin<$USARTX>,
+                    RX: RxPin<$USARTX>,
+                {
+                    Serial::$usartX(self, tx, rx, config, rcc)
                 }
 
-                usart.cr3.write(|w| unsafe {
-                    w.txftcfg()
-                        .bits(config.tx_fifo_threshold.bits())
-                        .rxftcfg()
-                        .bits(config.rx_fifo_threshold.bits())
-                        .txftie()
-                        .bit(config.tx_fifo_interrupt)
-                        .rxftie()
-                        .bit(config.rx_fifo_interrupt)
-                });
+                fn usart_with_driver_enable<TX, RX, DE>(
+                    self,
+                    tx: TX,
+                    rx: RX,
+                    de: DE,
+                    config: FullConfig,
+                    rcc: &mut Rcc,
+                ) -> Result<Serial<$USARTX, FullConfig>, InvalidConfig>
+                where
+                    TX: TxPin<$USARTX>,
+                    RX: RxPin<$USARTX>,
+                    DE: DePin<$USARTX>,
+                {
+                    Serial::[< $usartX _with_driver_enable>](self, tx, rx, de, config, rcc)
+                }
+            }
 
-                usart.cr1.modify(|_, w| {
-                    w.ue()
-                        .set_bit()
-                        .te()
-                        .set_bit()
-                        .re()
-                        .set_bit()
-                        .m0()
-                        .bit(config.wordlength == WordLength::DataBits7)
-                        .m1()
-                        .bit(config.wordlength == WordLength::DataBits9)
-                        .pce()
-                        .bit(config.parity != Parity::ParityNone)
-                        .ps()
-                        .bit(config.parity == Parity::ParityOdd)
-                        .fifoen()
-                        .bit(config.fifo_enable)
-                });
+            impl Serial<$USARTX, FullConfig> {
+                pub fn $usartX<TX, RX>(
+                    usart: $USARTX,
+                    tx: TX,
+                    rx: RX,
+                    config: FullConfig,
+                    rcc: &mut Rcc,
+                ) -> Result<Self, InvalidConfig>
+                where
+                    TX: TxPin<$USARTX>,
+                    RX: RxPin<$USARTX>,
+                {
+                    // Enable clock for USART
+                    $USARTX::enable(rcc);
 
-                tx.setup();
-                rx.setup();
+                    let clk = rcc.clocks.apb_clk.raw() as u64;
+                    let bdr = config.baudrate.0 as u64;
+                    let clk_mul = 1;
+                    let div = (clk_mul * clk) / bdr;
+                    usart.brr.write(|w| unsafe { w.bits(div as u32) });
 
-                Ok(Serial {
-                    tx: Tx {
-                        _usart: PhantomData,
+                    usart.cr1.reset();
+                    usart.cr2.reset();
+                    usart.cr3.reset();
+
+                    usart.cr2.write(|w| unsafe {
+                        w.stop()
+                            .bits(config.stopbits.bits())
+                            .swap()
+                            .bit(config.swap)
+                    });
+
+                    if let Some(timeout) = config.receiver_timeout {
+                        usart.cr1.write(|w| w.rtoie().set_bit());
+                        usart.cr2.modify(|_, w| w.rtoen().set_bit());
+                        usart.rtor.write(|w| unsafe { w.rto().bits(timeout) });
+                    }
+
+                    usart.cr3.write(|w| unsafe {
+                        w.txftcfg()
+                            .bits(config.tx_fifo_threshold.bits())
+                            .rxftcfg()
+                            .bits(config.rx_fifo_threshold.bits())
+                            .txftie()
+                            .bit(config.tx_fifo_interrupt)
+                            .rxftie()
+                            .bit(config.rx_fifo_interrupt)
+                    });
+
+                    usart.cr1.modify(|_, w| {
+                        w.ue()
+                            .set_bit()
+                            .te()
+                            .set_bit()
+                            .re()
+                            .set_bit()
+                            .m0()
+                            .bit(config.wordlength == WordLength::DataBits7)
+                            .m1()
+                            .bit(config.wordlength == WordLength::DataBits9)
+                            .pce()
+                            .bit(config.parity != Parity::ParityNone)
+                            .ps()
+                            .bit(config.parity == Parity::ParityOdd)
+                            .fifoen()
+                            .bit(config.fifo_enable)
+                    });
+
+                    tx.setup();
+                    rx.setup();
+
+                    Ok(Serial {
+                        tx: Tx {
+                            _usart: PhantomData,
+                            _config: PhantomData,
+                        },
+                        rx: Rx {
+                            _usart: PhantomData,
+                            _config: PhantomData,
+                        },
+                        usart,
                         _config: PhantomData,
-                    },
-                    rx: Rx {
-                        _usart: PhantomData,
+                    })
+                }
+
+                pub fn [< $usartX _with_driver_enable>]<TX, RX, DE>(
+                    usart: $USARTX,
+                    tx: TX,
+                    rx: RX,
+                    de: DE,
+                    config: FullConfig,
+                    rcc: &mut Rcc,
+                ) -> Result<Self, InvalidConfig>
+                where
+                    TX: TxPin<$USARTX>,
+                    RX: RxPin<$USARTX>,
+                    DE: DePin<$USARTX>,
+                {
+                    // Enable clock for USART
+                    $USARTX::enable(rcc);
+
+                    let clk = rcc.clocks.apb_clk.raw() as u64;
+                    let bdr = config.baudrate.0 as u64;
+                    let clk_mul = 1;
+                    let div = (clk_mul * clk) / bdr;
+                    usart.brr.write(|w| unsafe { w.bits(div as u32) });
+
+                    usart.cr1.reset();
+                    usart.cr2.reset();
+                    usart.cr3.reset();
+
+                    usart.cr2.write(|w| unsafe {
+                        w.stop()
+                            .bits(config.stopbits.bits())
+                            .swap()
+                            .bit(config.swap)
+                    });
+
+                    if let Some(timeout) = config.receiver_timeout {
+                        usart.cr1.write(|w| w.rtoie().set_bit());
+                        usart.cr2.modify(|_, w| w.rtoen().set_bit());
+                        usart.rtor.write(|w| unsafe { w.rto().bits(timeout) });
+                    }
+
+                    usart.cr3.write(|w| unsafe {
+                        w.dem()
+                            .set_bit()
+                            .txftcfg()
+                            .bits(config.tx_fifo_threshold.bits())
+                            .rxftcfg()
+                            .bits(config.rx_fifo_threshold.bits())
+                            .txftie()
+                            .bit(config.tx_fifo_interrupt)
+                            .rxftie()
+                            .bit(config.rx_fifo_interrupt)
+                    });
+
+                    usart.cr1.modify(|_, w| {
+                        w.ue()
+                            .set_bit()
+                            .te()
+                            .set_bit()
+                            .re()
+                            .set_bit()
+                            .m0()
+                            .bit(config.wordlength == WordLength::DataBits7)
+                            .m1()
+                            .bit(config.wordlength == WordLength::DataBits9)
+                            .pce()
+                            .bit(config.parity != Parity::ParityNone)
+                            .ps()
+                            .bit(config.parity == Parity::ParityOdd)
+                            .fifoen()
+                            .bit(config.fifo_enable)
+                    });
+
+                    tx.setup();
+                    rx.setup();
+                    de.setup();
+
+                    Ok(Serial {
+                        tx: Tx {
+                            _usart: PhantomData,
+                            _config: PhantomData,
+                        },
+                        rx: Rx {
+                            _usart: PhantomData,
+                            _config: PhantomData,
+                        },
+                        usart,
                         _config: PhantomData,
-                    },
-                    usart,
-                    _config: PhantomData,
-                })
-            }
+                    })
+                }
 
-            /// Starts listening for an interrupt event
-            pub fn listen(&mut self, event: Event) {
-                match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
-                    _ => {}
+                /// Starts listening for an interrupt event
+                pub fn listen(&mut self, event: Event) {
+                    match event {
+                        Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
+                        Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
+                        Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
+                        _ => {}
+                    }
+                }
+
+                /// Stop listening for an interrupt event
+                pub fn unlisten(&mut self, event: Event) {
+                    match event {
+                        Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
+                        Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
+                        Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
+                        _ => {}
+                    }
+                }
+
+                /// Check if interrupt event is pending
+                pub fn is_pending(&mut self, event: Event) -> bool {
+                    (self.usart.isr.read().bits() & event.val()) != 0
+                }
+
+                /// Clear pending interrupt
+                pub fn unpend(&mut self, event: Event) {
+                    // mask the allowed bits
+                    let mask: u32 = 0x123BFF;
+                    self.usart
+                        .icr
+                        .write(|w| unsafe { w.bits(event.val() & mask) });
+                }
+            }
+            impl Tx<$USARTX, FullConfig> {
+                /// Returns true if the tx fifo threshold has been reached.
+                pub fn fifo_threshold_reached(&self) -> bool {
+                    let usart = unsafe { &(*$USARTX::ptr()) };
+                    usart.isr.read().txft().bit_is_set()
                 }
             }
 
-            /// Stop listening for an interrupt event
-            pub fn unlisten(&mut self, event: Event) {
-                match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
-                    _ => {}
+            impl Rx<$USARTX, FullConfig> {
+                /// Check if receiver timeout has lapsed
+                /// Returns the current state of the ISR RTOF bit
+                pub fn timeout_lapsed(&self) -> bool {
+                    let usart = unsafe { &(*$USARTX::ptr()) };
+                    usart.isr.read().rtof().bit_is_set()
                 }
-            }
 
-            /// Check if interrupt event is pending
-            pub fn is_pending(&mut self, event: Event) -> bool {
-                (self.usart.isr.read().bits() & event.val()) != 0
-            }
+                /// Clear pending receiver timeout interrupt
+                pub fn clear_timeout(&mut self) {
+                    let usart = unsafe { &(*$USARTX::ptr()) };
+                    usart.icr.write(|w| w.rtocf().set_bit());
+                }
 
-            /// Clear pending interrupt
-            pub fn unpend(&mut self, event: Event) {
-                // mask the allowed bits
-                let mask: u32 = 0x123BFF;
-                self.usart
-                    .icr
-                    .write(|w| unsafe { w.bits(event.val() & mask) });
-            }
-        }
-        impl Tx<$USARTX, FullConfig> {
-            /// Returns true if the tx fifo threshold has been reached.
-            pub fn fifo_threshold_reached(&self) -> bool {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().txft().bit_is_set()
-            }
-        }
-
-        impl Rx<$USARTX, FullConfig> {
-            /// Check if receiver timeout has lapsed
-            /// Returns the current state of the ISR RTOF bit
-            pub fn timeout_lapsed(&self) -> bool {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().rtof().bit_is_set()
-            }
-
-            /// Clear pending receiver timeout interrupt
-            pub fn clear_timeout(&mut self) {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.icr.write(|w| w.rtocf().set_bit());
-            }
-
-            /// Returns true if the rx fifo threshold has been reached.
-            pub fn fifo_threshold_reached(&self) -> bool {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().rxft().bit_is_set()
+                /// Returns true if the rx fifo threshold has been reached.
+                pub fn fifo_threshold_reached(&self) -> bool {
+                    let usart = unsafe { &(*$USARTX::ptr()) };
+                    usart.isr.read().rxft().bit_is_set()
+                }
             }
         }
     };
 }
 
 uart_shared!(USART1, USART1_RX, USART1_TX,
-tx: [
-    (PA9, AltFunction::AF1),
-    (PB6, AltFunction::AF0),
-    (PC4, AltFunction::AF1),
-],
-rx: [
-    (PA10, AltFunction::AF1),
-    (PB7, AltFunction::AF0),
-    (PC5, AltFunction::AF1),
-]);
+    tx: [
+        (PA9, AltFunction::AF1),
+        (PB6, AltFunction::AF0),
+        (PC4, AltFunction::AF1),
+    ],
+    rx: [
+        (PA10, AltFunction::AF1),
+        (PB7, AltFunction::AF0),
+        (PC5, AltFunction::AF1),
+    ],
+    de: [
+        (PA12, AltFunction::AF1),
+        (PB3, AltFunction::AF4),
+    ]
+);
 
 uart_shared!(USART2, USART2_RX, USART2_TX,
     tx: [
@@ -651,6 +888,10 @@ uart_shared!(USART2, USART2_RX, USART2_TX,
         (PA3, AltFunction::AF1),
         (PA15, AltFunction::AF1),
         (PD6, AltFunction::AF0),
+    ],
+    de: [
+        (PA1, AltFunction::AF1),
+        (PD4, AltFunction::AF0),
     ]
 );
 
@@ -672,6 +913,13 @@ uart_shared!(USART3, USART3_RX, USART3_TX,
         (PC5, AltFunction::AF1),
         (PC11, AltFunction::AF1),
         (PD9, AltFunction::AF1),
+    ],
+    de: [
+        (PA15, AltFunction::AF5),
+        (PB1, AltFunction::AF4),
+        (PB14, AltFunction::AF4),
+        (PD2, AltFunction::AF0),
+        (PD12, AltFunction::AF0),
     ]
 );
 
@@ -684,6 +932,9 @@ uart_shared!(USART4, USART4_RX, USART4_TX,
     rx: [
         (PC11, AltFunction::AF1),
         (PA1, AltFunction::AF4),
+    ],
+    de: [
+        (PA15, AltFunction::AF4),
     ]
 );
 
@@ -698,6 +949,10 @@ uart_shared!(LPUART, LPUART_RX, LPUART_TX,
         (PA3, AltFunction::AF6),
         (PB10, AltFunction::AF1),
         (PC0, AltFunction::AF1),
+    ],
+    de: [
+        (PB1, AltFunction::AF6),
+        (PB12, AltFunction::AF1),
     ]
 );
 
