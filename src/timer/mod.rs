@@ -59,7 +59,6 @@ impl CountDown for Timer<SYST> {
         T: Into<MicroSecond>,
     {
         let cycles = timeout.into().cycles(self.clk);
-        assert!(cycles < 0x00ff_ffff);
         self.tim.set_reload(cycles);
         self.tim.clear_current();
         self.tim.enable_counter();

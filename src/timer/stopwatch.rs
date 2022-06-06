@@ -16,7 +16,6 @@ macro_rules! stopwatches {
         $(
             impl Stopwatch<$TIM> {
                 pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
-                    assert!(rcc.clocks.apb_tim_clk.0 > 1_000_000);
                     $TIM::enable(rcc);
                     $TIM::reset(rcc);
 
@@ -35,9 +34,7 @@ macro_rules! stopwatches {
                 where
                     T: Into<Hertz>,
                 {
-                    let clk = clk.into();
-                    assert!(clk.0 > 1_000_000);
-                    self.clk = clk;
+                    self.clk = clk.into();
                 }
 
                 /// Set the prescaler which divides the input clock frequency before the counter

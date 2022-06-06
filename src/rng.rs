@@ -109,7 +109,6 @@ impl Rng {
     }
 
     pub fn gen_ratio(&mut self, numerator: u32, denominator: u32) -> Result<bool, ErrorKind> {
-        assert!(denominator > 0 || denominator > numerator);
         let val = self.gen_range(0, denominator)?;
         Ok(numerator > val)
     }
@@ -159,7 +158,6 @@ macro_rules! rng_core {
 
                 // TODO: fix modulo bias
                 fn gen_range(&mut self, low: $type, high: $type) -> Result<$type, ErrorKind> {
-                    assert!(high > low);
                     let range = high - low;
                     let val: $type = self.gen()? as $type;
                     Ok(low + val % range)

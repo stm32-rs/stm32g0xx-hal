@@ -203,9 +203,6 @@ impl Rcc {
     }
 
     fn config_pll(&self, pll_cfg: PllConfig) -> PLLClocks {
-        assert!(pll_cfg.m > 0 && pll_cfg.m <= 8);
-        assert!(pll_cfg.r > 1 && pll_cfg.r <= 8);
-
         // Disable PLL
         self.cr.modify(|_, w| w.pllon().clear_bit());
         while self.cr.read().pllrdy().bit_is_set() {}
@@ -225,8 +222,9 @@ impl Rcc {
             }
         };
 
-        let pll_freq = freq / (pll_cfg.m as u32) * (pll_cfg.n as u32);
-        let r = (pll_freq / (pll_cfg.r as u32)).hz();
+        let div = (pll_cfg.m as u32) * (pll_cfg.n as u32);
+        let pll_freq = freq.checked_div(div).unwrap_or_default();
+
         let q = match pll_cfg.q {
             Some(div) if div > 1 && div <= 8 => {
                 self.pllsyscfgr
@@ -264,6 +262,7 @@ impl Rcc {
         self.cr.modify(|_, w| w.pllon().set_bit());
         while self.cr.read().pllrdy().bit_is_clear() {}
 
+        let r = (pll_freq.checked_div(pll_cfg.r as u32).unwrap_or_default()).hz();
         PLLClocks { r, q, p }
     }
 

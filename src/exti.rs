@@ -85,7 +85,6 @@ pub trait ExtiExt {
 impl ExtiExt for EXTI {
     fn listen(&self, ev: Event, edge: SignalEdge) {
         let line = ev as u8;
-        assert!(line <= TRIGGER_MAX);
         let mask = 1 << line;
         match edge {
             SignalEdge::Rising => {
