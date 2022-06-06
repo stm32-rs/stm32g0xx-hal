@@ -93,6 +93,7 @@ impl WindowWatchdog {
             psc += 1;
             cycles /= 2;
         }
+        assert!(window <= 0x40);
         self.wwdg
             .cfr
             .write(|w| unsafe { w.wdgtb().bits(psc).w().bits(window as u8) });

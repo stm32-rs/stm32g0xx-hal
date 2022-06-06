@@ -133,6 +133,8 @@ pub trait Channel: private::Channel {
     ///
     /// Panics if this channel is enabled.
     fn set_peripheral_address(&mut self, address: u32, inc: bool) {
+        assert!(!self.is_enabled());
+
         self.ch().par.write(|w| unsafe { w.pa().bits(address) });
         self.ch().cr.modify(|_, w| w.pinc().bit(inc));
     }
@@ -146,6 +148,8 @@ pub trait Channel: private::Channel {
     ///
     /// Panics if this channel is enabled.
     fn set_memory_address(&mut self, address: u32, inc: bool) {
+        assert!(!self.is_enabled());
+
         self.ch().mar.write(|w| unsafe { w.ma().bits(address) });
         self.ch().cr.modify(|_, w| w.minc().bit(inc));
     }
@@ -158,6 +162,8 @@ pub trait Channel: private::Channel {
     ///
     /// Panics if this channel is enabled.
     fn set_transfer_length(&mut self, len: u16) {
+        assert!(!self.is_enabled());
+
         self.ch().ndtr.write(|w| unsafe { w.ndt().bits(len) });
     }
 

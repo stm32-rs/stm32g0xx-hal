@@ -124,10 +124,12 @@ pub trait U32Ext {
 
 impl U32Ext for u32 {
     fn bps(self) -> Bps {
+        assert!(self > 0);
         Bps(self)
     }
 
     fn hz(self) -> Hertz {
+        assert!(self > 0);
         Hertz(self)
     }
 
@@ -199,6 +201,7 @@ impl Div for Hertz {
 
 impl MicroSecond {
     pub fn cycles(self, clk: Hertz) -> u32 {
+        assert!(self.0 > 0);
         let clk = clk.0 as u64;
         let period = self.0 as u64;
         let cycles = clk.saturating_mul(period) / 1_000_000_u64;
@@ -222,12 +225,14 @@ impl From<Second> for MicroSecond {
 
 impl From<Hertz> for MicroSecond {
     fn from(freq: Hertz) -> MicroSecond {
-        MicroSecond(1_000_000_u32.checked_div(freq.0).unwrap_or_default())
+        assert!(freq.0 <= 1_000_000);
+        MicroSecond(1_000_000 / freq.0)
     }
 }
 
 impl From<MicroSecond> for Hertz {
     fn from(period: MicroSecond) -> Hertz {
-        Hertz(1_000_000_u32.checked_div(period.0).unwrap_or_default())
+        assert!(period.0 > 0 && period.0 <= 1_000_000);
+        Hertz(1_000_000 / period.0)
     }
 }

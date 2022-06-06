@@ -49,6 +49,7 @@ impl Config {
     }
 
     pub fn enable_digital_filter(mut self, cycles: u8) -> Self {
+        assert!(cycles <= 16);
         self.digital_filter = cycles;
         self
     }
