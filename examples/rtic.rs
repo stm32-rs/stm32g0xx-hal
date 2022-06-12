@@ -40,7 +40,7 @@ mod app {
         let gpioc = ctx.device.GPIOC.split(&mut rcc);
 
         let mut timer = ctx.device.TIM17.timer(&mut rcc);
-        timer.start(3.Hz());
+        timer.start(Hertz::Hz(3).into_duration());
         timer.listen();
 
         let mut exti = ctx.device.EXTI;

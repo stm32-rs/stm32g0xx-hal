@@ -16,6 +16,9 @@ pub extern crate stm32g0;
 
 pub use nb::block;
 
+#[cfg(feature = "device-selected")]
+pub use stm32 as pac;
+
 #[cfg(feature = "stm32g030")]
 pub use stm32g0::stm32g030 as stm32;
 
