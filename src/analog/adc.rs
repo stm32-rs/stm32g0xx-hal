@@ -465,6 +465,7 @@ adc_pin! {
     Channel9: (gpiob::PB1<Analog>, 9u8),
     Channel10: (gpiob::PB2<Analog>, 10u8),
     Channel11: (gpiob::PB10<Analog>, 11u8),
+    Channel11: (gpiob::PB7<Analog>, 11u8),
     Channel15: (gpiob::PB11<Analog>, 15u8),
     Channel16: (gpiob::PB12<Analog>, 16u8),
     Channel17: (gpioc::PC4<Analog>, 17u8),
