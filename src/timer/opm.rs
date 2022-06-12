@@ -1,11 +1,11 @@
 //! # One-pulse Mode
-use crate::prelude::*;
 use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
 use crate::timer::pins::TimerPin;
 use crate::timer::*;
 use core::marker::PhantomData;
+use fugit::RateExtU32;
 
 pub trait OpmExt: Sized {
     fn opm(self, period: MicroSecond, rcc: &mut Rcc) -> Opm<Self>;
@@ -59,10 +59,11 @@ macro_rules! opm {
 
             impl Opm<$TIMX> {
                 pub fn set_pulse(&mut self, pulse: MicroSecond) {
-                    let cycles_per_period = self.clk / pulse.into();
+                    let pulsehz: Hertz = pulse.into_rate();
+                    let cycles_per_period = self.clk / pulsehz;
                     let psc = (cycles_per_period - 1) / 0xffff;
-                    let freq = (self.clk.0 / (psc + 1)).hz();
-                    let reload = pulse.cycles(freq);
+                    let freq = (self.clk.raw() / (psc + 1)).Hz();
+                    let reload = crate::time::cycles(pulse, freq);
                     unsafe {
                         let tim = &*$TIMX::ptr();
                         tim.psc.write(|w| w.psc().bits(psc as u16));

@@ -154,8 +154,8 @@ macro_rules! spi {
                 // disable SS output
                 spi.cr2.write(|w| w.ssoe().clear_bit());
 
-                let spi_freq = speed.into().0;
-                let apb_freq = rcc.clocks.apb_clk.0;
+                let spi_freq = speed.into().raw();
+                let apb_freq = rcc.clocks.apb_clk.raw();
                 let br = match apb_freq / spi_freq {
                     0 => unreachable!(),
                     1..=2 => 0b000,

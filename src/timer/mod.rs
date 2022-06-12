@@ -58,7 +58,7 @@ impl CountDown for Timer<SYST> {
     where
         T: Into<MicroSecond>,
     {
-        let cycles = timeout.into().cycles(self.clk);
+        let cycles = crate::time::cycles(timeout.into(), self.clk);
         assert!(cycles < 0x00ff_ffff);
         self.tim.set_reload(cycles);
         self.tim.clear_current();
@@ -169,7 +169,7 @@ macro_rules! timers {
                     self.tim.sr.modify(|_, w| w.uif().clear_bit());
 
                     // Calculate counter configuration
-                    let cycles = timeout.into().cycles(self.clk);
+                    let cycles = crate::time::cycles(timeout.into(), self.clk);
                     let psc = cycles / 0xffff;
                     let arr = cycles / (psc + 1);
 

@@ -1,6 +1,6 @@
 use crate::rcc::*;
 use crate::stm32::*;
-use crate::time::{Hertz, Instant, MicroSecond};
+use crate::time::{duration, Hertz, Instant, MicroSecond};
 
 pub trait StopwatchExt<TIM> {
     fn stopwatch(self, rcc: &mut Rcc) -> Stopwatch<TIM>;
@@ -16,7 +16,7 @@ macro_rules! stopwatches {
         $(
             impl Stopwatch<$TIM> {
                 pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
-                    assert!(rcc.clocks.apb_tim_clk.0 > 1_000_000);
+                    assert!(rcc.clocks.apb_tim_clk.raw() > 1_000_000);
                     $TIM::enable(rcc);
                     $TIM::reset(rcc);
 
@@ -36,7 +36,7 @@ macro_rules! stopwatches {
                     T: Into<Hertz>,
                 {
                     let clk = clk.into();
-                    assert!(clk.0 > 1_000_000);
+                    assert!(clk.raw() > 1_000_000);
                     self.clk = clk;
                 }
 
@@ -65,23 +65,23 @@ macro_rules! stopwatches {
                 }
 
                 pub fn now(&self) -> Instant {
-                    Instant(self.tim.cnt.read().bits())
+                    Instant::from_ticks(self.tim.cnt.read().bits())
                 }
 
                 pub fn elapsed(&self, ts: Instant) -> MicroSecond {
-                    let now = self.now().0;
-                    let cycles = (now as u16).wrapping_sub(ts.0 as u16) as u32;
-                    self.clk.duration(cycles * (1 + self.tim.psc.read().bits()))
+                    let now = self.now().ticks();
+                    let cycles = (now as u16).wrapping_sub(ts.ticks() as u16) as u32;
+                    duration(self.clk, cycles * (1 + self.tim.psc.read().bits()))
                 }
 
                 pub fn trace<F>(&self, mut closure: F) -> MicroSecond
                 where
                     F: FnMut(),
                 {
-                    let started = self.now().0;
+                    let started = self.now().ticks();
                     closure();
-                    let now = self.now().0;
-                    self.clk.duration(now.wrapping_sub(started) * (1 + self.tim.psc.read().bits()))
+                    let now = self.now().ticks();
+                    duration(self.clk, now.wrapping_sub(started) * (1 + self.tim.psc.read().bits()))
                 }
             }
 

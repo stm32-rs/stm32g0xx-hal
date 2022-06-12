@@ -44,3 +44,4 @@ pub use crate::timer::stopwatch::StopwatchExt as _;
 pub use crate::timer::TimerExt as _;
 pub use crate::watchdog::IWDGExt as _;
 pub use crate::watchdog::WWDGExt as _;
+pub use fugit::{ExtU32 as _, RateExtU32 as _};

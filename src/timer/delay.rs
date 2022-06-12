@@ -1,9 +1,9 @@
 //! Delays
 use core::cmp;
 use cortex_m::peripheral::SYST;
+use fugit::ExtU32;
 use hal::blocking::delay::{DelayMs, DelayUs};
 
-use crate::prelude::*;
 use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
@@ -31,7 +31,7 @@ impl Delay<SYST> {
     where
         T: Into<MicroSecond>,
     {
-        let mut cycles = delay.into().cycles(self.clk);
+        let mut cycles = crate::time::cycles(delay.into(), self.clk);
         while cycles > 0 {
             let reload = cmp::min(cycles, 0x00ff_ffff);
             cycles -= reload;
@@ -51,7 +51,7 @@ impl Delay<SYST> {
 
 impl DelayUs<u32> for Delay<SYST> {
     fn delay_us(&mut self, us: u32) {
-        self.delay(us.us())
+        self.delay(us.micros())
     }
 }
 
@@ -110,7 +110,7 @@ macro_rules! delays {
                 where
                     T: Into<MicroSecond>,
                 {
-                    let mut cycles = delay.into().cycles(self.clk);
+                    let mut cycles = crate::time::cycles(delay.into(), self.clk);
                     while cycles > 0 {
                         let reload = cmp::min(cycles, 0xffff);
                         cycles -= reload;
@@ -130,7 +130,7 @@ macro_rules! delays {
 
             impl DelayUs<u32> for Delay<$TIM> {
                 fn delay_us(&mut self, us: u32) {
-                    self.delay(us.us())
+                    self.delay(us.micros())
                 }
             }
 

@@ -21,7 +21,7 @@ impl watchdog::WatchdogEnable for IndependedWatchdog {
     where
         T: Into<MicroSecond>,
     {
-        let mut cycles = period.into().cycles(16_384.hz());
+        let mut cycles = crate::time::cycles(period.into(), 16_384.Hz());
         let mut psc = 0;
         let mut reload = 0;
         while psc < 6 {
@@ -82,7 +82,7 @@ impl WindowWatchdog {
     where
         T: Into<MicroSecond>,
     {
-        let mut cycles = window.into().cycles(self.clk);
+        let mut cycles = crate::time::cycles(window.into(), self.clk);
         let mut psc = 0u8;
         let mut window = 0;
         while psc < 8 {
@@ -132,10 +132,10 @@ pub trait WWDGExt {
 impl WWDGExt for WWDG {
     fn constrain(self, rcc: &mut Rcc) -> WindowWatchdog {
         WWDG::enable(rcc);
-        let clk = rcc.clocks.apb_clk.0 / 4096;
+        let clk = rcc.clocks.apb_clk.raw() / 4096;
         WindowWatchdog {
             wwdg: self,
-            clk: clk.hz(),
+            clk: clk.Hz(),
         }
     }
 }

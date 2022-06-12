@@ -94,7 +94,7 @@ impl Rtc {
         Time::new(
             bcd2_decode(timer.ht().bits(), timer.hu().bits()).hours(),
             bcd2_decode(timer.mnt().bits(), timer.mnu().bits()).minutes(),
-            bcd2_decode(timer.st().bits(), timer.su().bits()).seconds(),
+            bcd2_decode(timer.st().bits(), timer.su().bits()).secs(),
             self.rb.cr.read().fmt().bit(),
         )
     }
