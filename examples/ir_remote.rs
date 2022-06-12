@@ -51,7 +51,7 @@ const APP: () = {
         timer.start(IR_SAMPLERATE);
         timer.listen();
 
-        let carrier_timer = ctx.device.TIM17.pwm(38.khz(), &mut rcc);
+        let carrier_timer = ctx.device.TIM17.pwm(38.kHz(), &mut rcc);
         let mut ir_pin = carrier_timer.bind_pin(gpiob.pb9);
         ir_pin.set_duty(ir_pin.get_max_duty() / 2);
         let transmitter = Sender::new(IR_SAMPLERATE.0, ir_pin);

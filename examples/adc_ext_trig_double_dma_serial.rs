@@ -191,7 +191,7 @@ fn main() -> ! {
 
     // don't enabel the timer bevor the dma
     // Set up a timer expiring after
-    timer.start(50.us());
+    timer.start(50.micros());
     timer.listen();
 
     //enable DMA_CHANNEL1 interrupt

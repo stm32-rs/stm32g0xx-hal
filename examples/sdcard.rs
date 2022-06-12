@@ -45,7 +45,7 @@ fn main() -> ! {
     let sdmmc_spi = dp.SPI1.spi(
         (gpiob.pb3, gpiob.pb4, gpiob.pb5),
         spi::MODE_0,
-        400.khz(),
+        400.kHz(),
         &mut rcc,
     );
 

@@ -32,11 +32,11 @@ fn main() -> ! {
     let mut stopwatch = dp.TIM3.stopwatch(&mut rcc);
 
     let elapsed_us = stopwatch.trace(|| {
-        delay.delay(100.us());
+        delay.delay(100.micros());
     });
     hprintln!("Delay: 100 us -> {} us", elapsed_us.0).unwrap();
 
-    timer.start(100.us());
+    timer.start(100.micros());
     let elapsed_us = stopwatch.trace(|| {
         block!(timer.wait()).unwrap();
     });

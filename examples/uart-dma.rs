@@ -86,6 +86,6 @@ fn main() -> ! {
             dma.ch1.enable();
         }
 
-        delay.delay(500.ms());
+        delay.delay(500.millis());
     }
 }

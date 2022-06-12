@@ -37,7 +37,7 @@ const APP: () = {
         let led = gpioa.pa5.into_push_pull_output();
         gpioc.pc13.listen(SignalEdge::Falling, &mut exti);
 
-        let opm = ctx.device.TIM3.opm(4.ms(), &mut rcc);
+        let opm = ctx.device.TIM3.opm(4.millis(), &mut rcc);
 
         let mut opm_ch1 = opm.bind_pin(gpioa.pa6);
         let mut opm_ch2 = opm.bind_pin(gpioa.pa7);

@@ -40,7 +40,7 @@ mod app {
         let gpioc = ctx.device.GPIOC.split(&mut rcc);
 
         let mut timer = ctx.device.TIM17.timer(&mut rcc);
-        timer.start(3.hz());
+        timer.start(3.Hz());
         timer.listen();
 
         let mut exti = ctx.device.EXTI;
@@ -48,7 +48,7 @@ mod app {
 
         let mut rtc = ctx.device.RTC.constrain(&mut rcc);
         rtc.set_date(&Date::new(2019.year(), 11.month(), 24.day()));
-        rtc.set_time(&Time::new(21.hours(), 15.minutes(), 10.seconds(), false));
+        rtc.set_time(&Time::new(21.hours(), 15.minutes(), 10.secs(), false));
 
         (
             Shared {},

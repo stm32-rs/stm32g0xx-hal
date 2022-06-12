@@ -37,7 +37,7 @@ fn main() -> ! {
         match rng.gen_range(20, 200) {
             Ok(period) => {
                 led.toggle().unwrap();
-                delay.delay(period.ms());
+                delay.delay(period.millis());
             }
             Err(err) => hprintln!("RNG error: {:?}", err).unwrap(),
         }
