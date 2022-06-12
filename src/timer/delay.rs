@@ -27,11 +27,8 @@ impl Delay<SYST> {
         }
     }
 
-    pub fn delay<T>(&mut self, delay: T)
-    where
-        T: Into<MicroSecond>,
-    {
-        let mut cycles = crate::time::cycles(delay.into(), self.clk);
+    pub fn delay(&mut self, delay: MicroSecond) {
+        let mut cycles = crate::time::cycles(delay, self.clk);
         while cycles > 0 {
             let reload = cmp::min(cycles, 0x00ff_ffff);
             cycles -= reload;
@@ -106,11 +103,8 @@ macro_rules! delays {
                     }
                 }
 
-                pub fn delay<T>(&mut self, delay: T)
-                where
-                    T: Into<MicroSecond>,
-                {
-                    let mut cycles = crate::time::cycles(delay.into(), self.clk);
+                pub fn delay(&mut self, delay: MicroSecond) {
+                    let mut cycles = crate::time::cycles(delay, self.clk);
                     while cycles > 0 {
                         let reload = cmp::min(cycles, 0xffff);
                         cycles -= reload;

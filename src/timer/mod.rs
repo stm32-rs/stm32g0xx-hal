@@ -51,6 +51,24 @@ impl Timer<SYST> {
     }
 }
 
+impl Timer<SYST> {
+    pub fn start(&mut self, timeout: MicroSecond) {
+        let cycles = crate::time::cycles(timeout, self.clk);
+        assert!(cycles < 0x00ff_ffff);
+        self.tim.set_reload(cycles);
+        self.tim.clear_current();
+        self.tim.enable_counter();
+    }
+
+    pub fn wait(&mut self) -> nb::Result<(), Void> {
+        if self.tim.has_wrapped() {
+            Ok(())
+        } else {
+            Err(nb::Error::WouldBlock)
+        }
+    }
+}
+
 impl CountDown for Timer<SYST> {
     type Time = MicroSecond;
 
@@ -58,19 +76,11 @@ impl CountDown for Timer<SYST> {
     where
         T: Into<MicroSecond>,
     {
-        let cycles = crate::time::cycles(timeout.into(), self.clk);
-        assert!(cycles < 0x00ff_ffff);
-        self.tim.set_reload(cycles);
-        self.tim.clear_current();
-        self.tim.enable_counter();
+        self.start(timeout.into())
     }
 
     fn wait(&mut self) -> nb::Result<(), Void> {
-        if self.tim.has_wrapped() {
-            Ok(())
-        } else {
-            Err(nb::Error::WouldBlock)
-        }
+        self.wait()
     }
 }
 
@@ -153,13 +163,8 @@ macro_rules! timers {
                 }
             }
 
-            impl CountDown for Timer<$TIM> {
-                type Time = MicroSecond;
-
-                fn start<T>(&mut self, timeout: T)
-                where
-                    T: Into<MicroSecond>,
-                {
+            impl Timer<$TIM> {
+                pub fn start(&mut self, timeout: MicroSecond) {
                     // Pause the counter. Also set URS so that when we set UG below, it will
                     // generate an update event *without* triggering an interrupt.
                     self.tim.cr1.modify(|_, w| w.cen().clear_bit().urs().set_bit());
@@ -169,7 +174,7 @@ macro_rules! timers {
                     self.tim.sr.modify(|_, w| w.uif().clear_bit());
 
                     // Calculate counter configuration
-                    let cycles = crate::time::cycles(timeout.into(), self.clk);
+                    let cycles = crate::time::cycles(timeout, self.clk);
                     let psc = cycles / 0xffff;
                     let arr = cycles / (psc + 1);
 
@@ -183,13 +188,28 @@ macro_rules! timers {
                     self.tim.cr1.modify(|_, w| w.cen().set_bit());
                 }
 
-                fn wait(&mut self) -> nb::Result<(), Void> {
+                pub fn wait(&mut self) -> nb::Result<(), Void> {
                     if self.tim.sr.read().uif().bit_is_clear() {
                         Err(nb::Error::WouldBlock)
                     } else {
                         self.tim.sr.modify(|_, w| w.uif().clear_bit());
                         Ok(())
                     }
+                }
+            }
+
+            impl CountDown for Timer<$TIM> {
+                type Time = MicroSecond;
+
+                fn start<T>(&mut self, timeout: T)
+                where
+                    T: Into<MicroSecond>,
+                {
+                    self.start(timeout.into())
+                }
+
+                fn wait(&mut self) -> nb::Result<(), Void> {
+                    self.wait()
                 }
             }
 

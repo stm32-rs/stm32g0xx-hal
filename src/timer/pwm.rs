@@ -35,9 +35,7 @@ pub struct PwmPin<TIM, CH> {
 }
 
 pub trait PwmExt: Sized {
-    fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
-    where
-        T: Into<Hertz>;
+    fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self>;
 }
 
 pub trait PwmPinMode {
@@ -61,15 +59,12 @@ macro_rules! pwm {
     ($($TIMX:ident: ($timX:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
         $(
             impl PwmExt for $TIMX {
-                fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
-                where
-                    T: Into<Hertz>,
-                {
+                fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self> {
                     $timX(self, freq, rcc)
                 }
             }
 
-            fn $timX<F: Into<Hertz>>(tim: $TIMX, freq: F, rcc: &mut Rcc) -> Pwm<$TIMX> {
+            fn $timX(tim: $TIMX, freq: Hertz, rcc: &mut Rcc) -> Pwm<$TIMX> {
                 $TIMX::enable(rcc);
                 $TIMX::reset(rcc);
 
@@ -82,8 +77,8 @@ macro_rules! pwm {
             }
 
             impl Pwm<$TIMX> {
-                pub fn set_freq<F: Into<Hertz>>(&mut self, freq: F) {
-                    let ratio = self.clk / freq.into();
+                pub fn set_freq(&mut self, freq: Hertz) {
+                    let ratio = self.clk / freq;
                     let psc = (ratio - 1) / 0xffff;
                     let arr = ratio / (psc + 1) - 1;
 

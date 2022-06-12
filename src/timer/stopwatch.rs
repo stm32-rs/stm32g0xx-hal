@@ -31,11 +31,7 @@ macro_rules! stopwatches {
                 ///
                 /// Useful if the APB Timer Clock changes after the `Stopwatch` is created or
                 /// to deliberately speed up or slow down the `Stopwatch` from actual measured time.
-                pub fn set_clock<T>(&mut self, clk: T)
-                where
-                    T: Into<Hertz>,
-                {
-                    let clk = clk.into();
+                pub fn set_clock(&mut self, clk: Hertz) {
                     assert!(clk.raw() > 1_000_000);
                     self.clk = clk;
                 }

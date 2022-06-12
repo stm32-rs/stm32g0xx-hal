@@ -14,12 +14,9 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new<T>(speed: T) -> Self
-    where
-        T: Into<Hertz>,
-    {
+    pub fn new(speed: Hertz) -> Self {
         Config {
-            speed: Some(speed.into()),
+            speed: Some(speed),
             timing: None,
             analog_filter: true,
             digital_filter: 0,
@@ -97,11 +94,8 @@ impl Config {
     }
 }
 
-impl<F> From<F> for Config
-where
-    F: Into<Hertz>,
-{
-    fn from(speed: F) -> Self {
+impl From<Hertz> for Config {
+    fn from(speed: Hertz) -> Self {
         Config::new(speed)
     }
 }
