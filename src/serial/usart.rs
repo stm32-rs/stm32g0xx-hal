@@ -6,7 +6,7 @@ use crate::dmamux::DmaMuxIndex;
 use crate::gpio::AltFunction;
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
 use crate::prelude::*;
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::*;
 
 use cortex_m::interrupt;
@@ -330,7 +330,7 @@ macro_rules! uart_shared {
 
 macro_rules! uart_basic {
     ($USARTX:ident,
-        $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
+        $usartX:ident, $clk_mul:expr
     ) => {
         impl SerialExt<$USARTX, BasicConfig> for $USARTX {
             fn usart<TX, RX>(
@@ -361,7 +361,8 @@ macro_rules! uart_basic {
                 RX: RxPin<$USARTX>,
             {
                 // Enable clock for USART
-                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
+                $USARTX::enable(rcc);
+
                 let clk = rcc.clocks.apb_clk.0 as u64;
                 let bdr = config.baudrate.0 as u64;
                 let div = ($clk_mul * clk) / bdr;
@@ -460,7 +461,7 @@ macro_rules! uart_basic {
 
 macro_rules! uart_full {
     ($USARTX:ident,
-        $usartX:ident, $apbXenr:ident, $usartXen:ident, $clk_mul:expr
+        $usartX:ident, $clk_mul:expr
     ) => {
         impl SerialExt<$USARTX, FullConfig> for $USARTX {
             fn usart<TX, RX>(
@@ -491,7 +492,7 @@ macro_rules! uart_full {
                 RX: RxPin<$USARTX>,
             {
                 // Enable clock for USART
-                rcc.rb.$apbXenr.modify(|_, w| w.$usartXen().set_bit());
+                $USARTX::enable(rcc);
 
                 let clk = rcc.clocks.apb_clk.0 as u64;
                 let bdr = config.baudrate.0 as u64;
@@ -700,22 +701,22 @@ uart_shared!(LPUART, LPUART_RX, LPUART_TX,
     ]
 );
 
-uart_full!(USART1, usart1, apbenr2, usart1en, 1);
+uart_full!(USART1, usart1, 1);
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-uart_full!(USART2, usart2, apbenr1, usart2en, 1);
+uart_full!(USART2, usart2, 1);
 
 #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
-uart_basic!(USART2, usart2, apbenr1, usart2en, 1);
+uart_basic!(USART2, usart2, 1);
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-uart_basic!(USART3, usart3, apbenr1, usart3en, 1);
+uart_basic!(USART3, usart3, 1);
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-uart_basic!(USART4, usart4, apbenr1, usart4en, 1);
+uart_basic!(USART4, usart4, 1);
 
 // LPUART Should be given its own implementation when it needs to be used with features not present on
 // the basic feature set such as: Dual clock domain, FIFO or prescaler.
 // Or when Synchronous mode is implemented for the basic feature set, since the LP feature set does not have support.
 #[cfg(feature = "stm32g0x1")]
-uart_basic!(LPUART, lpuart, apbenr1, lpuart1en, 256);
+uart_basic!(LPUART, lpuart, 256);

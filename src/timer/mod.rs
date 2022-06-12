@@ -1,5 +1,5 @@
 //! Timers
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
 use cortex_m::peripheral::syst::SystClkSource;
@@ -7,6 +7,7 @@ use cortex_m::peripheral::SYST;
 use hal::timer::{CountDown, Periodic};
 use void::Void;
 
+pub mod delay;
 pub mod opm;
 pub mod pins;
 pub mod pwm;
@@ -86,14 +87,13 @@ impl TimerExt<SYST> for SYST {
 impl Periodic for Timer<SYST> {}
 
 macro_rules! timers {
-    ($($TIM:ident: ($tim:ident, $timXen:ident, $timXrst:ident, $apbenr:ident, $apbrstr:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
+    ($($TIM:ident: ($tim:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
         $(
             impl Timer<$TIM> {
                 /// Configures a TIM peripheral as a periodic count down timer
-                pub fn $tim<T>(tim: $TIM, rcc: &mut Rcc) -> Self {
-                    rcc.rb.$apbenr.modify(|_, w| w.$timXen().set_bit());
-                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().set_bit());
-                    rcc.rb.$apbrstr.modify(|_, w| w.$timXrst().clear_bit());
+                pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
+                    $TIM::enable(rcc);
+                    $TIM::reset(rcc);
 
                     Timer {
                         tim,
@@ -149,7 +149,7 @@ macro_rules! timers {
 
             impl TimerExt<$TIM> for $TIM {
                 fn timer(self, rcc: &mut Rcc) -> Timer<$TIM> {
-                    Timer::$tim::<$TIM>(self, rcc)
+                    Timer::$tim(self, rcc)
                 }
             }
 
@@ -160,10 +160,13 @@ macro_rules! timers {
                 where
                     T: Into<MicroSecond>,
                 {
-                    // pause
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                    // Pause the counter. Also set URS so that when we set UG below, it will
+                    // generate an update event *without* triggering an interrupt.
+                    self.tim.cr1.modify(|_, w| w.cen().clear_bit().urs().set_bit());
                     // reset counter
                     self.tim.cnt.reset();
+                    // clear interrupt flag
+                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
 
                     // Calculate counter configuration
                     let cycles = timeout.into().cycles(self.clk);
@@ -172,7 +175,12 @@ macro_rules! timers {
 
                     self.tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
                     self.tim.arr.write(|w| unsafe { w.bits(arr) });
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit().urs().set_bit());
+
+                    // Generate an update event so that PSC and ARR values are copied into their
+                    // shadow registers.
+                    self.tim.egr.write(|w| w.ug().set_bit());
+
+                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
                 }
 
                 fn wait(&mut self) -> nb::Result<(), Void> {
@@ -191,21 +199,21 @@ macro_rules! timers {
 }
 
 timers! {
-    TIM1: (tim1, tim1en, tim1rst, apbenr2, apbrstr2, cnt),
-    TIM3: (tim3, tim3en, tim3rst, apbenr1, apbrstr1, cnt_l, cnt_h),
-    TIM14: (tim14, tim14en, tim14rst, apbenr2, apbrstr2, cnt),
-    TIM16: (tim16, tim16en, tim16rst, apbenr2, apbrstr2, cnt),
-    TIM17: (tim17, tim17en, tim17rst, apbenr2, apbrstr2, cnt),
+    TIM1: (tim1, cnt),
+    TIM3: (tim3, cnt_l, cnt_h),
+    TIM14: (tim14, cnt),
+    TIM16: (tim16, cnt),
+    TIM17: (tim17, cnt),
 }
 
 #[cfg(feature = "stm32g0x1")]
 timers! {
-    TIM2: (tim2, tim2en, tim2rst, apbenr1, apbrstr1, cnt_l, cnt_h),
+    TIM2: (tim2, cnt_l, cnt_h),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 timers! {
-    TIM6: (tim6, tim6en, tim6rst, apbenr1, apbrstr1, cnt),
-    TIM7: (tim7, tim7en, tim7rst, apbenr1, apbrstr1, cnt),
-    TIM15: (tim15, tim15en, tim15rst, apbenr2, apbrstr2, cnt),
+    TIM6: (tim6, cnt),
+    TIM7: (tim7, cnt),
+    TIM15: (tim15, cnt),
 }

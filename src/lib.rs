@@ -1,14 +1,7 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 
-#[cfg(not(any(
-    feature = "stm32g070",
-    feature = "stm32g071",
-    feature = "stm32g030",
-    feature = "stm32g031",
-    feature = "stm32g041",
-    feature = "stm32g081"
-)))]
+#[cfg(not(feature = "device-selected"))]
 compile_error!(
     "This crate requires one of the following features enabled: stm32g030, stm32g070, stm32g031, stm32g041, stm32g071, stm32g081"
 );
@@ -46,7 +39,6 @@ pub use crate::stm32::interrupt;
 
 pub mod analog;
 pub mod crc;
-pub mod delay;
 pub mod dma;
 pub mod dmamux;
 pub mod exti;
@@ -64,3 +56,10 @@ pub mod spi;
 pub mod time;
 pub mod timer;
 pub mod watchdog;
+
+#[cfg(feature = "device-selected")]
+mod sealed {
+    pub trait Sealed {}
+}
+#[cfg(feature = "device-selected")]
+pub(crate) use sealed::Sealed;

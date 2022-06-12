@@ -1,5 +1,5 @@
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*, AltFunction, DefaultMode};
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
 use core::ptr;
@@ -66,15 +66,15 @@ pub struct Spi<SPI, PINS> {
     pins: PINS,
 }
 
-pub trait SpiExt<SPI>: Sized {
-    fn spi<PINS, T>(self, pins: PINS, mode: Mode, freq: T, rcc: &mut Rcc) -> Spi<SPI, PINS>
+pub trait SpiExt: Sized {
+    fn spi<PINS, T>(self, pins: PINS, mode: Mode, freq: T, rcc: &mut Rcc) -> Spi<Self, PINS>
     where
-        PINS: Pins<SPI>,
+        PINS: Pins<Self>,
         T: Into<Hertz>;
 }
 
 macro_rules! spi {
-    ($SPIX:ident, $spiX:ident, $apbXenr:ident, $apbXrst:ident, $spiXen:ident, $spiXrst:ident,
+    ($SPIX:ident, $spiX:ident,
         sck: [ $(($SCK:ty, $SCK_AF:expr),)+ ],
         miso: [ $(($MISO:ty, $MISO_AF:expr),)+ ],
         mosi: [ $(($MOSI:ty, $MOSI_AF:expr),)+ ],
@@ -148,10 +148,8 @@ macro_rules! spi {
             where
             T: Into<Hertz>
             {
-                // Enable clock for SPI
-                rcc.rb.$apbXenr.modify(|_, w| w.$spiXen().set_bit());
-                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().set_bit());
-                rcc.rb.$apbXrst.modify(|_, w| w.$spiXrst().clear_bit());
+                $SPIX::enable(rcc);
+                $SPIX::reset(rcc);
 
                 // disable SS output
                 spi.cr2.write(|w| w.ssoe().clear_bit());
@@ -207,12 +205,30 @@ macro_rules! spi {
                 Spi { spi, pins }
             }
 
+            pub fn data_size(&mut self, nr_bits: u8) {
+                self.spi.cr2.modify(|_, w| unsafe {
+                    w.ds().bits(nr_bits-1)
+                });
+            }
+
+            pub fn half_duplex_enable(&mut self, enable: bool) {
+                self.spi.cr1.modify(|_, w|
+                    w.bidimode().bit(enable)
+                );
+            }
+
+            pub fn half_duplex_output_enable(&mut self, enable: bool) {
+                self.spi.cr1.modify(|_, w|
+                    w.bidioe().bit(enable)
+                );
+            }
+
             pub fn release(self) -> ($SPIX, PINS) {
                 (self.spi, self.pins.release())
             }
         }
 
-        impl SpiExt<$SPIX> for $SPIX {
+        impl SpiExt for $SPIX {
             fn spi<PINS, T>(self, pins: PINS, mode: Mode, freq: T, rcc: &mut Rcc) -> Spi<$SPIX, PINS>
             where
                 PINS: Pins<$SPIX>,
@@ -273,10 +289,6 @@ macro_rules! spi {
 spi!(
     SPI1,
     spi1,
-    apbenr2,
-    apbrstr2,
-    spi1en,
-    spi1rst,
     sck: [
         (PA1<DefaultMode>, AltFunction::AF0),
         (PA5<DefaultMode>, AltFunction::AF0),
@@ -301,10 +313,6 @@ spi!(
 spi!(
     SPI2,
     spi2,
-    apbenr1,
-    apbrstr1,
-    spi2en,
-    spi2rst,
     sck: [
         (PA0<DefaultMode>, AltFunction::AF0),
         (PB8<DefaultMode>, AltFunction::AF1),

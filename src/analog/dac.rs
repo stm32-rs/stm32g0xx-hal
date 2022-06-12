@@ -5,7 +5,7 @@ use core::mem::MaybeUninit;
 
 use crate::gpio::gpioa::{PA4, PA5};
 use crate::gpio::DefaultMode;
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::DAC;
 use hal::blocking::delay::DelayUs;
 
@@ -78,12 +78,8 @@ pub fn dac<PINS>(_dac: DAC, _pins: PINS, rcc: &mut Rcc) -> PINS::Output
 where
     PINS: Pins<DAC>,
 {
-    // Enable DAC clocks
-    rcc.rb.apbenr1.modify(|_, w| w.dac1en().set_bit());
-
-    // Reset DAC
-    rcc.rb.apbrstr1.modify(|_, w| w.dac1rst().set_bit());
-    rcc.rb.apbrstr1.modify(|_, w| w.dac1rst().clear_bit());
+    DAC::enable(rcc);
+    DAC::reset(rcc);
 
     #[allow(clippy::uninit_assumed_init)]
     unsafe {

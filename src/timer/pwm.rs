@@ -1,14 +1,32 @@
 //! # Pulse Width Modulation
 use core::marker::PhantomData;
 
-use crate::rcc::Rcc;
+use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::Hertz;
 use crate::timer::pins::TimerPin;
 use crate::timer::*;
 
+pub enum OutputCompareMode {
+    Frozen = 0,
+    MatchPos = 1,
+    MatchNeg = 2,
+    MatchToggle = 3,
+    ForceLow = 4,
+    ForceHigh = 5,
+    PwmMode1 = 6,
+    PmwMode2 = 7,
+    OpmMode1 = 8,
+    OomMode2 = 9,
+    CombinedMode1 = 12,
+    CombinedMode2 = 13,
+    AsyncMode1 = 14,
+    AsyncMode2 = 15,
+}
+
 pub struct Pwm<TIM> {
-    tim: PhantomData<TIM>,
+    clk: Hertz,
+    tim: TIM,
 }
 
 pub struct PwmPin<TIM, CH> {
@@ -20,6 +38,10 @@ pub trait PwmExt: Sized {
     fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
     where
         T: Into<Hertz>;
+}
+
+pub trait PwmPinMode {
+    fn set_compare_mode(&mut self, mode: OutputCompareMode);
 }
 
 impl<TIM> Pwm<TIM> {
@@ -36,7 +58,7 @@ impl<TIM> Pwm<TIM> {
 }
 
 macro_rules! pwm {
-    ($($TIMX:ident: ($apbXenr:ident, $apbXrstr:ident, $timX:ident, $timXen:ident, $timXrst:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
+    ($($TIMX:ident: ($timX:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
         $(
             impl PwmExt for $TIMX {
                 fn pwm<T>(self, freq: T, rcc: &mut Rcc) -> Pwm<Self>
@@ -47,31 +69,57 @@ macro_rules! pwm {
                 }
             }
 
-            fn $timX<T>(tim: $TIMX, freq: T, rcc: &mut Rcc) -> Pwm<$TIMX>
-            where
-                T: Into<Hertz>,
-            {
-                rcc.rb.$apbXenr.modify(|_, w| w.$timXen().set_bit());
-                rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().set_bit());
-                rcc.rb.$apbXrstr.modify(|_, w| w.$timXrst().clear_bit());
-                let ratio = rcc.clocks.apb_tim_clk / freq.into();
-                let psc = (ratio - 1) / 0xffff;
-                let arr = ratio / (psc + 1) - 1;
-                tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
-                tim.arr.write(|w| unsafe { w.$arr().bits(arr as u16) });
-                $(
-                    tim.arr.modify(|_, w| unsafe { w.$arr_h().bits((arr >> 16) as u16) });
-                )*
-                tim.cr1.write(|w| w.cen().set_bit());
-                Pwm {
-                    tim: PhantomData
+            fn $timX<F: Into<Hertz>>(tim: $TIMX, freq: F, rcc: &mut Rcc) -> Pwm<$TIMX> {
+                $TIMX::enable(rcc);
+                $TIMX::reset(rcc);
+
+                let mut pwm = Pwm::<$TIMX> {
+                    clk: rcc.clocks.apb_tim_clk,
+                    tim,
+                };
+                pwm.set_freq(freq);
+                pwm
+            }
+
+            impl Pwm<$TIMX> {
+                pub fn set_freq<F: Into<Hertz>>(&mut self, freq: F) {
+                    let ratio = self.clk / freq.into();
+                    let psc = (ratio - 1) / 0xffff;
+                    let arr = ratio / (psc + 1) - 1;
+
+                    unsafe {
+                        self.tim.psc.write(|w| w.psc().bits(psc as u16));
+                        self.tim.arr.write(|w| w.$arr().bits(arr as u16));
+                        $(
+                            self.tim.arr.modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
+                        )*
+                        self.tim.cr1.write(|w| w.cen().set_bit())
+                    }
+                }
+                /// Starts listening
+                pub fn listen(&mut self) {
+                    self.tim.dier.write(|w| w.uie().set_bit());
+                }
+
+                /// Stops listening
+                pub fn unlisten(&mut self) {
+                    self.tim.dier.write(|w| w.uie().clear_bit());
+                }
+                /// Clears interrupt flag
+                pub fn clear_irq(&mut self) {
+                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                }
+
+                /// Resets counter value
+                pub fn reset(&mut self) {
+                    self.tim.cnt.reset();
                 }
             }
         )+
     }
 }
 
-#[cfg(feature = "stm32g0x1")]
+#[cfg(any(feature = "stm32g0x1", feature = "stm32g070"))]
 macro_rules! pwm_hal {
     ($($TIMX:ident:
         ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident),)+
@@ -157,6 +205,15 @@ macro_rules! pwm_advanced_hal {
                     unsafe { (*$TIMX::ptr()).$ccrx.write(|w| w.$ccrx().bits(duty)) }
                 }
             }
+
+            impl PwmPinMode for PwmPin<$TIMX, $CH>{
+                fn set_compare_mode(&mut self, mode: OutputCompareMode) {
+                    unsafe {
+                        let tim = &*$TIMX::ptr();
+                        tim.$ccmrx_output().modify(|_, w| w.$ocxm().bits(mode as u8));
+                    }
+                }
+            }
         )+
     };
 }
@@ -188,20 +245,28 @@ pwm_hal! {
     TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
 }
 
+#[cfg(feature = "stm32g070")]
+pwm_hal! {
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+}
+
 pwm! {
-    TIM1: (apbenr2, apbrstr2, tim1, tim1en, tim1rst, arr),
-    TIM3: (apbenr1, apbrstr1, tim3, tim3en, tim3rst, arr_l, arr_h),
-    TIM14: (apbenr2, apbrstr2, tim14, tim14en, tim14rst, arr),
-    TIM16: (apbenr2, apbrstr2, tim16, tim16en, tim16rst, arr),
-    TIM17: (apbenr2, apbrstr2, tim17, tim17en, tim17rst, arr),
+    TIM1: (tim1, arr),
+    TIM3: (tim3, arr_l, arr_h),
+    TIM14: (tim14, arr),
+    TIM16: (tim16, arr),
+    TIM17: (tim17, arr),
 }
 
 #[cfg(feature = "stm32g0x1")]
 pwm! {
-    TIM2: (apbenr1, apbrstr1, tim2, tim2en, tim2rst, arr_l, arr_h),
+    TIM2: (tim2, arr_l, arr_h),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 pwm! {
-    TIM15: (apbenr2, apbrstr2, tim15, tim15en, tim15rst, arr),
+    TIM15: (tim15, arr),
 }

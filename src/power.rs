@@ -1,16 +1,21 @@
 //! Power control
 
-use crate::{rcc::Rcc, stm32::PWR};
+use crate::{
+    rcc::{Enable, Rcc},
+    stm32::PWR,
+};
 
 pub enum LowPowerMode {
-    StopMode1 = 0b00,
-    StopMode2 = 0b01,
-    Standby = 0b11,
+    StopMode1 = 0b000,
+    StopMode2 = 0b001,
+    Standby = 0b011,
+    Shutdown = 0b111,
 }
 
 pub enum PowerMode {
     Run,
     LowPower(LowPowerMode),
+    UltraLowPower(LowPowerMode),
 }
 
 pub struct Power {
@@ -19,7 +24,7 @@ pub struct Power {
 
 impl Power {
     pub fn new(pwr: PWR, rcc: &mut Rcc) -> Self {
-        rcc.enable_power_control();
+        PWR::enable(rcc);
         Self { rb: pwr }
     }
 
@@ -30,6 +35,16 @@ impl Power {
                 while !self.rb.sr2.read().reglpf().bit_is_clear() {}
             }
             PowerMode::LowPower(sm) => {
+                self.rb.cr3.modify(|_, w| w.ulpen().clear_bit());
+                self.rb
+                    .cr1
+                    .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });
+                while !self.rb.sr2.read().reglps().bit_is_set()
+                    || !self.rb.sr2.read().reglpf().bit_is_set()
+                {}
+            }
+            PowerMode::UltraLowPower(sm) => {
+                self.rb.cr3.modify(|_, w| w.ulpen().set_bit());
                 self.rb
                     .cr1
                     .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });

@@ -42,7 +42,7 @@ impl LSCOExt for LscoPin {
         };
         rcc.unlock_rtc();
         self.set_alt_mode(AltFunction::AF0);
-        rcc.rb.bdcr.modify(|_, w| w.lscosel().bit(src_select_bit));
+        rcc.bdcr.modify(|_, w| w.lscosel().bit(src_select_bit));
         Lsco { pin: self }
     }
 }
@@ -93,7 +93,7 @@ macro_rules! mco {
                         _ => 0b111,
                     };
 
-                    rcc.rb.cfgr.modify(|r, w| unsafe {
+                    rcc.cfgr.modify(|r, w| unsafe {
                         w.bits((r.bits() & !(0b111 << 28)) | (psc_bits << 28))
                     });
 

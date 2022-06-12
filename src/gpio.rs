@@ -2,6 +2,7 @@
 use core::marker::PhantomData;
 
 use crate::rcc::Rcc;
+use embedded_hal::digital::v2::PinState;
 
 /// Default pin mode
 pub type DefaultMode = Analog;
@@ -71,7 +72,7 @@ pub(crate) enum AltFunction {
 }
 
 macro_rules! gpio {
-    ($GPIOX:ident, $gpiox:ident, $iopxenr:ident, $PXx:ident, $Pxn:expr, [
+    ($GPIOX:ident, $gpiox:ident, $PXx:ident, $Pxn:expr, [
         $($PXi:ident: ($pxi:ident, $i:expr),)+
     ]) => {
         /// GPIO
@@ -81,7 +82,7 @@ macro_rules! gpio {
             use hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin};
             use crate::stm32::{EXTI, $GPIOX};
             use crate::exti::{ExtiExt, Event};
-            use crate::rcc::Rcc;
+            use crate::rcc::{Enable, Rcc};
             use super::*;
 
             /// GPIO parts
@@ -95,7 +96,8 @@ macro_rules! gpio {
                 type Parts = Parts;
 
                 fn split(self, rcc: &mut Rcc) -> Parts {
-                    rcc.rb.iopenr.modify(|_, w| w.$iopxenr().set_bit());
+                    <$GPIOX>::enable(rcc);
+
                     Parts {
                         $(
                             $pxi: $PXi { _mode: PhantomData },
@@ -273,6 +275,14 @@ macro_rules! gpio {
                         $PXi { _mode: PhantomData }
                     }
 
+                    /// Configures the pin to operate as an open drain output
+                    /// pin with `initial_state` specifying whether the pin
+                    /// should initially be high or low
+                    pub fn into_open_drain_output_in_state(mut self, initial_state: PinState) -> $PXi<Output<OpenDrain>> {
+                        self.internal_set_state(initial_state);
+                        self.into_open_drain_output()
+                    }
+
                     /// Configures the pin to operate as an open drain output pin
                     pub fn into_open_drain_output(self) -> $PXi<Output<OpenDrain>> {
                         let offset = 2 * $i;
@@ -291,7 +301,15 @@ macro_rules! gpio {
                         $PXi { _mode: PhantomData }
                     }
 
-                    /// Configures the pin to operate as an push pull output pin
+                    /// Configures the pin to operate as a push pull output pin
+                    /// with `initial_state` specifying whether the pin should
+                    /// initially be high or low
+                    pub fn into_push_pull_output_in_state(mut self, initial_state: PinState) -> $PXi<Output<PushPull>> {
+                        self.internal_set_state(initial_state);
+                        self.into_push_pull_output()
+                    }
+
+                    /// Configures the pin to operate as a push pull output pin
                     pub fn into_push_pull_output(self) -> $PXi<Output<PushPull>> {
                         let offset = 2 * $i;
                         unsafe {
@@ -313,7 +331,7 @@ macro_rules! gpio {
                     pub fn listen(self, edge: SignalEdge, exti: &mut EXTI) -> $PXi<Input<Floating>> {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
+                            let _ = &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
                                 w.bits(r.bits() & !(0b11 << offset))
                             });
                             &(*$GPIOX::ptr()).moder.modify(|r, w| {
@@ -375,6 +393,19 @@ macro_rules! gpio {
                             });
                         }
                     }
+
+                    fn internal_set_state(&mut self, state: PinState) {
+                        match state {
+                            PinState::High => {
+                                // NOTE(unsafe) atomic write to a stateless register
+                                unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << $i)) };
+                            }
+                            PinState::Low => {
+                                // NOTE(unsafe) atomic write to a stateless register
+                                unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << ($i + 16))) };
+                            }
+                        }
+                    }
                 }
 
                 impl<MODE> $PXi<Output<MODE>> {
@@ -391,14 +422,12 @@ macro_rules! gpio {
                     type Error = Infallible;
 
                     fn set_high(&mut self) -> Result<(), Self::Error> {
-                        // NOTE(unsafe) atomic write to a stateless register
-                        unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << $i)) };
+                        self.internal_set_state(PinState::High);
                         Ok(())
                     }
 
                     fn set_low(&mut self) -> Result<(), Self::Error>{
-                        // NOTE(unsafe) atomic write to a stateless register
-                        unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << ($i + 16))) };
+                        self.internal_set_state(PinState::Low);
                         Ok(())
                     }
                 }
@@ -469,7 +498,7 @@ macro_rules! gpio {
     }
 }
 
-gpio!(GPIOA, gpioa, iopaen, PA, 0, [
+gpio!(GPIOA, gpioa, PA, 0, [
     PA0: (pa0, 0),
     PA1: (pa1, 1),
     PA2: (pa2, 2),
@@ -488,7 +517,7 @@ gpio!(GPIOA, gpioa, iopaen, PA, 0, [
     PA15: (pa15, 15),
 ]);
 
-gpio!(GPIOB, gpiob, iopben, PB, 1, [
+gpio!(GPIOB, gpiob, PB, 1, [
     PB0: (pb0, 0),
     PB1: (pb1, 1),
     PB2: (pb2, 2),
@@ -507,7 +536,7 @@ gpio!(GPIOB, gpiob, iopben, PB, 1, [
     PB15: (pb15, 15),
 ]);
 
-gpio!(GPIOC, gpioc, iopcen, PC, 2, [
+gpio!(GPIOC, gpioc, PC, 2, [
     PC0: (pc0, 0),
     PC1: (pc1, 1),
     PC2: (pc2, 2),
@@ -526,7 +555,7 @@ gpio!(GPIOC, gpioc, iopcen, PC, 2, [
     PC15: (pc15, 15),
 ]);
 
-gpio!(GPIOD, gpiod, iopden, PD, 3, [
+gpio!(GPIOD, gpiod, PD, 3, [
     PD0: (pd0, 0),
     PD1: (pd1, 1),
     PD2: (pd2, 2),
@@ -545,7 +574,7 @@ gpio!(GPIOD, gpiod, iopden, PD, 3, [
     PD15: (pd15, 15),
 ]);
 
-gpio!(GPIOF, gpiof, iopfen, PF, 5, [
+gpio!(GPIOF, gpiof, PF, 5, [
     PF0: (pf0, 0),
     PF1: (pf1, 1),
     PF2: (pf2, 2),

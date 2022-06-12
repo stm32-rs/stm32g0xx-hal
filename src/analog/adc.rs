@@ -2,7 +2,7 @@
 use core::ptr;
 
 use crate::gpio::*;
-use crate::rcc::Rcc;
+use crate::rcc::{Enable, Rcc};
 use crate::stm32::ADC;
 use hal::adc::{Channel, OneShot};
 
@@ -116,7 +116,7 @@ pub struct CalibrationFactor(pub u8);
 impl Adc {
     pub fn new(adc: ADC, rcc: &mut Rcc) -> Self {
         // Enable ADC clocks
-        rcc.enable_adc();
+        ADC::enable(rcc);
 
         adc.cr.modify(|_, w| w.advregen().set_bit());
 
@@ -304,10 +304,6 @@ where
     type Error = ();
 
     fn prepare_injected(&mut self, _pin: &mut PIN, triger_source: InjTrigSource) {
-        // set the clock mode to synchronous one
-        // self.rb.cfgr2.ckmode().bits(CLCOKMODE)   // CLOCKMODE = 01 or 10 for PCLK/2 or PCLK/4
-
-        // self.set_injected_trigger_source(triger_source as InjTrigSource);
         self.rb
             .cfgr1
             .modify(|_, w| unsafe { w.exten().bits(1).extsel().bits(triger_source as u8) });
