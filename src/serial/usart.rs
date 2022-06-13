@@ -363,7 +363,7 @@ macro_rules! uart_basic {
                 // Enable clock for USART
                 $USARTX::enable(rcc);
 
-                let clk = rcc.clocks.apb_clk.0 as u64;
+                let clk = rcc.clocks.apb_clk.raw() as u64;
                 let bdr = config.baudrate.0 as u64;
                 let div = ($clk_mul * clk) / bdr;
                 usart.brr.write(|w| unsafe { w.bits(div as u32) });
@@ -494,7 +494,7 @@ macro_rules! uart_full {
                 // Enable clock for USART
                 $USARTX::enable(rcc);
 
-                let clk = rcc.clocks.apb_clk.0 as u64;
+                let clk = rcc.clocks.apb_clk.raw() as u64;
                 let bdr = config.baudrate.0 as u64;
                 let clk_mul = 1;
                 let div = (clk_mul * clk) / bdr;

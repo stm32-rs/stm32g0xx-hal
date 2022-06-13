@@ -33,7 +33,7 @@ fn main() -> ! {
     let spi = dp.SPI2.spi(
         (spi::NoSck, spi::NoMiso, gpioa.pa10),
         ws2812::MODE,
-        3.mhz(),
+        3.MHz(),
         &mut rcc,
     );
     let mut ws = ws2812::Ws2812::new(spi);
@@ -51,6 +51,6 @@ fn main() -> ! {
         }
         ws.write(data.iter().cloned()).unwrap();
         cnt += 1;
-        delay.delay(50.ms());
+        delay.delay(50.millis());
     }
 }

@@ -19,7 +19,6 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);
-    let gpiob = dp.GPIOB.split(&mut rcc);
 
     let mut led = gpioa.pa5.into_push_pull_output();
 
@@ -86,6 +85,6 @@ fn main() -> ! {
             dma.ch1.enable();
         }
 
-        delay.delay(500.ms());
+        delay.delay(500.millis());
     }
 }

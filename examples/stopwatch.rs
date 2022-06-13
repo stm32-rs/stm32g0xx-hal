@@ -32,24 +32,24 @@ fn main() -> ! {
     let mut stopwatch = dp.TIM3.stopwatch(&mut rcc);
 
     let elapsed_us = stopwatch.trace(|| {
-        delay.delay(100.us());
+        delay.delay(100.micros());
     });
-    hprintln!("Delay: 100 us -> {} us", elapsed_us.0).unwrap();
+    hprintln!("Delay: 100 us -> {}", elapsed_us).unwrap();
 
-    timer.start(100.us());
+    timer.start(100.micros());
     let elapsed_us = stopwatch.trace(|| {
         block!(timer.wait()).unwrap();
     });
-    hprintln!("Timer: 100 us -> {} us", elapsed_us.0).unwrap();
+    hprintln!("Timer: 100 us -> {}", elapsed_us).unwrap();
 
     let elapsed_us = stopwatch.trace(calc_something);
-    hprintln!("Calc @ 16 MHz: {} us", elapsed_us.0).unwrap();
+    hprintln!("Calc @ 16 MHz: {}", elapsed_us).unwrap();
 
     let rcc = rcc.freeze(Config::new(SysClockSrc::PLL));
     stopwatch.set_clock(rcc.clocks.apb_tim_clk);
 
     let elapsed_us = stopwatch.trace(calc_something);
-    hprintln!("Calc @ 64 MHz: {} us", elapsed_us.0).unwrap();
+    hprintln!("Calc @ 64 MHz: {}", elapsed_us).unwrap();
 
     loop {}
 }

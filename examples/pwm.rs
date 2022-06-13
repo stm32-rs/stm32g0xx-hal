@@ -20,7 +20,7 @@ fn main() -> ! {
 
     let mut rcc = dp.RCC.constrain();
     let gpioa = dp.GPIOA.split(&mut rcc);
-    let mut pwm = dp.TIM1.pwm(10.khz(), &mut rcc);
+    let mut pwm = dp.TIM1.pwm(10.kHz(), &mut rcc);
 
     let mut pwm_ch1 = pwm.bind_pin(gpioa.pa8);
     let mut pwm_ch2 = pwm.bind_pin(gpioa.pa9);
@@ -41,7 +41,7 @@ fn main() -> ! {
     pwm_ch2.set_duty(max / 16);
     asm::bkpt();
 
-    pwm.set_freq(20.khz());
+    pwm.set_freq(20.kHz());
 
     loop {}
 }

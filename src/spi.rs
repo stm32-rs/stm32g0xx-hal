@@ -67,10 +67,9 @@ pub struct Spi<SPI, PINS> {
 }
 
 pub trait SpiExt: Sized {
-    fn spi<PINS, T>(self, pins: PINS, mode: Mode, freq: T, rcc: &mut Rcc) -> Spi<Self, PINS>
+    fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<Self, PINS>
     where
-        PINS: Pins<Self>,
-        T: Into<Hertz>;
+        PINS: Pins<Self>;
 }
 
 macro_rules! spi {
@@ -138,25 +137,20 @@ macro_rules! spi {
         )*
 
         impl<PINS: Pins<$SPIX>> Spi<$SPIX, PINS> {
-            pub fn $spiX<T>(
+            pub fn $spiX(
                 spi: $SPIX,
                 pins: PINS,
                 mode: Mode,
-                speed: T,
+                speed: Hertz,
                 rcc: &mut Rcc
-            ) -> Self
-            where
-            T: Into<Hertz>
-            {
+            ) -> Self {
                 $SPIX::enable(rcc);
                 $SPIX::reset(rcc);
 
                 // disable SS output
                 spi.cr2.write(|w| w.ssoe().clear_bit());
 
-                let spi_freq = speed.into().0;
-                let apb_freq = rcc.clocks.apb_clk.0;
-                let br = match apb_freq / spi_freq {
+                let br = match rcc.clocks.apb_clk / speed {
                     0 => unreachable!(),
                     1..=2 => 0b000,
                     3..=5 => 0b001,
@@ -229,13 +223,12 @@ macro_rules! spi {
         }
 
         impl SpiExt for $SPIX {
-            fn spi<PINS, T>(self, pins: PINS, mode: Mode, freq: T, rcc: &mut Rcc) -> Spi<$SPIX, PINS>
+            fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<$SPIX, PINS>
             where
                 PINS: Pins<$SPIX>,
-                T: Into<Hertz>
-                {
-                    Spi::$spiX(self, pins, mode, freq, rcc)
-                }
+            {
+                Spi::$spiX(self, pins, mode, freq, rcc)
+            }
         }
 
         impl<PINS> hal::spi::FullDuplex<u8> for Spi<$SPIX, PINS> {

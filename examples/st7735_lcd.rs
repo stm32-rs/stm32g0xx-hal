@@ -33,7 +33,7 @@ fn main() -> ! {
     let spi = dp.SPI2.spi(
         (gpioa.pa0, gpioa.pa9, gpioa.pa4),
         spi::MODE_0,
-        8.mhz(),
+        8.MHz(),
         &mut rcc,
     );
 
@@ -49,6 +49,6 @@ fn main() -> ! {
         cnt = (cnt + 1) % 100;
         disp.draw(black_backdrop.into_iter());
         disp.draw(ferris.translate(Coord::new(cnt, cnt)).into_iter());
-        delay.delay(200.ms());
+        delay.delay(200.millis());
     }
 }

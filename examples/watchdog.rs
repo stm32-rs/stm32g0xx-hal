@@ -27,10 +27,10 @@ fn main() -> ! {
     let mut watchdog = dp.WWDG.constrain(&mut rcc);
     // let mut watchdog = dp.IWDG.constrain();
 
-    watchdog.start(100.ms());
+    watchdog.start(100.millis());
 
-    delay.delay(90.ms());
-    // delay.delay(110.ms());
+    delay.delay(90.millis());
+    // delay.delay(110.millis());
 
     cortex_m::asm::bkpt();
 

@@ -30,7 +30,7 @@ fn main() -> ! {
     adc.set_oversampling_shift(16);
     adc.oversampling_enable(true);
 
-    delay.delay(20.us()); // Wait for ADC voltage regulator to stabilize
+    delay.delay(20.micros()); // Wait for ADC voltage regulator to stabilize
     adc.calibrate();
 
     let mut adc_pin = gpioa.pa0.into_analog();

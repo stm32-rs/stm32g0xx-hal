@@ -18,15 +18,21 @@ use hal::timer::opm::Opm;
 use rtic::app;
 
 #[app(device = hal::stm32, peripherals = true)]
-const APP: () = {
-    struct Resources {
+mod app {
+    use super::*;
+
+    #[shared]
+    struct Shared {}
+
+    #[local]
+    struct Local {
         exti: stm32::EXTI,
         led: PA5<Output<PushPull>>,
         opm: Opm<stm32::TIM3>,
     }
 
     #[init]
-    fn init(ctx: init::Context) -> init::LateResources {
+    fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let mut rcc = ctx.device.RCC.freeze(rcc::Config::pll());
         let mut exti = ctx.device.EXTI;
 
@@ -37,7 +43,7 @@ const APP: () = {
         let led = gpioa.pa5.into_push_pull_output();
         gpioc.pc13.listen(SignalEdge::Falling, &mut exti);
 
-        let opm = ctx.device.TIM3.opm(4.ms(), &mut rcc);
+        let opm = ctx.device.TIM3.opm(4.millis(), &mut rcc);
 
         let mut opm_ch1 = opm.bind_pin(gpioa.pa6);
         let mut opm_ch2 = opm.bind_pin(gpioa.pa7);
@@ -55,13 +61,13 @@ const APP: () = {
         opm_ch3.enable();
         opm_ch4.enable();
 
-        init::LateResources { opm, exti, led }
+        (Shared {}, Local { opm, exti, led }, init::Monotonics())
     }
 
-    #[task(binds = EXTI4_15, resources = [exti, led, opm])]
+    #[task(binds = EXTI4_15, local = [exti, led, opm])]
     fn button_click(ctx: button_click::Context) {
-        ctx.resources.led.toggle().unwrap();
-        ctx.resources.opm.generate();
-        ctx.resources.exti.unpend(Event::GPIO13);
+        ctx.local.led.toggle().unwrap();
+        ctx.local.opm.generate();
+        ctx.local.exti.unpend(Event::GPIO13);
     }
-};
+}

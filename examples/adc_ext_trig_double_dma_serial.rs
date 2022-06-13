@@ -63,7 +63,7 @@ unsafe fn DMA_CHANNEL1() {
     // Address is in byte, value in 2Bytes, this is why second dma buffer ist added with BUFFER_SIZE
     // and not BUFFER_SIZE/2
 
-    let dma = &(*stm32g0::stm32g031::DMA::ptr());
+    let dma = &(*hal::stm32::DMA::ptr());
     let htif1 = dma.isr.read().htif1().bit();
     let tcif1 = dma.isr.read().tcif1().bit();
     // set the global clear bit of DMA channel1
@@ -107,7 +107,7 @@ fn main() -> ! {
 
     let mut dma = dp.DMA.split(&mut rcc, dp.DMAMUX);
 
-    let adc_ptr = unsafe { &(*stm32g0::stm32g031::ADC::ptr()) };
+    let adc_ptr = unsafe { &(*hal::stm32::ADC::ptr()) };
     let adc_data_register_addr = &adc_ptr.dr as *const _ as u32;
 
     let adc_buffer1_addr: u32 = adc_buffer1.as_ptr() as u32;
@@ -125,8 +125,7 @@ fn main() -> ! {
                                                                          // https://sourceware.org/gdb/current/onlinedocs/gdb/Memory.html
 
     // dma ch1 reads from ADC register into memory
-    dma.ch1
-        .select_peripheral(stm32g0xx_hal::dmamux::DmaMuxIndex::ADC);
+    dma.ch1.select_peripheral(hal::dmamux::DmaMuxIndex::ADC);
     // The dma continuesly fills the buffer, when its full, it starts over again
     dma.ch1.set_circular_mode(true);
 
@@ -180,7 +179,7 @@ fn main() -> ! {
     // this is only available on timer TIM2, TIM3, TIM4 and TIM1
     unsafe {
         // get pointer of timer 2
-        let tim = &(*stm32g0::stm32g031::TIM2::ptr());
+        let tim = &(*hal::stm32::TIM2::ptr());
         //
         tim.cr2.modify(|_, w| w.mms().bits(3 as u8));
     }
@@ -191,7 +190,7 @@ fn main() -> ! {
 
     // don't enabel the timer bevor the dma
     // Set up a timer expiring after
-    timer.start(50.us());
+    timer.start(50.micros());
     timer.listen();
 
     //enable DMA_CHANNEL1 interrupt
