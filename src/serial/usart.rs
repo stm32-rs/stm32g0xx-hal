@@ -247,12 +247,13 @@ macro_rules! uart_shared {
         )+
 
         impl<Config> Rx<$USARTX, Config> {
+            /// Listen for a data interrupt event
             pub fn listen(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.cr1.modify(|_, w| w.rxneie().set_bit());
             }
 
-            /// Stop listening for an interrupt event
+            /// Stop listening for a data interrupt event
             pub fn unlisten(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.cr1.modify(|_, w| w.rxneie().clear_bit());
@@ -264,6 +265,29 @@ macro_rules! uart_shared {
                 usart.isr.read().rxne().bit_is_set()
             }
 
+            /// Listen for an idle interrupt event
+            pub fn listen_idle(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1.modify(|_, w| w.idleie().set_bit());
+            }
+
+            /// Stop listening for an idle interrupt event
+            pub fn unlisten_idle(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1.modify(|_, w| w.idleie().clear_bit());
+            }
+
+            /// Return true if the idle event occured
+            pub fn is_idle(&self) -> bool {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr.read().idle().bit_is_set()
+            }
+
+            /// Clear the idle event flag
+            pub fn clear_idle(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.icr.write(|w| w.idlecf().set_bit());
+            }
         }
 
         impl<Config> hal::serial::Read<u8> for Rx<$USARTX, Config> {
