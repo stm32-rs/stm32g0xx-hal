@@ -2,9 +2,9 @@
 use core::marker::PhantomData;
 
 use crate::rcc::Rcc;
+use core::convert::Infallible;
 use embedded_hal::digital::v2::PinState;
 use hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin};
-use core::convert::Infallible;
 
 /// Default pin mode
 pub type DefaultMode = Analog;
