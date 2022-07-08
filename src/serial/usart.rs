@@ -3,16 +3,15 @@ use core::marker::PhantomData;
 
 use crate::dma;
 use crate::dmamux::DmaMuxIndex;
-use crate::gpio::AltFunction;
-use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*};
+use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*, AltFunction};
 use crate::prelude::*;
 use crate::rcc::*;
+use crate::serial::config::*;
 use crate::stm32::*;
 
 use cortex_m::interrupt;
 use nb::block;
 
-use crate::serial::config::*;
 /// Serial error
 #[derive(Debug)]
 pub enum Error {
@@ -66,6 +65,7 @@ pub enum Event {
     /// Parity error
     PE = 1 << 0,
 }
+
 impl Event {
     fn val(self) -> u32 {
         self as u32
@@ -95,24 +95,93 @@ pub struct Serial<USART, Config> {
 // Serial TX pin
 pub trait TxPin<USART> {
     fn setup(&self);
+    fn release(self) -> Self;
 }
 
 // Serial RX pin
 pub trait RxPin<USART> {
     fn setup(&self);
+    fn release(self) -> Self;
+}
+
+pub struct NoTx;
+
+impl<USART> TxPin<USART> for NoTx {
+    fn setup(&self) {}
+
+    fn release(self) -> Self {
+        self
+    }
+}
+pub struct NoRx;
+
+impl<USART> RxPin<USART> for NoRx {
+    fn setup(&self) {}
+
+    fn release(self) -> Self {
+        self
+    }
+}
+
+// Driver enable pin
+pub trait DriverEnablePin<USART> {
+    fn setup(&self);
+    fn release(self) -> Self;
+}
+
+// Serial pins
+pub trait Pins<USART> {
+    const DRIVER_ENABLE: bool;
+
+    fn setup(&self);
+    fn release(self) -> Self;
+}
+
+// Duplex mode
+impl<USART, TX, RX> Pins<USART> for (TX, RX)
+where
+    TX: TxPin<USART>,
+    RX: RxPin<USART>,
+{
+    const DRIVER_ENABLE: bool = false;
+
+    fn setup(&self) {
+        self.0.setup();
+        self.1.setup();
+    }
+
+    fn release(self) -> Self {
+        (self.0.release(), self.1.release())
+    }
+}
+
+// Duplex mode with driver enabled
+impl<USART, TX, RX, DE> Pins<USART> for (TX, RX, DE)
+where
+    TX: TxPin<USART>,
+    RX: RxPin<USART>,
+    DE: DriverEnablePin<USART>,
+{
+    const DRIVER_ENABLE: bool = true;
+
+    fn setup(&self) {
+        self.0.setup();
+        self.1.setup();
+        self.2.setup();
+    }
+
+    fn release(self) -> Self {
+        (self.0.release(), self.1.release(), self.2.release())
+    }
 }
 
 pub trait SerialExt<USART, Config> {
-    fn usart<TX, RX>(
+    fn usart<PINS: Pins<USART>>(
         self,
-        tx: TX,
-        rx: RX,
+        pins: PINS,
         config: Config,
         rcc: &mut Rcc,
-    ) -> Result<Serial<USART, Config>, InvalidConfig>
-    where
-        TX: TxPin<USART>,
-        RX: RxPin<USART>;
+    ) -> Result<Serial<USART, Config>, InvalidConfig>;
 }
 
 impl<USART, Config> fmt::Write for Serial<USART, Config>
@@ -138,12 +207,17 @@ where
 macro_rules! uart_shared {
     ($USARTX:ident, $dmamux_rx:ident, $dmamux_tx:ident,
         tx: [ $(($PTX:ident, $TAF:expr),)+ ],
-        rx: [ $(($PRX:ident, $RAF:expr),)+ ]) => {
+        rx: [ $(($PRX:ident, $RAF:expr),)+ ],
+        de: [ $(($PDE:ident, $DAF:expr),)+ ]) => {
 
         $(
             impl<MODE> TxPin<$USARTX> for $PTX<MODE> {
                 fn setup(&self) {
                     self.set_alt_mode($TAF)
+                }
+
+                fn release(self) -> Self {
+                    self
                 }
             }
         )+
@@ -152,6 +226,22 @@ macro_rules! uart_shared {
             impl<MODE> RxPin<$USARTX> for $PRX<MODE> {
                 fn setup(&self) {
                     self.set_alt_mode($RAF)
+                }
+
+                fn release(self) -> Self {
+                    self
+                }
+            }
+        )+
+
+        $(
+            impl<MODE> DriverEnablePin<$USARTX> for $PDE<MODE> {
+                fn setup(&self) {
+                    self.set_alt_mode($DAF)
+                }
+
+                fn release(self) -> Self {
+                    self
                 }
             }
         )+
@@ -333,33 +423,23 @@ macro_rules! uart_basic {
         $usartX:ident, $clk_mul:expr
     ) => {
         impl SerialExt<$USARTX, BasicConfig> for $USARTX {
-            fn usart<TX, RX>(
+            fn usart<PINS: Pins<$USARTX>>(
                 self,
-                tx: TX,
-                rx: RX,
+                pins: PINS,
                 config: BasicConfig,
                 rcc: &mut Rcc,
-            ) -> Result<Serial<$USARTX, BasicConfig>, InvalidConfig>
-            where
-                TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX>,
-            {
-                Serial::$usartX(self, tx, rx, config, rcc)
+            ) -> Result<Serial<$USARTX, BasicConfig>, InvalidConfig> {
+                Serial::$usartX(self, pins, config, rcc)
             }
         }
 
         impl Serial<$USARTX, BasicConfig> {
-            pub fn $usartX<TX, RX>(
+            pub fn $usartX<PINS: Pins<$USARTX>>(
                 usart: $USARTX,
-                tx: TX,
-                rx: RX,
+                pins: PINS,
                 config: BasicConfig,
                 rcc: &mut Rcc,
-            ) -> Result<Self, InvalidConfig>
-            where
-                TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX>,
-            {
+            ) -> Result<Self, InvalidConfig> {
                 // Enable clock for USART
                 $USARTX::enable(rcc);
 
@@ -401,9 +481,10 @@ macro_rules! uart_basic {
                         .bit(config.swap)
                 });
 
+                usart.cr3.write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
+
                 // Enable pins
-                tx.setup();
-                rx.setup();
+                pins.setup();
 
                 // Enable USART
                 usart.cr1.modify(|_, w| w.ue().set_bit());
@@ -464,33 +545,23 @@ macro_rules! uart_full {
         $usartX:ident, $clk_mul:expr
     ) => {
         impl SerialExt<$USARTX, FullConfig> for $USARTX {
-            fn usart<TX, RX>(
+            fn usart<PINS: Pins<$USARTX>>(
                 self,
-                tx: TX,
-                rx: RX,
+                pins: PINS,
                 config: FullConfig,
                 rcc: &mut Rcc,
-            ) -> Result<Serial<$USARTX, FullConfig>, InvalidConfig>
-            where
-                TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX>,
-            {
-                Serial::$usartX(self, tx, rx, config, rcc)
+            ) -> Result<Serial<$USARTX, FullConfig>, InvalidConfig> {
+                Serial::$usartX(self, pins, config, rcc)
             }
         }
 
         impl Serial<$USARTX, FullConfig> {
-            pub fn $usartX<TX, RX>(
+            pub fn $usartX<PINS: Pins<$USARTX>>(
                 usart: $USARTX,
-                tx: TX,
-                rx: RX,
+                pins: PINS,
                 config: FullConfig,
                 rcc: &mut Rcc,
-            ) -> Result<Self, InvalidConfig>
-            where
-                TX: TxPin<$USARTX>,
-                RX: RxPin<$USARTX>,
-            {
+            ) -> Result<Self, InvalidConfig> {
                 // Enable clock for USART
                 $USARTX::enable(rcc);
 
@@ -547,8 +618,10 @@ macro_rules! uart_full {
                         .bit(config.fifo_enable)
                 });
 
-                tx.setup();
-                rx.setup();
+                usart.cr3.write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
+
+                // Enable pins
+                pins.setup();
 
                 Ok(Serial {
                     tx: Tx {
@@ -630,16 +703,21 @@ macro_rules! uart_full {
 }
 
 uart_shared!(USART1, USART1_RX, USART1_TX,
-tx: [
-    (PA9, AltFunction::AF1),
-    (PB6, AltFunction::AF0),
-    (PC4, AltFunction::AF1),
-],
-rx: [
-    (PA10, AltFunction::AF1),
-    (PB7, AltFunction::AF0),
-    (PC5, AltFunction::AF1),
-]);
+    tx: [
+        (PA9, AltFunction::AF1),
+        (PB6, AltFunction::AF0),
+        (PC4, AltFunction::AF1),
+    ],
+    rx: [
+        (PA10, AltFunction::AF1),
+        (PB7, AltFunction::AF0),
+        (PC5, AltFunction::AF1),
+    ],
+    de: [
+        (PA12, AltFunction::AF1),
+        (PB3, AltFunction::AF4),
+    ]
+);
 
 uart_shared!(USART2, USART2_RX, USART2_TX,
     tx: [
@@ -651,6 +729,10 @@ uart_shared!(USART2, USART2_RX, USART2_TX,
         (PA3, AltFunction::AF1),
         (PA15, AltFunction::AF1),
         (PD6, AltFunction::AF0),
+    ],
+    de: [
+        (PA1, AltFunction::AF1),
+        (PD4, AltFunction::AF0),
     ]
 );
 
@@ -672,6 +754,13 @@ uart_shared!(USART3, USART3_RX, USART3_TX,
         (PC5, AltFunction::AF1),
         (PC11, AltFunction::AF1),
         (PD9, AltFunction::AF1),
+    ],
+    de: [
+        (PA15, AltFunction::AF5),
+        (PB1, AltFunction::AF4),
+        (PB14, AltFunction::AF4),
+        (PD2, AltFunction::AF0),
+        (PD12, AltFunction::AF0),
     ]
 );
 
@@ -684,6 +773,9 @@ uart_shared!(USART4, USART4_RX, USART4_TX,
     rx: [
         (PC11, AltFunction::AF1),
         (PA1, AltFunction::AF4),
+    ],
+    de: [
+        (PA15, AltFunction::AF4),
     ]
 );
 
@@ -698,6 +790,10 @@ uart_shared!(LPUART, LPUART_RX, LPUART_TX,
         (PA3, AltFunction::AF6),
         (PB10, AltFunction::AF1),
         (PC0, AltFunction::AF1),
+    ],
+    de: [
+        (PB1, AltFunction::AF6),
+        (PB12, AltFunction::AF1),
     ]
 );
 

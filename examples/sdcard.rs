@@ -35,8 +35,7 @@ fn main() -> ! {
     let mut uart = dp
         .USART2
         .usart(
-            gpioa.pa2,
-            gpioa.pa3,
+            (gpioa.pa2, gpioa.pa3),
             serial::FullConfig::default(),
             &mut rcc,
         )
