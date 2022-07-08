@@ -49,6 +49,7 @@ st7735-lcd = "0.6.1"
 ws2812-spi = { version = "0.3.0", features = [] }
 
 [features]
+default = ["i2c-blocking"]
 device-selected = []
 rt = ["stm32g0/rt"]
 stm32g030 = ["stm32g0/stm32g030", "stm32g0x0", "device-selected"]
@@ -60,6 +61,9 @@ stm32g081 = ["stm32g0/stm32g081", "stm32g0x1", "device-selected"]
 
 stm32g0x0 = []
 stm32g0x1 = []
+
+i2c-blocking = []
+i2c-nonblocking = []
 
 [profile.dev]
 incremental = false
