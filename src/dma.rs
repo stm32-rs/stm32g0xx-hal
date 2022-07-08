@@ -3,7 +3,6 @@ use crate::dmamux::DmaMuxIndex;
 use crate::rcc::Rcc;
 use crate::stm32::DMAMUX;
 
-
 /// Extension trait to split a DMA peripheral into independent channels
 pub trait DmaExt {
     /// The type to split the DMA into
