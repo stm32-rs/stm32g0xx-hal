@@ -23,7 +23,11 @@ fn main() -> ! {
     let gpioa = dp.GPIOA.split(&mut rcc);
     let mut usart = dp
         .USART2
-        .usart((gpioa.pa2, gpioa.pa3, gpioa.pa1), FullConfig::default(), &mut rcc)
+        .usart(
+            (gpioa.pa2, gpioa.pa3, gpioa.pa1),
+            FullConfig::default(),
+            &mut rcc,
+        )
         .unwrap();
 
     writeln!(usart, "Hello RS485\r").unwrap();
