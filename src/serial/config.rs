@@ -1,21 +1,21 @@
 use crate::prelude::*;
 use crate::time::Bps;
 
-#[derive(PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Eq, PartialEq, PartialOrd, Clone, Copy)]
 pub enum WordLength {
     DataBits7,
     DataBits8,
     DataBits9,
 }
 
-#[derive(PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Eq, PartialEq, PartialOrd, Clone, Copy)]
 pub enum Parity {
     ParityNone,
     ParityEven,
     ParityOdd,
 }
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(Eq, PartialEq, PartialOrd, Clone, Copy, Debug)]
 pub enum StopBits {
     #[doc = "1 stop bit"]
     STOP1 = 0b00,
@@ -33,7 +33,7 @@ impl StopBits {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(Eq, PartialEq, PartialOrd, Clone, Copy, Debug)]
 pub enum FifoThreshold {
     #[doc = "1/8 of its depth"]
     FIFO_1_BYTE = 0b000,
@@ -54,7 +54,7 @@ impl FifoThreshold {
         self as u8
     }
 }
-#[derive(PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Eq, PartialEq, PartialOrd, Clone, Copy)]
 pub struct BasicConfig {
     pub(crate) baudrate: Bps,
     pub(crate) wordlength: WordLength,
@@ -63,7 +63,7 @@ pub struct BasicConfig {
     pub(crate) swap: bool,
 }
 
-#[derive(PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Eq, PartialEq, PartialOrd, Clone, Copy)]
 pub struct FullConfig {
     pub(crate) baudrate: Bps,
     pub(crate) wordlength: WordLength,

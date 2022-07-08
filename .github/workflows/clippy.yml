@@ -7,15 +7,26 @@ name: Clippy check
 jobs:
   clippy_check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+        feature:
+          - stm32g030
+          - stm32g031
+          - stm32g041
+          - stm32g070
+          - stm32g071
+          - stm32g081
     steps:
       - uses: actions/checkout@v1
       - run: rustup component add clippy
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: ${{ matrix.rust }}
           target: thumbv6m-none-eabi
           override: true
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --features=stm32g031 --target thumbv6m-none-eabi
+          args: --target thumbv6m-none-eabi --features ${{ matrix.feature }}

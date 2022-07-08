@@ -14,7 +14,7 @@ impl IndependedWatchdog {
     }
 
     pub fn start(&mut self, period: MicroSecond) {
-        let mut cycles = crate::time::cycles(period.into(), 16_384.Hz());
+        let mut cycles = crate::time::cycles(period, 16_384.Hz());
         let mut psc = 0;
         let mut reload = 0;
         while psc < 6 {
@@ -117,7 +117,7 @@ impl WindowWatchdog {
     }
 
     pub fn start(&mut self, period: MicroSecond) {
-        self.set_window(period.into());
+        self.set_window(period);
         self.feed();
         self.wwdg.cr.write(|w| w.wdga().set_bit());
     }

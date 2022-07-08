@@ -1,9 +1,7 @@
 //! Direct Memory Access Engine
-use crate::dmamux::{self, DmaMuxIndex};
-use crate::rcc::{Enable, Rcc, Reset};
-use crate::stm32::{self, DMA, DMAMUX};
-
-use crate::dmamux::DmaMuxExt;
+use crate::dmamux::DmaMuxIndex;
+use crate::rcc::Rcc;
+use crate::stm32::DMAMUX;
 
 /// Extension trait to split a DMA peripheral into independent channels
 pub trait DmaExt {
@@ -58,7 +56,7 @@ impl From<Direction> for bool {
 }
 
 #[doc = "Peripheral size"]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
 pub enum WordSize {
     #[doc = "0: 8-bit size"]
@@ -239,6 +237,8 @@ pub trait Channel: private::Channel {
     }
 }
 
+// TODO: Blocked by https://github.com/stm32-rs/stm32-rs/pull/695
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 macro_rules! dma {
     (
         channels: {
@@ -250,6 +250,11 @@ macro_rules! dma {
             ), )+
         },
     ) => {
+        use crate::dmamux;
+        use crate::rcc::{Enable, Reset};
+        use crate::stm32::{self, DMA};
+
+        use crate::dmamux::DmaMuxExt;
 
         /// DMA channels
         pub struct Channels {
@@ -322,21 +327,8 @@ macro_rules! dma {
     }
 }
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071"))]
-dma!(
-    channels: {
-        C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
-        C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
-        C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
-        C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
-        C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
-        C6: (ch6, htif6, tcif6, teif6, gif6, chtif6, ctcif6, cteif6, cgif6, C5),
-        C7: (ch7, htif7, tcif7, teif7, gif7, chtif7, ctcif7, cteif7, cgif7, C6),
-    },
-);
-
 // TODO: Blocked by https://github.com/stm32-rs/stm32-rs/pull/695
-// #[cfg(feature = "stm32g081")]
+// #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 // dma!(
 //     channels: {
 //         C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
@@ -360,6 +352,7 @@ dma!(
     },
 );
 
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 impl DmaExt for DMA {
     type Channels = Channels;
 

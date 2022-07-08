@@ -17,7 +17,6 @@ jobs:
           - stm32g070
           - stm32g071
           - stm32g081
-
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -26,6 +25,5 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: thumbv6m-none-eabi
           override: true
-
       - name: Regular build
         run: cargo check --features ${{ matrix.feature }}
