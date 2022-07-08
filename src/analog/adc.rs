@@ -7,7 +7,7 @@ use crate::stm32::ADC;
 use hal::adc::{Channel, OneShot};
 
 /// ADC Result Alignment
-#[derive(PartialEq)]
+#[derive(Eq, PartialEq)]
 pub enum Align {
     /// Right aligned results (least significant bits)
     ///
@@ -23,7 +23,7 @@ pub enum Align {
 }
 
 /// ADC Sampling Precision
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Precision {
     /// 12 bit precision
     B_12 = 0b00,
@@ -36,7 +36,7 @@ pub enum Precision {
 }
 
 /// ADC Sampling time
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum SampleTime {
     T_2 = 0b000,
     T_4 = 0b001,
@@ -49,7 +49,7 @@ pub enum SampleTime {
 }
 
 // ADC Oversampling ratio
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum OversamplingRatio {
     X_2 = 0b000,
     X_4 = 0b001,
@@ -88,7 +88,7 @@ pub enum AsyncClockDiv {
 }
 
 /// ADC injected trigger source selection
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum InjTrigSource {
     TRG_0 = 0b000, // TIM1_TRGO2
     TRG_1 = 0b001, // TIM1_CC4

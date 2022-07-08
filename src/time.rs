@@ -4,33 +4,33 @@ pub use fugit::{
 };
 
 /// Baudrate
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, PartialOrd, Clone, Copy)]
 pub struct Bps(pub u32);
 
 /// A measurement of a monotonically nondecreasing clock
 pub type Instant = fugit::TimerInstantU32<1_000_000>;
 
 /// WeekDay (1-7)
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WeekDay(pub u32);
 
 /// Date (1-31)
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MonthDay(pub u32);
 
 /// Week (1-52)
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Week(pub u32);
 
 /// Month (1-12)
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Month(pub u32);
 
 /// Year
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Year(pub u32);
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Time {
     pub hours: u32,
     pub minutes: u32,
@@ -49,7 +49,7 @@ impl Time {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Date {
     pub day: u32,
     pub month: u32,

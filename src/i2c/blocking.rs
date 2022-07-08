@@ -231,7 +231,7 @@ macro_rules! i2c {
 
                 // Wait for any previous address sequence to end automatically.
                 // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
-                while self.i2c.cr2.read().start().bit_is_set() { () };
+                while self.i2c.cr2.read().start().bit_is_set() {};
 
                 // flush i2c tx register
                 self.i2c.isr.write(|w| w.txe().set_bit());
@@ -308,7 +308,7 @@ macro_rules! i2c {
 
                 // Wait for any previous address sequence to end automatically.
                 // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
-                while self.i2c.cr2.read().start().bit_is_set() { () };
+                while self.i2c.cr2.read().start().bit_is_set() {};
 
                 self.i2c.cr2.modify(|_, w| unsafe {
                     w
@@ -349,7 +349,7 @@ macro_rules! i2c {
 
                 // Wait for any previous address sequence to end automatically.
                 // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
-                while self.i2c.cr2.read().start().bit_is_set() { () };
+                while self.i2c.cr2.read().start().bit_is_set() {};
                 // Flush rxdr register
                 let _ = self.i2c.rxdr.read().rxdata().bits();
 
@@ -392,8 +392,7 @@ macro_rules! i2c {
 
             fn slave_wait_addressed(&mut self)  -> Result<(u16, I2cDirection), Error>{
                 // blocking wait until addressed
-                while self.i2c.isr.read().addr().bit_is_clear()
-                {   ()  };
+                while self.i2c.isr.read().addr().bit_is_clear() {};
 
 
                 let isr = self.i2c.isr.read();
