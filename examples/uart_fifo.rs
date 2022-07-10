@@ -23,8 +23,7 @@ fn main() -> ! {
     let mut usart1 = dp
         .USART1
         .usart(
-            gpioa.pa9,
-            gpioa.pa10,
+            (gpioa.pa9, gpioa.pa10),
             FullConfig::default()
                 .baudrate(115200.bps())
                 .fifo_enable()

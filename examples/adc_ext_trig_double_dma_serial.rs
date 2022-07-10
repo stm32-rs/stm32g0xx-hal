@@ -94,8 +94,9 @@ fn main() -> ! {
     let usart1 = dp
         .USART1
         .usart(
-            gpioa.pa9,                                                  // TX: pa9, => CN3 Pin-D5
-            gpioa.pa10,                                                 // RX: pa10, => CN3 Pin-D4
+            // TX: pa9, => CN3 Pin-D5
+            // RX: pa10, => CN3 Pin-D4
+            (gpioa.pa9, gpioa.pa10),
             FullConfig::default().baudrate(460800.bps()).fifo_enable(), // enable fifo, so that dma can fill it fast, otherwise it may not finish before ch1 is requested again
             &mut rcc,
         )
