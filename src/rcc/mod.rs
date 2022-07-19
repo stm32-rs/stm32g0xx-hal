@@ -140,11 +140,11 @@ impl Rcc {
             _ => (sys_clk.raw(), 0b0000),
         };
         let (apb_freq, apb_tim_freq, apb_psc_bits) = match rcc_cfg.apb_psc {
-            Prescaler::Div2 => (sys_freq / 2, sys_freq, 0b100),
-            Prescaler::Div4 => (sys_freq / 4, sys_freq / 2, 0b101),
-            Prescaler::Div8 => (sys_freq / 8, sys_freq / 4, 0b110),
-            Prescaler::Div16 => (sys_freq / 16, sys_freq / 8, 0b111),
-            _ => (sys_clk.raw(), sys_clk.raw(), 0b000),
+            Prescaler::Div2 => (ahb_freq / 2, ahb_freq, 0b100),
+            Prescaler::Div4 => (ahb_freq / 4, ahb_freq / 2, 0b101),
+            Prescaler::Div8 => (ahb_freq / 8, ahb_freq / 4, 0b110),
+            Prescaler::Div16 => (ahb_freq / 16, ahb_freq / 8, 0b111),
+            _ => (ahb_freq, ahb_freq, 0b000),
         };
 
         unsafe {
