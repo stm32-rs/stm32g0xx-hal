@@ -12,7 +12,7 @@ pub struct Stopwatch<TIM> {
 }
 
 macro_rules! stopwatches {
-    ($($TIM:ident: $tim:ident,)+) => {
+    ($($TIM:ident: $tim:ident, $depth:ident,)+) => {
         $(
             impl Stopwatch<$TIM> {
                 pub fn $tim(tim: $TIM, rcc: &mut Rcc) -> Self {
@@ -66,7 +66,7 @@ macro_rules! stopwatches {
 
                 pub fn elapsed(&self, ts: Instant) -> MicroSecond {
                     let now = self.now().ticks();
-                    let cycles = (now as u16).wrapping_sub(ts.ticks() as u16) as u32;
+                    let cycles = (now as $depth).wrapping_sub(ts.ticks() as $depth) as u32;
                     duration(self.clk, cycles * (1 + self.tim.psc.read().bits()))
                 }
 
@@ -91,21 +91,21 @@ macro_rules! stopwatches {
 }
 
 stopwatches! {
-    TIM1: tim1,
-    TIM3: tim3,
-    TIM14: tim14,
-    TIM16: tim16,
-    TIM17: tim17,
+    TIM1: tim1, u16,
+    TIM3: tim3, u16,
+    TIM14: tim14, u16,
+    TIM16: tim16, u16,
+    TIM17: tim17, u16,
 }
 
 #[cfg(feature = "stm32g0x1")]
 stopwatches! {
-    TIM2: tim2,
+    TIM2: tim2, u32,
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 stopwatches! {
-    TIM6: tim6,
-    TIM7: tim7,
-    TIM15: tim15,
+    TIM6: tim6, u16,
+    TIM7: tim7, u16,
+    TIM15: tim15, u16,
 }
