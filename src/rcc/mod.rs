@@ -249,16 +249,12 @@ impl Rcc {
         };
 
         self.pllsyscfgr.write(move |w| unsafe {
-            w.pllsrc()
-                .bits(pll_sw_bits)
-                .pllm()
-                .bits(pll_cfg.m - 1)
-                .plln()
-                .bits(pll_cfg.n)
-                .pllr()
-                .bits(pll_cfg.r - 1)
-                .pllren()
-                .set_bit()
+            w.pllsrc().bits(pll_sw_bits);
+            w.pllm().bits(pll_cfg.m - 1);
+            w.plln().bits(pll_cfg.n);
+            w.pllr().bits(pll_cfg.r - 1);
+            w.pllren().set_bit();
+            w
         });
 
         // Enable PLL
