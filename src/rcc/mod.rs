@@ -228,32 +228,29 @@ impl Rcc {
 
         let pll_freq = freq / (pll_cfg.m as u32) * (pll_cfg.n as u32);
         let r = (pll_freq / (pll_cfg.r as u32)).Hz();
-        let q = match pll_cfg.q {
-            Some(div) if div > 1 && div <= 8 => {
-                self.pllsyscfgr
-                    .write(move |w| unsafe { w.pllq().bits(div - 1) });
-                let req = pll_freq / div as u32;
-                Some(req.Hz())
-            }
-            _ => None,
-        };
+        let mut q = None;
+        let mut p = None;
 
-        let p = match pll_cfg.p {
-            Some(div) if div > 1 && div <= 8 => {
-                self.pllsyscfgr
-                    .write(move |w| unsafe { w.pllp().bits(div - 1) });
-                let req = pll_freq / div as u32;
-                Some(req.Hz())
-            }
-            _ => None,
-        };
-
-        self.pllsyscfgr.write(move |w| unsafe {
+        self.pllsyscfgr.write(|w| unsafe {
             w.pllsrc().bits(pll_sw_bits);
             w.pllm().bits(pll_cfg.m - 1);
             w.plln().bits(pll_cfg.n);
             w.pllr().bits(pll_cfg.r - 1);
             w.pllren().set_bit();
+            if let Some(div) = pll_cfg.q {
+                assert!(div > 1 && div <= 8);
+                w.pllq().bits(div - 1);
+                w.pllqen().set_bit();
+                let req = pll_freq / div as u32;
+                q = Some(req.Hz());
+            }
+            if let Some(div) = pll_cfg.p {
+                assert!(div > 1 && div <= 8);
+                w.pllp().bits(div - 1);
+                w.pllpen().set_bit();
+                let req = pll_freq / div as u32;
+                p = Some(req.Hz());
+            }
             w
         });
 
