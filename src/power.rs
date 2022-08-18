@@ -88,11 +88,11 @@ impl Power {
             }
             WakeUp::Line5 => {
                 self.rb.cr3.modify(|_, w| w.ewup5().set_bit());
-                self.rb.cr4.modify(|_, w| w.wp4().bit(edge));
+                self.rb.cr4.modify(|_, w| w.wp5().bit(edge));
             }
             WakeUp::Line6 => {
                 self.rb.cr3.modify(|_, w| w.ewup6().set_bit());
-                self.rb.cr4.modify(|_, w| w.wp5().bit(edge));
+                self.rb.cr4.modify(|_, w| w.wp6().bit(edge));
             }
             WakeUp::InternalLine => self.rb.cr3.modify(|_, w| w.eiwul().set_bit()),
         }
