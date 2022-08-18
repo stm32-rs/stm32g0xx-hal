@@ -141,10 +141,10 @@ impl Power {
 macro_rules! wakeup_pins {
     ($($PIN:path: $line:expr,)+) => {
         $(
-            impl<M> Into<WakeUpLine> for &$PIN {
-                fn into(self) -> WakeUpLine {
+            impl<M> From<&$PIN> for WakeUpLine {
+                fn from(_: &$PIN) -> Self {
                     $line
-                }
+                 }
             }
         )+
     }
