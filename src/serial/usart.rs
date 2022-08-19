@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 
 use crate::dma;
 use crate::dmamux::DmaMuxIndex;
-use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*, AltFunction};
+use crate::gpio::{*, AltFunction};
 use crate::prelude::*;
 use crate::rcc::*;
 use crate::serial::config::*;

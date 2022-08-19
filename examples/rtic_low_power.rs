@@ -9,8 +9,7 @@ extern crate rtic;
 extern crate stm32g0xx_hal as hal;
 
 use hal::exti::Event;
-use hal::gpio::gpioa::PA5;
-use hal::gpio::{Output, PushPull, SignalEdge};
+use hal::gpio::*;
 use hal::power::{LowPowerMode, PowerMode};
 use hal::prelude::*;
 use hal::rcc::{self, Prescaler};

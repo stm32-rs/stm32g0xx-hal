@@ -155,14 +155,14 @@ macro_rules! positive_input_pin {
     };
 }
 
-positive_input_pin!(COMP1, gpioc::PC5<Analog>, 0b00);
-positive_input_pin!(COMP1, gpiob::PB2<Analog>, 0b01);
-positive_input_pin!(COMP1, gpioa::PA1<Analog>, 0b10);
+positive_input_pin!(COMP1, PC5<Analog>, 0b00);
+positive_input_pin!(COMP1, PB2<Analog>, 0b01);
+positive_input_pin!(COMP1, PA1<Analog>, 0b10);
 positive_input_pin!(COMP1, Open, 0b11);
 
-positive_input_pin!(COMP2, gpiob::PB4<Analog>, 0b00);
-positive_input_pin!(COMP2, gpiob::PB6<Analog>, 0b01);
-positive_input_pin!(COMP2, gpioa::PA3<Analog>, 0b10);
+positive_input_pin!(COMP2, PB4<Analog>, 0b00);
+positive_input_pin!(COMP2, PB6<Analog>, 0b01);
+positive_input_pin!(COMP2, PA3<Analog>, 0b10);
 positive_input_pin!(COMP2, Open, 0b11);
 
 macro_rules! negative_input_pin {
@@ -175,13 +175,13 @@ macro_rules! negative_input_pin {
     };
 }
 
-negative_input_pin!(COMP1, gpiob::PB1<Analog>, 0b0110);
-negative_input_pin!(COMP1, gpioc::PC4<Analog>, 0b0111);
-negative_input_pin!(COMP1, gpioa::PA0<Analog>, 0b1000);
+negative_input_pin!(COMP1, PB1<Analog>, 0b0110);
+negative_input_pin!(COMP1, PC4<Analog>, 0b0111);
+negative_input_pin!(COMP1, PA0<Analog>, 0b1000);
 
-negative_input_pin!(COMP2, gpiob::PB3<Analog>, 0b0110);
-negative_input_pin!(COMP2, gpiob::PB7<Analog>, 0b0111);
-negative_input_pin!(COMP2, gpioa::PA2<Analog>, 0b1000);
+negative_input_pin!(COMP2, PB3<Analog>, 0b0110);
+negative_input_pin!(COMP2, PB7<Analog>, 0b0111);
+negative_input_pin!(COMP2, PA2<Analog>, 0b1000);
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum RefintInput {
@@ -552,24 +552,24 @@ macro_rules! output_pin_open_drain {
     };
 }
 
-output_pin_push_pull!(COMP1, gpioa::PA0<Output<PushPull>>);
-output_pin_open_drain!(COMP1, gpioa::PA0<Output<OpenDrain>>);
-output_pin_push_pull!(COMP1, gpioa::PA6<Output<PushPull>>);
-output_pin_open_drain!(COMP1, gpioa::PA6<Output<OpenDrain>>);
-output_pin_push_pull!(COMP1, gpioa::PA11<Output<PushPull>>);
-output_pin_open_drain!(COMP1, gpioa::PA11<Output<OpenDrain>>);
-output_pin_push_pull!(COMP1, gpiob::PB0<Output<PushPull>>);
-output_pin_open_drain!(COMP1, gpiob::PB0<Output<OpenDrain>>);
-output_pin_push_pull!(COMP1, gpiob::PB10<Output<PushPull>>);
-output_pin_open_drain!(COMP1, gpiob::PB10<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, PA0<Output<PushPull>>);
+output_pin_open_drain!(COMP1, PA0<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, PA6<Output<PushPull>>);
+output_pin_open_drain!(COMP1, PA6<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, PA11<Output<PushPull>>);
+output_pin_open_drain!(COMP1, PA11<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, PB0<Output<PushPull>>);
+output_pin_open_drain!(COMP1, PB0<Output<OpenDrain>>);
+output_pin_push_pull!(COMP1, PB10<Output<PushPull>>);
+output_pin_open_drain!(COMP1, PB10<Output<OpenDrain>>);
 
-output_pin_push_pull!(COMP2, gpioa::PA2<Output<PushPull>>);
-output_pin_open_drain!(COMP2, gpioa::PA2<Output<OpenDrain>>);
-output_pin_push_pull!(COMP2, gpioa::PA7<Output<PushPull>>);
-output_pin_open_drain!(COMP2, gpioa::PA7<Output<OpenDrain>>);
-output_pin_push_pull!(COMP2, gpioa::PA12<Output<PushPull>>);
-output_pin_open_drain!(COMP2, gpioa::PA12<Output<OpenDrain>>);
-output_pin_push_pull!(COMP2, gpiob::PB5<Output<PushPull>>);
-output_pin_open_drain!(COMP2, gpiob::PB5<Output<OpenDrain>>);
-output_pin_push_pull!(COMP2, gpiob::PB11<Output<PushPull>>);
-output_pin_open_drain!(COMP2, gpiob::PB11<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, PA2<Output<PushPull>>);
+output_pin_open_drain!(COMP2, PA2<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, PA7<Output<PushPull>>);
+output_pin_open_drain!(COMP2, PA7<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, PA12<Output<PushPull>>);
+output_pin_open_drain!(COMP2, PA12<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, PB5<Output<PushPull>>);
+output_pin_open_drain!(COMP2, PB5<Output<OpenDrain>>);
+output_pin_push_pull!(COMP2, PB11<Output<PushPull>>);
+output_pin_open_drain!(COMP2, PB11<Output<OpenDrain>>);

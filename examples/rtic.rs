@@ -10,8 +10,7 @@ extern crate stm32g0xx_hal as hal;
 
 use cortex_m_semihosting::hprintln;
 use hal::exti::Event;
-use hal::gpio::gpioa::PA5;
-use hal::gpio::{Output, PushPull, SignalEdge};
+use hal::gpio::*;
 use hal::prelude::*;
 use hal::rtc::Rtc;
 use hal::stm32;

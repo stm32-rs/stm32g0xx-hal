@@ -150,12 +150,12 @@ macro_rules! wakeup_pins {
 }
 
 wakeup_pins! {
-    gpioa::PA0<M>: WakeUp::Line1,
-    gpioa::PA4<M>: WakeUp::Line2,
-    gpioc::PC13<M>: WakeUp::Line2,
-    gpioa::PA2<M>: WakeUp::Line4,
-    gpioc::PC5<M>: WakeUp::Line5,
-    gpiob::PB5<M>: WakeUp::Line6,
+    PA0<M>: WakeUp::Line1,
+    PA4<M>: WakeUp::Line2,
+    PC13<M>: WakeUp::Line2,
+    PA2<M>: WakeUp::Line4,
+    PC5<M>: WakeUp::Line5,
+    PB5<M>: WakeUp::Line6,
 }
 
 pub trait PowerExt {
