@@ -207,6 +207,16 @@ impl Rcc {
         assert!(pll_cfg.m > 0 && pll_cfg.m <= 8);
         assert!(pll_cfg.r > 1 && pll_cfg.r <= 8);
 
+        // If the system is currently clocked from the PLL, then switch back to
+        // the HSI before we disable the PLL, otherwise the PLL will refuse to
+        // switch off.
+        self.cfgr.modify(|r, w| {
+            if r.sw().bits() == 0b010 {
+                unsafe { w.sw().bits(0b000) };
+            }
+            w
+        });
+
         // Disable PLL
         self.cr.modify(|_, w| w.pllon().clear_bit());
         while self.cr.read().pllrdy().bit_is_set() {}
