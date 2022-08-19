@@ -130,8 +130,4 @@ macro_rules! mco {
     };
 }
 
-mco!(
-    PA8<DefaultMode>,
-    PA9<DefaultMode>,
-    PF2<DefaultMode>
-);
+mco!(PA8<DefaultMode>, PA9<DefaultMode>, PF2<DefaultMode>);

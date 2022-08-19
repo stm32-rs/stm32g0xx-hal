@@ -3,7 +3,7 @@
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 
-use crate::gpio::{PA4, PA5,DefaultMode};
+use crate::gpio::{DefaultMode, PA4, PA5};
 use crate::rcc::*;
 use crate::stm32::DAC;
 use hal::blocking::delay::DelayUs;
