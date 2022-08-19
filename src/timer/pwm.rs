@@ -100,6 +100,9 @@ macro_rules! pwm {
             }
 
             impl Pwm<$TIMX> {
+                /// Set the PWM frequency. Actual frequency may differ from
+                /// requested due to precision of input clock. To check actual
+                /// frequency, call freq.
                 pub fn set_freq(&mut self, freq: Hertz) {
                     let ratio = self.clk / freq;
                     let psc = (ratio - 1) / 0xffff;
@@ -131,6 +134,13 @@ macro_rules! pwm {
                 /// Resets counter value
                 pub fn reset(&mut self) {
                     self.tim.cnt.reset();
+                }
+
+                /// Returns the currently configured frequency
+                pub fn freq(&self) -> Hertz {
+                    Hertz::from_raw(self.clk.raw()
+                        / (self.tim.psc.read().bits() + 1)
+                        / (self.tim.arr.read().bits() + 1))
                 }
             }
         )+
