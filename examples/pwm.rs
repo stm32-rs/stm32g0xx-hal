@@ -1,5 +1,4 @@
 #![deny(warnings)]
-#![deny(unsafe_code)]
 #![no_main]
 #![no_std]
 
@@ -47,11 +46,11 @@ fn main() -> ! {
 }
 
 #[exception]
-fn HardFault(ef: &ExceptionFrame) -> ! {
+unsafe fn HardFault(ef: &ExceptionFrame) -> ! {
     panic!("Hard fault {:#?}", ef);
 }
 
 #[exception]
-fn DefaultHandler(irqn: i16) {
+unsafe fn DefaultHandler(irqn: i16) {
     panic!("Unhandled exception (IRQn = {})", irqn);
 }

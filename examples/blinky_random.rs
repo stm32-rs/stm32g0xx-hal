@@ -1,5 +1,4 @@
 #![deny(warnings)]
-#![deny(unsafe_code)]
 #![no_main]
 #![no_std]
 
@@ -46,7 +45,7 @@ fn main() -> ! {
 
 #[allow(clippy::empty_loop)]
 #[exception]
-fn HardFault(ef: &ExceptionFrame) -> ! {
+unsafe fn HardFault(ef: &ExceptionFrame) -> ! {
     hprintln!("Hard fault {:#?}", ef).unwrap();
     loop {}
 }
