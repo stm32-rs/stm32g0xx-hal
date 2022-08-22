@@ -1,4 +1,4 @@
-use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiod::*, AltFunction, DefaultMode};
+use crate::gpio::*;
 use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;

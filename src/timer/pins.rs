@@ -1,8 +1,4 @@
-use crate::gpio::gpioa::*;
-use crate::gpio::gpiob::*;
-use crate::gpio::gpioc::*;
-use crate::gpio::gpiod::*;
-use crate::gpio::gpiof::*;
+use crate::gpio::*;
 use crate::gpio::{AltFunction, DefaultMode};
 use crate::stm32::*;
 use crate::timer::*;

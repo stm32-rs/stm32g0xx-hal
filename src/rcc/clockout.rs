@@ -2,7 +2,7 @@ use crate::gpio::*;
 use crate::rcc::*;
 use crate::stm32::RCC;
 
-pub type LscoPin = gpioa::PA2<DefaultMode>;
+pub type LscoPin = PA2<DefaultMode>;
 
 pub struct Lsco {
     pin: LscoPin,
@@ -130,8 +130,4 @@ macro_rules! mco {
     };
 }
 
-mco!(
-    gpioa::PA8<DefaultMode>,
-    gpioa::PA9<DefaultMode>,
-    gpiof::PF2<DefaultMode>
-);
+mco!(PA8<DefaultMode>, PA9<DefaultMode>, PF2<DefaultMode>);

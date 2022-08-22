@@ -1,5 +1,5 @@
 //! I2C
-use crate::gpio::{gpioa::*, gpiob::*};
+use crate::gpio::*;
 use crate::gpio::{AltFunction, OpenDrain, Output};
 use crate::i2c::config::Config;
 use crate::i2c::{Error, I2c, I2cDirection, I2cExt, I2cResult, SCLPin, SDAPin};

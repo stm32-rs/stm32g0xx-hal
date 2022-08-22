@@ -154,6 +154,7 @@ impl<MODE> InputPin for Pin<Input<MODE>> {
 }
 
 /// GPIO Pin speed selection
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Speed {
     Low = 0,
     Medium = 1,
@@ -161,7 +162,8 @@ pub enum Speed {
     VeryHigh = 3,
 }
 
-/// Trigger edgw
+/// Trigger edge
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SignalEdge {
     Rising,
     Falling,
@@ -631,8 +633,9 @@ macro_rules! gpio {
                     }
                 }
             }
-
         }
+
+        pub use $gpiox::{ $($PXi,)+ };
     }
 }
 
