@@ -629,6 +629,8 @@ macro_rules! uart_full {
                         .bit(config.tx_fifo_interrupt)
                         .rxftie()
                         .bit(config.rx_fifo_interrupt)
+                        .dem()
+                        .bit(PINS::DRIVER_ENABLE)
                 });
 
                 usart.cr1.modify(|_, w| {
@@ -649,8 +651,6 @@ macro_rules! uart_full {
                         .fifoen()
                         .bit(config.fifo_enable)
                 });
-
-                usart.cr3.write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
 
                 // Enable pins
                 pins.setup();
