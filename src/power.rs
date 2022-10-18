@@ -66,7 +66,9 @@ impl Power {
     }
 
     pub fn clear_standby_flag(&mut self) {
-        self.rb.scr.write(|w| w.csbf().set_bit());
+        if self.rb.sr1.read().sbf().bit_is_set() {
+            self.rb.scr.write(|w| w.csbf().set_bit());
+        }
     }
 
     pub fn enable_wakeup_lane<L: Into<WakeUp>>(&mut self, lane: L, edge: SignalEdge) {
