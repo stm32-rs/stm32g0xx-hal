@@ -115,7 +115,6 @@ bus! {
     USART2 => (APB1, usart2en, usart2smen, usart2rst), // 17
     WWDG => (APB1, wwdgen, wwdgsmen,), // 11
 
-    //SYSCFG => (APB2, syscfgen, syscfgsmen, syscfgrst), // 0
     ADC => (APB2, adcen, adcsmen, adcrst), // 20
     SPI1 => (APB2, spi1en, spi1smen, spi1rst), // 12
     TIM1 => (APB2, tim1en, tim1smen, tim1rst), // 11
@@ -129,6 +128,11 @@ bus! {
     GPIOC => (IOP, iopcen, iopcsmen, iopcrst), // 2
     GPIOD => (IOP, iopden, iopdsmen, iopdrst), // 3
     GPIOF => (IOP, iopfen, iopfsmen, iopfrst), // 5
+}
+
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
+bus! {
+    SYSCFG => (APB2, syscfgen, syscfgsmen, syscfgrst), // 0
 }
 
 #[cfg(any(feature = "stm32g041", feature = "stm32g081"))]
