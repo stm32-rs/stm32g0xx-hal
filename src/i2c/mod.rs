@@ -39,7 +39,7 @@ pub enum I2cDirection {
 #[derive(Debug, Clone, Copy)]
 pub enum Event {
     AddressMatch,
-    Rxne
+    Rxne,
 }
 
 /// I2C error
