@@ -1,6 +1,6 @@
 //! Delays
 use core::cmp;
-use cortex_m::peripheral::SYST;
+use cortex_m::peripheral::{syst::SystClkSource, SYST};
 use fugit::ExtU32;
 use hal::blocking::delay::{DelayMs, DelayUs};
 
@@ -20,11 +20,12 @@ pub trait DelayExt<TIM> {
 
 impl Delay<SYST> {
     /// Configures the system timer (SysTick) as a delay provider
-    pub fn syst(syst: SYST, rcc: &Rcc) -> Self {
-        Delay {
-            tim: syst,
-            clk: rcc.clocks.core_clk,
-        }
+    pub fn syst(mut syst: SYST, rcc: &Rcc) -> Self {
+        let clk = match syst.get_clock_source() {
+            SystClkSource::Core => rcc.clocks.ahb_clk,
+            SystClkSource::External => rcc.clocks.core_clk,
+        };
+        Delay { tim: syst, clk }
     }
 
     pub fn delay(&mut self, delay: MicroSecond) {
