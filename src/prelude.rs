@@ -25,6 +25,7 @@ pub use crate::exti::ExtiExt as _;
 pub use crate::flash::FlashExt as _;
 pub use crate::gpio::GpioExt as _;
 pub use crate::i2c::I2cExt as _;
+pub use crate::i2c::blocking::I2cSlave;
 pub use crate::power::PowerExt as _;
 pub use crate::rcc::LSCOExt as _;
 pub use crate::rcc::MCOExt as _;

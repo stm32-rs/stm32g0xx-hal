@@ -73,22 +73,22 @@ impl Config {
         };
         psc << 28 | scldel << 20 | sdadel << 16 | sclh << 8 | scll
     }
+
     /// Slave address 1 as 7 bit address, in range 0 .. 127
     pub fn slave_address(&mut self, own_address: u8) {
-        //assert!(own_address < (2 ^ 7));
         self.slave_address_1 = own_address as u16;
         self.address_11bits = false;
     }
+
     /// Slave address 1 as 11 bit address in range 0 .. 2047
     pub fn slave_address_11bits(&mut self, own_address: u16) {
-        //assert!(own_address < (2 ^ 11));
         self.slave_address_1 = own_address;
         self.address_11bits = true;
     }
+
     /// Slave address 2 as 7 bit address in range 0 .. 127.
     /// The mask makes all slaves within the mask addressable
     pub fn slave_address_2(&mut self, own_address: u8, mask: SlaveAddressMask) {
-        //assert!(own_address < (2 ^ 7));
         self.slave_address_2 = own_address;
         self.slave_address_mask = mask;
     }
