@@ -106,7 +106,7 @@ pub struct Adc {
     sample_time: SampleTime,
     align: Align,
     precision: Precision,
-    vdda_mv: Option<u32>,
+    vref_cache: Option<u16>,
 }
 
 /// Contains the calibration factors for the ADC which can be reused with [`Adc::set_calibration()`]
@@ -125,7 +125,7 @@ impl Adc {
             sample_time: SampleTime::T_2,
             align: Align::Right,
             precision: Precision::B_12,
-            vdda_mv: None,
+            vref_cache: None,
         }
     }
 
@@ -228,39 +228,79 @@ impl Adc {
         self.rb.ier.modify(|_, w| w.eocie().clear_bit()); // end of sequence interupt disable
     }
 
+    /// Read actual VREF voltage using the internal reference
+    ///
+    /// If oversampling is enabled, the return value is scaled down accordingly.
+    /// The product of the return value and any ADC reading always gives correct voltage in 4096ths of mV
+    /// regardless of oversampling and shift settings provided that these settings remain the same.
+    pub fn read_vref(&mut self) -> nb::Result<u16, ()> {
+        let mut vref = VRef::new();
+        let vref_val: u32 = if vref.enabled(self) {
+            self.read(&mut vref)?
+        } else {
+            vref.enable(self);
+            let vref_val = self.read(&mut vref)?;
+            vref.disable(self);
+            vref_val
+        };
+
+        let vref_cal: u32 = unsafe {
+            // DS12766 3.13.2
+            ptr::read_volatile(0x1FFF_75AA as *const u16) as u32
+        };
+
+        // RM0454 14.9 Calculating the actual VDDA voltage using the internal reference voltage
+        // V_DDA = 3 V x VREFINT_CAL / VREFINT_DATA
+        let vref = (vref_cal * 3_000_u32 / vref_val) as u16;
+        self.vref_cache = Some(vref);
+        Ok(vref)
+    }
+
+    /// Get VREF value using cached value if possible
+    ///
+    /// See `read_vref` for more details.
+    pub fn get_vref_cached(&mut self) -> nb::Result<u16, ()> {
+        if let Some(vref) = self.vref_cache {
+            Ok(vref)
+        } else {
+            self.read_vref()
+        }
+    }
+
     pub fn read_voltage<PIN: Channel<Adc, ID = u8>>(
         &mut self,
         pin: &mut PIN,
     ) -> nb::Result<u16, ()> {
-        let vdda_mv = if let Some(vdda_mv) = self.vdda_mv {
-            vdda_mv
-        } else {
-            let mut vref = VRef::new();
-            let vref_val: u32 = if vref.enabled(self) {
-                self.read(&mut vref)?
-            } else {
-                vref.enable(self);
-                let vref_val = self.read(&mut vref)?;
-                vref.disable(self);
-                vref_val
-            };
-
-            let vref_cal: u32 = unsafe {
-                // DS12766 3.13.2
-                ptr::read_volatile(0x1FFF_75AA as *const u16) as u32
-            };
-
-            // RM0454 14.9 Calculating the actual VDDA voltage using the internal reference voltage
-            // V_DDA = 3 V x VREFINT_CAL / VREFINT_DATA
-            let vdda_mv = vref_cal * 3_000_u32 / vref_val;
-            self.vdda_mv = Some(vdda_mv);
-            vdda_mv
-        };
+        let vref = self.get_vref_cached()?;
 
         self.read(pin).map(|raw: u32| {
-            let adc_mv = (vdda_mv * raw) >> 12;
+            let adc_mv = (vref as u32 * raw) >> 12;
             adc_mv as u16
         })
+    }
+
+    pub fn read_temperature(&mut self) -> nb::Result<i16, ()> {
+        let mut vtemp = VTemp::new();
+        let vtemp_voltage: u16 = if vtemp.enabled(self) {
+            self.read_voltage(&mut vtemp)?
+        } else {
+            vtemp.enable(self);
+            let vtemp_voltage = self.read_voltage(&mut vtemp)?;
+            vtemp.disable(self);
+            vtemp_voltage
+        };
+
+        let ts_cal1: u32 = unsafe {
+            // DS12991 3.14.1
+            // at 3000 mV Vref+ and 30 degC
+            ptr::read_volatile(0x1FFF_75A8 as *const u16) as u32
+        };
+
+        let v30 = (3000_u32 * ts_cal1) >> 12; // mV
+                                              // 2.5 mV/degC
+        let t = 30 + (vtemp_voltage as i32 - v30 as i32) * 10 / 25;
+
+        Ok(t as i16)
     }
 
     pub fn release(self) -> ADC {
@@ -453,21 +493,33 @@ macro_rules! adc_pin {
 }
 
 adc_pin! {
-    Channel0: (PA0<Analog>, 0u8),
-    Channel1: (PA1<Analog>, 1u8),
-    Channel2: (PA2<Analog>, 2u8),
-    Channel3: (PA3<Analog>, 3u8),
-    Channel4: (PA4<Analog>, 4u8),
-    Channel5: (PA5<Analog>, 5u8),
-    Channel6: (PA6<Analog>, 6u8),
-    Channel7: (PA7<Analog>, 7u8),
-    Channel8: (PB0<Analog>, 8u8),
-    Channel9: (PB1<Analog>, 9u8),
-    Channel10: (PB2<Analog>, 10u8),
-    Channel11: (PB10<Analog>, 11u8),
-    Channel11: (PB7<Analog>, 11u8),
-    Channel15: (PB11<Analog>, 15u8),
-    Channel16: (PB12<Analog>, 16u8),
-    Channel17: (PC4<Analog>, 17u8),
-    Channel18: (PC5<Analog>, 18u8),
+    Channel0: (gpioa::PA0<Analog>, 0u8),
+    Channel1: (gpioa::PA1<Analog>, 1u8),
+    Channel2: (gpioa::PA2<Analog>, 2u8),
+    Channel3: (gpioa::PA3<Analog>, 3u8),
+    Channel4: (gpioa::PA4<Analog>, 4u8),
+    Channel5: (gpioa::PA5<Analog>, 5u8),
+    Channel6: (gpioa::PA6<Analog>, 6u8),
+    Channel7: (gpioa::PA7<Analog>, 7u8),
+    Channel8: (gpiob::PB0<Analog>, 8u8),
+    Channel9: (gpiob::PB1<Analog>, 9u8),
+    Channel10: (gpiob::PB2<Analog>, 10u8),
+    Channel11: (gpiob::PB10<Analog>, 11u8),
+    Channel15: (gpiob::PB11<Analog>, 15u8),
+    Channel16: (gpiob::PB12<Analog>, 16u8),
+}
+
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041",))]
+adc_pin! {
+    Channel11: (gpiob::PB7<Analog>, 11u8),
+    Channel15: (gpioa::PA11<Analog>, 15u8),
+    Channel16: (gpioa::PA12<Analog>, 16u8),
+    Channel17: (gpioa::PA13<Analog>, 17u8),
+    Channel18: (gpioa::PA14<Analog>, 18u8),
+}
+
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081",))]
+adc_pin! {
+    Channel17: (gpioc::PC4<Analog>, 17u8),
+    Channel18: (gpioc::PC5<Analog>, 18u8),
 }
