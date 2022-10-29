@@ -78,7 +78,7 @@ macro_rules! busy_wait {
                 // This condition Will only happen when reload == 1 and sbr == 1 (slave) and nbytes was written.
                 // Send a NACK, set nbytes to clear tcr flag
                 $i2c.cr2.modify(|_, w| unsafe {
-                    w.nack().set_bit().nbytes().bits( 1 as u8)
+                    w.nack().set_bit().nbytes().bits(1 as u8)
                 });
                 // Make one extra loop here to wait on the stop condition
             } else if isr.addr().bit_is_set() {
