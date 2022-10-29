@@ -13,11 +13,12 @@ pub trait I2cSlave {
     /// Before the send phase SBC should be enabled again.
     fn slave_sbc(&mut self, sbc_enabled: bool);
 
+    /// An optional tuple is returned with the address as sent by the master. The address is for 7 bit in range of 0..127
+    fn slave_addressed(&mut self) -> Result<Option<(u16, I2cDirection)>, Error>;
+
     /// Wait until this slave is addressed by the master.
     /// A tuple is returned with the address as sent by the master. The address is for 7 bit in range of 0..127
     fn slave_wait_addressed(&mut self) -> Result<(u16, I2cDirection), Error>;
-
-    fn slave_addressed(&mut self) -> Result<Option<(u16, I2cDirection)>, Error>;
 
     /// Start reading the bytes, send by the master . If OK returned, all bytes are transferred
     /// If the master want to send more bytes than the slave can recieve the slave will NACK the n+1 byte
@@ -414,29 +415,30 @@ macro_rules! i2c {
 
             fn slave_addressed(&mut self) -> Result<Option<(u16, I2cDirection)>, Error> {
                 if self.i2c.isr.read().addr().bit_is_set() {
-                    let res = self.slave_wait_addressed()?;
-                    Ok(Some(res))
+                    let isr = self.i2c.isr.read();
+                    let current_address = isr.addcode().bits() as u16;
+
+                    // if the dir bit is set it is a master write slave read operation
+                    let direction = if isr.dir().bit_is_set() {
+                        I2cDirection::MasterReadSlaveWrite
+                    }  else  {
+                        I2cDirection::MasterWriteSlaveRead
+                    };
+                    // do not yet release the clock stretching here.
+                    // In the slave read function the nbytes is send, for this the addr bit must be set
+                    Ok(Some((current_address, direction)))
+
                 } else {
                     Ok(None)
                 }
             }
 
             fn slave_wait_addressed(&mut self) -> Result<(u16, I2cDirection), Error> {
-                // blocking wait until addressed
-                while self.i2c.isr.read().addr().bit_is_clear() {};
-
-                let isr = self.i2c.isr.read();
-                let current_address = isr.addcode().bits() as u16;
-
-                // if the dir bit is set it is a master write slave read operation
-                let direction = if isr.dir().bit_is_set() {
-                    I2cDirection::MasterReadSlaveWrite
-                }  else  {
-                    I2cDirection::MasterWriteSlaveRead
-                };
-                // do not yet release the clock stretching here.
-                // In the slave read function the nbytes is send, for this the addr bit must be set
-                Ok((current_address, direction))
+                loop {
+                    if let Some(res) = self.slave_addressed()? {
+                        return Ok(res)
+                    }
+                }
             }
 
             fn slave_write(&mut self, bytes: &[u8]) -> Result<(), Error> {
