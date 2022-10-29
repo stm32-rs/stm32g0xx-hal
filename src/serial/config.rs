@@ -60,6 +60,8 @@ pub struct BasicConfig {
     pub(crate) wordlength: WordLength,
     pub(crate) parity: Parity,
     pub(crate) stopbits: StopBits,
+    pub(crate) inverted_tx: bool,
+    pub(crate) inverted_rx: bool,
     pub(crate) swap: bool,
 }
 
@@ -69,6 +71,8 @@ pub struct FullConfig {
     pub(crate) wordlength: WordLength,
     pub(crate) parity: Parity,
     pub(crate) stopbits: StopBits,
+    pub(crate) inverted_tx: bool,
+    pub(crate) inverted_rx: bool,
     pub(crate) swap: bool,
     pub(crate) fifo_enable: bool,
     pub(crate) tx_fifo_threshold: FifoThreshold,
@@ -100,6 +104,11 @@ impl BasicConfig {
         self
     }
 
+    pub fn wordlength_7(mut self) -> Self {
+        self.wordlength = WordLength::DataBits7;
+        self
+    }
+
     pub fn wordlength_8(mut self) -> Self {
         self.wordlength = WordLength::DataBits8;
         self
@@ -112,6 +121,16 @@ impl BasicConfig {
 
     pub fn stopbits(mut self, stopbits: StopBits) -> Self {
         self.stopbits = stopbits;
+        self
+    }
+
+    pub fn invert_tx(mut self) -> Self {
+        self.inverted_tx = true;
+        self
+    }
+
+    pub fn invert_rx(mut self) -> Self {
+        self.inverted_rx = true;
         self
     }
 
@@ -145,6 +164,11 @@ impl FullConfig {
         self
     }
 
+    pub fn wordlength_7(mut self) -> Self {
+        self.wordlength = WordLength::DataBits7;
+        self
+    }
+
     pub fn wordlength_8(mut self) -> Self {
         self.wordlength = WordLength::DataBits8;
         self
@@ -157,6 +181,16 @@ impl FullConfig {
 
     pub fn stopbits(mut self, stopbits: StopBits) -> Self {
         self.stopbits = stopbits;
+        self
+    }
+
+    pub fn invert_tx(mut self) -> Self {
+        self.inverted_tx = true;
+        self
+    }
+
+    pub fn invert_rx(mut self) -> Self {
+        self.inverted_rx = true;
         self
     }
 
@@ -212,6 +246,8 @@ impl Default for BasicConfig {
             wordlength: WordLength::DataBits8,
             parity: Parity::ParityNone,
             stopbits: StopBits::STOP1,
+            inverted_tx: false,
+            inverted_rx: false,
             swap: false,
         }
     }
@@ -225,6 +261,8 @@ impl Default for FullConfig {
             wordlength: WordLength::DataBits8,
             parity: Parity::ParityNone,
             stopbits: StopBits::STOP1,
+            inverted_tx: false,
+            inverted_rx: false,
             swap: false,
             fifo_enable: false,
             tx_fifo_threshold: FifoThreshold::FIFO_8_BYTES,
