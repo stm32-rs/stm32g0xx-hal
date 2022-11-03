@@ -301,11 +301,29 @@ impl Rcc {
     }
 
     pub(crate) fn enable_rtc(&self, src: RTCSrc) {
-        match src {
-            RTCSrc::LSI => self.enable_lsi(),
-            RTCSrc::HSE => self.enable_hse(false),
-            RTCSrc::LSE => self.enable_lse(false),
-        }
+        let rtc_sel = match src {
+            RTCSrc::LSE => {
+                self.enable_lse(false);
+                0b01
+            }
+            RTCSrc::LSE_BYPASS => {
+                self.enable_lse(true);
+                0b01
+            }
+            RTCSrc::LSI => {
+                self.enable_lsi();
+                0b10
+            }
+            RTCSrc::HSE => {
+                self.enable_hse(false);
+                0b11
+            }
+            RTCSrc::HSE_BYPASS => {
+                self.enable_hse(true);
+                0b11
+            }
+        };
+
         self.apbenr1
             .modify(|_, w| w.rtcapben().set_bit().pwren().set_bit());
         self.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
@@ -313,7 +331,7 @@ impl Rcc {
         self.bdcr.modify(|_, w| w.bdrst().set_bit());
         self.bdcr.modify(|_, w| unsafe {
             w.rtcsel()
-                .bits(src as u8)
+                .bits(rtc_sel)
                 .rtcen()
                 .set_bit()
                 .bdrst()

@@ -53,9 +53,11 @@ pub enum PLLSrc {
 /// RTC clock input source
 #[derive(Clone, Copy)]
 pub enum RTCSrc {
-    LSE = 0b01,
-    LSI = 0b10,
-    HSE = 0b11,
+    LSE,
+    LSE_BYPASS,
+    LSI,
+    HSE,
+    HSE_BYPASS,
 }
 
 /// PLL divider
