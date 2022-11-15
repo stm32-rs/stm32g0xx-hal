@@ -1,16 +1,20 @@
 //! I2C
 use crate::gpio::*;
 use crate::i2c::config::Config;
-use crate::i2c::{Error, I2c, I2cDirection, I2cExt, SCLPin, SDAPin};
+use crate::i2c::{self, Error, I2c, I2cDirection, I2cExt, SCLPin, SDAPin};
 use crate::rcc::*;
 use crate::stm32::{I2C1, I2C2};
 use hal::blocking::i2c::{Read, Write, WriteRead};
 
 pub trait I2cSlave {
-    /// Enable/ disable sbc. Default sbc is switched on.
+    /// Enable/Disable Slave Byte Control. Default SBC is switched on.
     /// For master write/read the transaction should start with sbc disabled.
-    /// So ACK will be send on the last received byte. Then before the send phase sbc should enabled again
+    /// So ACK will be send on the last received byte.
+    /// Before the send phase SBC should be enabled again.
     fn slave_sbc(&mut self, sbc_enabled: bool);
+
+    /// An optional tuple is returned with the address as sent by the master. The address is for 7 bit in range of 0..127
+    fn slave_addressed(&mut self) -> Result<Option<(u16, I2cDirection)>, Error>;
 
     /// Wait until this slave is addressed by the master.
     /// A tuple is returned with the address as sent by the master. The address is for 7 bit in range of 0..127
@@ -75,7 +79,7 @@ macro_rules! busy_wait {
                 // This condition Will only happen when reload == 1 and sbr == 1 (slave) and nbytes was written.
                 // Send a NACK, set nbytes to clear tcr flag
                 $i2c.cr2.modify(|_, w| unsafe {
-                    w.nack().set_bit().nbytes().bits( 1 as u8)
+                    w.nack().set_bit().nbytes().bits(1 as u8)
                 });
                 // Make one extra loop here to wait on the stop condition
             } else if isr.addr().bit_is_set() {
@@ -198,7 +202,7 @@ macro_rules! i2c {
                         .oa2en().set_bit()
                     });
                     // Enable acknowlidge control
-                    i2c.cr1.modify(|_, w|  w.sbc().set_bit() );
+                    i2c.cr1.modify(|_, w| w.sbc().set_bit() );
                 }
 
                 // Enable pins
@@ -206,6 +210,27 @@ macro_rules! i2c {
                 scl.setup();
 
                 I2c { i2c, sda, scl }
+            }
+
+            pub fn listen(&mut self, ev: i2c::Event) {
+                match ev {
+                    i2c::Event::AddressMatch => self.i2c.cr1.modify(|_, w| w.addrie().set_bit()),
+                    i2c::Event::Rxne => self.i2c.cr1.modify(|_, w| w.rxie().set_bit()),
+                }
+            }
+
+            pub fn unlisten(&mut self, ev: i2c::Event) {
+                match ev {
+                    i2c::Event::AddressMatch => self.i2c.cr1.modify(|_, w| w.addrie().clear_bit()),
+                    i2c::Event::Rxne => self.i2c.cr1.modify(|_, w| w.rxie().clear_bit()),
+                }
+            }
+
+            pub fn clear_irq(&mut self, ev: i2c::Event) {
+                match ev {
+                    i2c::Event::AddressMatch => self.i2c.icr.write(|w| w.addrcf().set_bit()),
+                    _ => {},
+                }
             }
 
             pub fn release(self) -> ($I2CX, SDA, SCL) {
@@ -384,29 +409,36 @@ macro_rules! i2c {
         impl<SDA, SCL> I2cSlave for I2c<$I2CX, SDA, SCL> {
 
             fn slave_sbc(&mut self, sbc_enabled: bool)  {
-                // enable acknowlidge control
+                // Enable Slave byte control
                 self.i2c.cr1.modify(|_, w|  w.sbc().bit(sbc_enabled) );
             }
 
+            fn slave_addressed(&mut self) -> Result<Option<(u16, I2cDirection)>, Error> {
+                if self.i2c.isr.read().addr().bit_is_set() {
+                    let isr = self.i2c.isr.read();
+                    let current_address = isr.addcode().bits() as u16;
 
-            fn slave_wait_addressed(&mut self)  -> Result<(u16, I2cDirection), Error>{
-                // blocking wait until addressed
-                while self.i2c.isr.read().addr().bit_is_clear() {};
-
-
-                let isr = self.i2c.isr.read();
-                let current_address = isr.addcode().bits() as u16;
-
-                // if the dir bit is set it is a master write slave read operation
-                let direction = if isr.dir().bit_is_set()
-                    {
+                    // if the dir bit is set it is a master write slave read operation
+                    let direction = if isr.dir().bit_is_set() {
                         I2cDirection::MasterReadSlaveWrite
                     }  else  {
                         I2cDirection::MasterWriteSlaveRead
                     };
-                // do not yet release the clock stretching here.
-                // In the slave read function the nbytes is send, for this the addr bit must be set
-                Ok((current_address, direction))
+                    // do not yet release the clock stretching here.
+                    // In the slave read function the nbytes is send, for this the addr bit must be set
+                    Ok(Some((current_address, direction)))
+
+                } else {
+                    Ok(None)
+                }
+            }
+
+            fn slave_wait_addressed(&mut self) -> Result<(u16, I2cDirection), Error> {
+                loop {
+                    if let Some(res) = self.slave_addressed()? {
+                        return Ok(res)
+                    }
+                }
             }
 
             fn slave_write(&mut self, bytes: &[u8]) -> Result<(), Error> {
