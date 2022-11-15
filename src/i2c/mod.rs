@@ -36,6 +36,12 @@ pub enum I2cDirection {
     MasterWriteSlaveRead = 1,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum Event {
+    AddressMatch,
+    Rxne,
+}
+
 /// I2C error
 #[derive(Debug, Clone, Copy)]
 pub enum Error {
