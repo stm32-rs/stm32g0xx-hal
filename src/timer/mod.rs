@@ -149,7 +149,7 @@ macro_rules! timers {
                         let _high = self.tim.cnt.read().$cnt_h().bits() as u32;
                     )*
                     let low = self.tim.cnt.read().$cnt().bits() as u32;
-                    low | (_high<< 16)
+                    low | (_high << 16)
                 }
 
                 pub fn start(&mut self, timeout: MicroSecond) {
@@ -262,7 +262,7 @@ timers_external_clocks! {
     TIM2: (tim2, sms, ece),
 }
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071"))]
 timers_external_clocks! {
     TIM15: (tim15, sms1),
 }
