@@ -10,6 +10,23 @@ pub trait TimerPin<TIM> {
     fn release(self) -> Self;
 }
 
+pub struct TriggerPin<TIM, PIN: TimerPin<TIM>> {
+    pin: PIN,
+    tim: PhantomData<TIM>,
+}
+
+impl<TIM, PIN: TimerPin<TIM>> ExternalClock for TriggerPin<TIM, PIN> {
+    fn mode(&self) -> ExternalClockMode {
+        ExternalClockMode::Mode1
+    }
+}
+
+impl<TIM, PIN: TimerPin<TIM>> TriggerPin<TIM, PIN> {
+    pub fn release(self) -> PIN {
+        self.pin
+    }
+}
+
 macro_rules! timer_pins {
     ($TIMX:ident, [ $(($ch:ty, $pin:ty, $af_mode:expr),)+ ]) => {
         $(
@@ -27,6 +44,75 @@ macro_rules! timer_pins {
         )+
     };
 }
+
+macro_rules! trigger_pins {
+    ($TIMX:ident, [ $(($pin:ty, $ccp:ident $(,$icf:ident)*),)+ ]) => {
+        $(
+            impl TriggerPin<$TIMX, $pin> {
+                pub fn new(pin: $pin, edge: SignalEdge) -> Self {
+                    TimerPin::<$TIMX>::setup(&pin);
+                    let tim = unsafe { &(*$TIMX::ptr()) };
+                    let ts = match edge {
+                        SignalEdge::All => 0b100,
+                        SignalEdge::Falling => {
+                            tim.ccer.modify(|_, w| w.$ccp().set_bit());
+                            0b101
+                        },
+                        SignalEdge::Rising => {
+                            tim.ccer.modify(|_, w| w.$ccp().clear_bit());
+                            0b101
+                        }
+                    };
+
+                    tim.smcr.modify(|_, w| unsafe { w.ts().bits(ts) });
+
+                    Self {
+                        pin,
+                        tim: PhantomData,
+                    }
+                }
+
+                $(
+                    pub fn with_filter(pin: $pin, edge: SignalEdge, capture_filter: u8) -> Self {
+                        unsafe {
+                            let tim =  &(*$TIMX::ptr()) ;
+                            tim.ccmr1_input().modify(|_, w| w.$icf().bits(capture_filter));
+                        }
+                        Self::new(pin, edge)
+                    }
+                )*
+            }
+        )+
+    };
+}
+
+trigger_pins!(TIM1, [
+    (PA8<DefaultMode>, cc1p),
+    (PC8<DefaultMode>, cc1p),
+    (PA9<DefaultMode>, cc2p),
+    (PB3<DefaultMode>, cc2p),
+    (PC9<DefaultMode>, cc2p),
+]);
+
+#[cfg(feature = "stm32g0x1")]
+trigger_pins!(TIM2, [
+    (PA0<DefaultMode>, cc1p, ic1f),
+    (PA5<DefaultMode>, cc1p, ic1f),
+    (PA15<DefaultMode>, cc1p, ic1f),
+    (PC4<DefaultMode>, cc1p, ic1f),
+    (PA1<DefaultMode>, cc2p, ic2f),
+    (PB3<DefaultMode>, cc2p, ic2f),
+    (PC5<DefaultMode>, cc2p, ic2f),
+]);
+
+trigger_pins!(TIM3, [
+    (PA6<DefaultMode>, cc1p, ic1f),
+    (PB4<DefaultMode>, cc1p, ic1f),
+    (PC6<DefaultMode>, cc1p, ic1f),
+    (PA7<DefaultMode>, cc2p, ic2f),
+    (PB5<DefaultMode>, cc2p, ic2f),
+    (PC7<DefaultMode>, cc2p, ic2f),
+]);
 
 timer_pins!(TIM1, [
     (Channel1, PA8<DefaultMode>, AltFunction::AF2),
