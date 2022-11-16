@@ -2,6 +2,7 @@
 use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
+use core::marker::PhantomData;
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::SYST;
 use hal::timer::{CountDown, Periodic};
@@ -151,19 +152,6 @@ macro_rules! timers {
                     low | (_high << 16)
                 }
 
-                /// Releases the TIM peripheral
-                pub fn release(self) -> $TIM {
-                    self.tim
-                }
-            }
-
-            impl TimerExt<$TIM> for $TIM {
-                fn timer(self, rcc: &mut Rcc) -> Timer<$TIM> {
-                    Timer::$tim(self, rcc)
-                }
-            }
-
-            impl Timer<$TIM> {
                 pub fn start(&mut self, timeout: MicroSecond) {
                     // Pause the counter. Also set URS so that when we set UG below, it will
                     // generate an update event *without* triggering an interrupt.
@@ -196,6 +184,17 @@ macro_rules! timers {
                         Ok(())
                     }
                 }
+
+                /// Releases the TIM peripheral
+                pub fn release(self) -> $TIM {
+                    self.tim
+                }
+            }
+
+            impl TimerExt<$TIM> for $TIM {
+                fn timer(self, rcc: &mut Rcc) -> Timer<$TIM> {
+                    Timer::$tim(self, rcc)
+                }
             }
 
             impl CountDown for Timer<$TIM> {
@@ -216,6 +215,56 @@ macro_rules! timers {
             impl Periodic for Timer<$TIM> {}
         )+
     }
+}
+
+pub enum ExternalClockMode {
+    Mode1,
+    Mode2,
+}
+
+pub trait ExternalClock {
+    fn mode(&self) -> ExternalClockMode;
+}
+
+macro_rules! timers_external_clocks {
+    ($($TIM:ident: ($tim:ident, $sms:ident $(,$ece:ident)*),)+) => {
+        $(
+            impl Timer<$TIM> {
+                pub fn use_external_clock<C: ExternalClock>(&mut self, clk: C, freq: Hertz) {
+                    self.clk = freq;
+                    match clk.mode() {
+                        ExternalClockMode::Mode1 => {
+                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b111) });
+                            $(
+                                self.tim.smcr.modify(|_, w| w.$ece().clear_bit());
+                            )*
+                        },
+                        ExternalClockMode::Mode2 => {
+                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b0) });
+                            $(
+                                self.tim.smcr.modify(|_, w| w.$ece().set_bit());
+                            )*
+                        },
+                    }
+                }
+            }
+        )+
+    }
+}
+
+timers_external_clocks! {
+    TIM1: (tim1, sms, ece),
+    TIM3: (tim3, sms, ece),
+}
+
+#[cfg(feature = "stm32g0x1")]
+timers_external_clocks! {
+    TIM2: (tim2, sms, ece),
+}
+
+#[cfg(any(feature = "stm32g070", feature = "stm32g071"))]
+timers_external_clocks! {
+    TIM15: (tim15, sms1),
 }
 
 timers! {

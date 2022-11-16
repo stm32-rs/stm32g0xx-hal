@@ -185,6 +185,10 @@ impl Rcc {
         }
     }
 
+    pub fn trim_hsi_clocks(&mut self, value: u8) {
+        self.icscr.modify(|_, w| unsafe { w.hsitrim().bits(value) });
+    }
+
     pub fn set_reset_mode(&mut self, mode: ResetMode) {
         unsafe {
             let flash = &(*FLASH::ptr());
