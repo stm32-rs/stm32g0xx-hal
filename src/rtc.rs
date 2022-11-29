@@ -1,7 +1,85 @@
 //! Real Time Clock
+use crate::gpio::*;
 use crate::rcc::{RTCSrc, Rcc};
 use crate::stm32::RTC;
 use crate::time::*;
+
+#[derive(Debug, PartialEq)]
+pub enum RtcHourFormat {
+    H24,
+    H12,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum RtcCalibrationFreqency {
+    F1Hz,
+    F512Hz,
+}
+
+pub enum Event {
+    WakeupTimer,
+    AlarmA,
+    AlarmB,
+    Timestamp,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Alarm {
+    time: Time,
+    date: u8,
+    subseconds: u16,
+    subseconds_mask_bits: u8,
+    seconds_masked: bool,
+    minutes_masked: bool,
+    hours_masked: bool,
+    date_masked: bool,
+}
+
+impl Alarm {
+    pub fn new(time: Time) -> Self {
+        Self {
+            time,
+            date: 0,
+            subseconds: 0,
+            subseconds_mask_bits: 0,
+            seconds_masked: false,
+            minutes_masked: false,
+            hours_masked: false,
+            date_masked: true,
+        }
+    }
+
+    pub fn set_day(mut self, date: u8) -> Self {
+        self.date_masked = false;
+        self.date = date;
+        self
+    }
+
+    pub fn set_subseconds(mut self, subseconds: u16, mask_bits: u8) -> Self {
+        self.subseconds_mask_bits = mask_bits;
+        self.subseconds = subseconds;
+        self
+    }
+    pub fn mask_seconds(mut self) -> Self {
+        self.seconds_masked = true;
+        self
+    }
+
+    pub fn mask_minutes(mut self) -> Self {
+        self.minutes_masked = true;
+        self
+    }
+
+    pub fn mask_hours(mut self) -> Self {
+        self.hours_masked = true;
+        self
+    }
+
+    pub fn mask_date(mut self) -> Self {
+        self.date_masked = true;
+        self
+    }
+}
 
 pub struct Rtc {
     rb: RTC,
@@ -9,34 +87,14 @@ pub struct Rtc {
 
 impl Rtc {
     pub fn new(rtc: RTC, src: RTCSrc, rcc: &mut Rcc) -> Self {
-        let mut rtc = Rtc { rb: rtc };
         rcc.enable_rtc(src);
-        rtc.modify(|rb| {
-            rb.cr.modify(|_, w| w.fmt().clear_bit());
-        });
-        rtc
+        Rtc { rb: rtc }
     }
 
-    fn modify<F>(&mut self, mut closure: F)
-    where
-        F: FnMut(&mut RTC),
-    {
-        // Disable write protection
-        self.rb.wpr.write(|w| unsafe { w.bits(0xCA) });
-        self.rb.wpr.write(|w| unsafe { w.bits(0x53) });
-        // Enter init mode
-        let isr = self.rb.icsr.read();
-        if isr.initf().bit_is_clear() {
-            self.rb.icsr.write(|w| w.init().set_bit());
-            self.rb.icsr.write(|w| unsafe { w.bits(0xFFFF_FFFF) });
-            while self.rb.icsr.read().initf().bit_is_clear() {}
-        }
-        // Invoke closure
-        closure(&mut self.rb);
-        // Exit init mode
-        self.rb.icsr.write(|w| w.init().clear_bit());
-        // Enable_write_protection
-        self.rb.wpr.write(|w| unsafe { w.bits(0xFF) });
+    pub fn set_hour_format(&mut self, fmt: RtcHourFormat) {
+        self.modify(|rb| {
+            rb.cr.modify(|_, w| w.fmt().bit(fmt == RtcHourFormat::H12));
+        });
     }
 
     pub fn set_date(&mut self, date: &Date) {
@@ -111,6 +169,174 @@ impl Rtc {
     pub fn get_week_day(&self) -> u8 {
         self.rb.dr.read().wdu().bits()
     }
+
+    pub fn set_alarm_a(&mut self, alarm: Alarm) {
+        let (dt, du) = bcd2_encode(alarm.date as u32);
+        let (ht, hu) = bcd2_encode(alarm.time.hours);
+        let (mt, mu) = bcd2_encode(alarm.time.minutes);
+        let (st, su) = bcd2_encode(alarm.time.seconds);
+
+        self.modify(|rb| {
+            rb.alrmassr.write(|w| unsafe {
+                w.maskss()
+                    .bits(alarm.subseconds_mask_bits)
+                    .ss()
+                    .bits(alarm.subseconds)
+            });
+            rb.alrmar.write(|w| unsafe {
+                w.msk1()
+                    .bit(alarm.seconds_masked)
+                    .msk2()
+                    .bit(alarm.minutes_masked)
+                    .msk3()
+                    .bit(alarm.hours_masked)
+                    .msk4()
+                    .bit(alarm.date_masked)
+                    .dt()
+                    .bits(dt)
+                    .du()
+                    .bits(du)
+                    .ht()
+                    .bits(ht)
+                    .hu()
+                    .bits(hu)
+                    .mnt()
+                    .bits(mt)
+                    .mnu()
+                    .bits(mu)
+                    .st()
+                    .bits(st)
+                    .su()
+                    .bits(su)
+            });
+
+            rb.cr.modify(|_, w| w.alrae().set_bit());
+        });
+    }
+
+    pub fn set_alarm_b(&mut self, alarm: Alarm) {
+        let (dt, du) = bcd2_encode(alarm.date as u32);
+        let (ht, hu) = bcd2_encode(alarm.time.hours);
+        let (mt, mu) = bcd2_encode(alarm.time.minutes);
+        let (st, su) = bcd2_encode(alarm.time.seconds);
+
+        self.modify(|rb| {
+            rb.alrmbssr.write(|w| unsafe {
+                w.maskss()
+                    .bits(alarm.subseconds_mask_bits)
+                    .ss()
+                    .bits(alarm.subseconds)
+            });
+            rb.alrmbr.write(|w| unsafe {
+                w.msk1()
+                    .bit(alarm.seconds_masked)
+                    .msk2()
+                    .bit(alarm.minutes_masked)
+                    .msk3()
+                    .bit(alarm.hours_masked)
+                    .msk4()
+                    .bit(alarm.date_masked)
+                    .dt()
+                    .bits(dt)
+                    .du()
+                    .bits(du)
+                    .ht()
+                    .bits(ht)
+                    .hu()
+                    .bits(hu)
+                    .mnt()
+                    .bits(mt)
+                    .mnu()
+                    .bits(mu)
+                    .st()
+                    .bits(st)
+                    .su()
+                    .bits(su)
+            });
+
+            rb.cr.modify(|_, w| w.alrbe().set_bit());
+        });
+    }
+
+    pub fn listen(&mut self, ev: Event) {
+        self.modify(|rb| match ev {
+            Event::WakeupTimer => rb.cr.modify(|_, w| w.wutie().set_bit()),
+            Event::AlarmA => rb.cr.modify(|_, w| w.alraie().set_bit()),
+            Event::AlarmB => rb.cr.modify(|_, w| w.alrbie().set_bit()),
+            Event::Timestamp => rb.cr.modify(|_, w| w.tsie().set_bit()),
+        })
+    }
+
+    pub fn unlisten(&mut self, ev: Event) {
+        self.modify(|rb| match ev {
+            Event::WakeupTimer => rb.cr.modify(|_, w| w.wutie().clear_bit()),
+            Event::AlarmA => rb.cr.modify(|_, w| w.alraie().clear_bit()),
+            Event::AlarmB => rb.cr.modify(|_, w| w.alrbie().clear_bit()),
+            Event::Timestamp => rb.cr.modify(|_, w| w.tsie().clear_bit()),
+        })
+    }
+
+    pub fn is_pending(&self, ev: Event) -> bool {
+        match ev {
+            Event::WakeupTimer => self.rb.sr.read().wutf().bit_is_set(),
+            Event::AlarmA => self.rb.sr.read().alraf().bit_is_set(),
+            Event::AlarmB => self.rb.sr.read().alrbf().bit_is_set(),
+            Event::Timestamp => self.rb.sr.read().tsf().bit_is_set(),
+        }
+    }
+
+    pub fn unpend(&mut self, ev: Event) {
+        self.modify(|rb| match ev {
+            Event::WakeupTimer => rb.scr.modify(|_, w| w.cwutf().set_bit()),
+            Event::AlarmA => rb.scr.modify(|_, w| w.calraf().set_bit()),
+            Event::AlarmB => rb.scr.modify(|_, w| w.calrbf().set_bit()),
+            Event::Timestamp => rb.scr.modify(|_, w| w.ctsf().set_bit()),
+        });
+    }
+
+    pub fn enable_calibration_output<PIN: RtcOutputPin>(
+        &mut self,
+        pin: PIN,
+        freq: RtcCalibrationFreqency,
+    ) {
+        pin.setup();
+        self.modify(|rb| {
+            rb.cr.modify(|_, w| unsafe {
+                w.osel()
+                    .bits(0b0)
+                    .out2en()
+                    .bit(pin.channel())
+                    .cosel()
+                    .bit(freq == RtcCalibrationFreqency::F1Hz)
+                    .tampoe()
+                    .clear_bit()
+                    .coe()
+                    .set_bit()
+            });
+        });
+    }
+
+    fn modify<F>(&mut self, mut closure: F)
+    where
+        F: FnMut(&mut RTC),
+    {
+        // Disable write protection
+        self.rb.wpr.write(|w| unsafe { w.bits(0xCA) });
+        self.rb.wpr.write(|w| unsafe { w.bits(0x53) });
+        // Enter init mode
+        let isr = self.rb.icsr.read();
+        if isr.initf().bit_is_clear() {
+            self.rb.icsr.write(|w| w.init().set_bit());
+            self.rb.icsr.write(|w| unsafe { w.bits(0xFFFF_FFFF) });
+            while self.rb.icsr.read().initf().bit_is_clear() {}
+        }
+        // Invoke closure
+        closure(&mut self.rb);
+        // Exit init mode
+        self.rb.icsr.write(|w| w.init().clear_bit());
+        // Enable_write_protection
+        self.rb.wpr.write(|w| unsafe { w.bits(0xFF) });
+    }
 }
 
 pub trait RtcExt {
@@ -121,6 +347,37 @@ impl RtcExt for RTC {
     fn constrain(self, rcc: &mut Rcc) -> Rtc {
         Rtc::new(self, RTCSrc::LSI, rcc)
     }
+}
+
+pub trait RtcOutputPin {
+    fn setup(&self);
+    fn channel(&self) -> bool;
+    fn release(self) -> Self;
+}
+
+macro_rules! rtc_out_pins {
+    ($($pin:ty: ($af_mode:expr, $ch:expr),)+) => {
+        $(
+            impl RtcOutputPin for $pin {
+                fn setup(&self) {
+                    self.set_alt_mode($af_mode);
+                }
+
+                fn channel(&self) -> bool {
+                    $ch
+                }
+
+                fn release(self) -> Self {
+                    self.into_analog()
+                }
+            }
+        )+
+    }
+}
+
+rtc_out_pins! {
+    PA4<DefaultMode>: (AltFunction::AF3, true),
+    PC13<DefaultMode>: (AltFunction::AF3, false),
 }
 
 fn bcd2_encode(word: u32) -> (u8, u8) {
