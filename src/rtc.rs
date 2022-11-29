@@ -71,6 +71,26 @@ impl Alarm {
         self.subseconds = subseconds;
         self
     }
+
+    pub fn mask_day(mut self) -> Self {
+        self.day = None;
+        self
+    }
+
+    pub fn mask_hours(mut self) -> Self {
+        self.hours = None;
+        self
+    }
+
+    pub fn mask_minutes(mut self) -> Self {
+        self.minutes = None;
+        self
+    }
+
+    pub fn mask_seconds(mut self) -> Self {
+        self.seconds = None;
+        self
+    }
 }
 
 impl From<Time> for Alarm {
