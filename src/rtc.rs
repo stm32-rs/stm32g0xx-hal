@@ -4,13 +4,13 @@ use crate::rcc::{RTCSrc, Rcc};
 use crate::stm32::RTC;
 use crate::time::*;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RtcHourFormat {
     H24,
     H12,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RtcCalibrationFreqency {
     F1Hz,
     F512Hz,
@@ -23,7 +23,7 @@ pub enum Event {
     Timestamp,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Alarm {
     day: Option<u32>,
     hours: Option<u32>,
@@ -79,20 +79,6 @@ impl From<Time> for Alarm {
             .set_hours(time.hours)
             .set_minutes(time.minutes)
             .set_seconds(time.seconds)
-    }
-}
-
-impl Default for Alarm {
-    fn default() -> Self {
-        Self {
-            day: None,
-            hours: None,
-            minutes: None,
-            seconds: None,
-            subseconds: 0,
-            subseconds_mask_bits: 0,
-            use_weekday: false,
-        }
     }
 }
 
