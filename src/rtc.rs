@@ -25,33 +25,44 @@ pub enum Event {
 
 #[derive(Debug, PartialEq)]
 pub struct Alarm {
-    time: Time,
-    date: u8,
+    day: Option<u32>,
+    hours: Option<u32>,
+    minutes: Option<u32>,
+    seconds: Option<u32>,
     subseconds: u16,
     subseconds_mask_bits: u8,
-    seconds_masked: bool,
-    minutes_masked: bool,
-    hours_masked: bool,
-    date_masked: bool,
+    use_weekday: bool,
 }
 
 impl Alarm {
-    pub fn new(time: Time) -> Self {
-        Self {
-            time,
-            date: 0,
-            subseconds: 0,
-            subseconds_mask_bits: 0,
-            seconds_masked: false,
-            minutes_masked: false,
-            hours_masked: false,
-            date_masked: true,
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn set_day(mut self, date: u8) -> Self {
-        self.date_masked = false;
-        self.date = date;
+    pub fn set_month_day(mut self, day: u32) -> Self {
+        self.use_weekday = false;
+        self.day = Some(day);
+        self
+    }
+
+    pub fn set_week_day(mut self, day: u32) -> Self {
+        self.use_weekday = true;
+        self.day = Some(day);
+        self
+    }
+
+    pub fn set_hours(mut self, val: u32) -> Self {
+        self.hours = Some(val);
+        self
+    }
+
+    pub fn set_minutes(mut self, val: u32) -> Self {
+        self.minutes = Some(val);
+        self
+    }
+
+    pub fn set_seconds(mut self, val: u32) -> Self {
+        self.seconds = Some(val);
         self
     }
 
@@ -60,24 +71,28 @@ impl Alarm {
         self.subseconds = subseconds;
         self
     }
-    pub fn mask_seconds(mut self) -> Self {
-        self.seconds_masked = true;
-        self
-    }
+}
 
-    pub fn mask_minutes(mut self) -> Self {
-        self.minutes_masked = true;
-        self
+impl From<Time> for Alarm {
+    fn from(time: Time) -> Self {
+        Self::default()
+            .set_hours(time.hours)
+            .set_minutes(time.minutes)
+            .set_seconds(time.seconds)
     }
+}
 
-    pub fn mask_hours(mut self) -> Self {
-        self.hours_masked = true;
-        self
-    }
-
-    pub fn mask_date(mut self) -> Self {
-        self.date_masked = true;
-        self
+impl Default for Alarm {
+    fn default() -> Self {
+        Self {
+            day: None,
+            hours: None,
+            minutes: None,
+            seconds: None,
+            subseconds: 0,
+            subseconds_mask_bits: 0,
+            use_weekday: false,
+        }
     }
 }
 
@@ -171,10 +186,10 @@ impl Rtc {
     }
 
     pub fn set_alarm_a(&mut self, alarm: Alarm) {
-        let (dt, du) = bcd2_encode(alarm.date as u32);
-        let (ht, hu) = bcd2_encode(alarm.time.hours);
-        let (mt, mu) = bcd2_encode(alarm.time.minutes);
-        let (st, su) = bcd2_encode(alarm.time.seconds);
+        let (dt, du) = bcd2_encode(alarm.day.unwrap_or_default() as u32);
+        let (ht, hu) = bcd2_encode(alarm.hours.unwrap_or_default() as u32);
+        let (mt, mu) = bcd2_encode(alarm.minutes.unwrap_or_default() as u32);
+        let (st, su) = bcd2_encode(alarm.seconds.unwrap_or_default() as u32);
 
         self.modify(|rb| {
             rb.alrmassr.write(|w| unsafe {
@@ -184,14 +199,16 @@ impl Rtc {
                     .bits(alarm.subseconds)
             });
             rb.alrmar.write(|w| unsafe {
-                w.msk1()
-                    .bit(alarm.seconds_masked)
+                w.wdsel()
+                    .bit(alarm.use_weekday)
+                    .msk1()
+                    .bit(alarm.seconds.is_none())
                     .msk2()
-                    .bit(alarm.minutes_masked)
+                    .bit(alarm.minutes.is_none())
                     .msk3()
-                    .bit(alarm.hours_masked)
+                    .bit(alarm.hours.is_none())
                     .msk4()
-                    .bit(alarm.date_masked)
+                    .bit(alarm.day.is_none())
                     .dt()
                     .bits(dt)
                     .du()
@@ -215,10 +232,10 @@ impl Rtc {
     }
 
     pub fn set_alarm_b(&mut self, alarm: Alarm) {
-        let (dt, du) = bcd2_encode(alarm.date as u32);
-        let (ht, hu) = bcd2_encode(alarm.time.hours);
-        let (mt, mu) = bcd2_encode(alarm.time.minutes);
-        let (st, su) = bcd2_encode(alarm.time.seconds);
+        let (dt, du) = bcd2_encode(alarm.day.unwrap_or_default() as u32);
+        let (ht, hu) = bcd2_encode(alarm.hours.unwrap_or_default() as u32);
+        let (mt, mu) = bcd2_encode(alarm.minutes.unwrap_or_default() as u32);
+        let (st, su) = bcd2_encode(alarm.seconds.unwrap_or_default() as u32);
 
         self.modify(|rb| {
             rb.alrmbssr.write(|w| unsafe {
@@ -228,14 +245,16 @@ impl Rtc {
                     .bits(alarm.subseconds)
             });
             rb.alrmbr.write(|w| unsafe {
-                w.msk1()
-                    .bit(alarm.seconds_masked)
+                w.wdsel()
+                    .bit(alarm.use_weekday)
+                    .msk1()
+                    .bit(alarm.seconds.is_none())
                     .msk2()
-                    .bit(alarm.minutes_masked)
+                    .bit(alarm.minutes.is_none())
                     .msk3()
-                    .bit(alarm.hours_masked)
+                    .bit(alarm.hours.is_none())
                     .msk4()
-                    .bit(alarm.date_masked)
+                    .bit(alarm.day.is_none())
                     .dt()
                     .bits(dt)
                     .du()
