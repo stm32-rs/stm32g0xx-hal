@@ -11,7 +11,7 @@ pub enum RtcHourFormat {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum RtcCalibrationFreqency {
+pub enum RtcCalibrationFrequency {
     F1Hz,
     F512Hz,
 }
@@ -191,7 +191,8 @@ impl Rtc {
         self.rb.dr.read().wdu().bits()
     }
 
-    pub fn set_alarm_a(&mut self, alarm: Alarm) {
+    pub fn set_alarm_a(&mut self, alarm: impl Into<Alarm>) {
+        let alarm = alarm.into();
         let (dt, du) = bcd2_encode(alarm.day.unwrap_or_default() as u32);
         let (ht, hu) = bcd2_encode(alarm.hours.unwrap_or_default() as u32);
         let (mt, mu) = bcd2_encode(alarm.minutes.unwrap_or_default() as u32);
@@ -205,32 +206,19 @@ impl Rtc {
                     .bits(alarm.subseconds)
             });
             rb.alrmar.write(|w| unsafe {
-                w.wdsel()
-                    .bit(alarm.use_weekday)
-                    .msk1()
-                    .bit(alarm.seconds.is_none())
-                    .msk2()
-                    .bit(alarm.minutes.is_none())
-                    .msk3()
-                    .bit(alarm.hours.is_none())
-                    .msk4()
-                    .bit(alarm.day.is_none())
-                    .dt()
-                    .bits(dt)
-                    .du()
-                    .bits(du)
-                    .ht()
-                    .bits(ht)
-                    .hu()
-                    .bits(hu)
-                    .mnt()
-                    .bits(mt)
-                    .mnu()
-                    .bits(mu)
-                    .st()
-                    .bits(st)
-                    .su()
-                    .bits(su)
+                w.wdsel().bit(alarm.use_weekday);
+                w.msk1().bit(alarm.seconds.is_none());
+                w.msk2().bit(alarm.minutes.is_none());
+                w.msk3().bit(alarm.hours.is_none());
+                w.msk4().bit(alarm.day.is_none());
+                w.dt().bits(dt);
+                w.du().bits(du);
+                w.ht().bits(ht);
+                w.hu().bits(hu);
+                w.mnt().bits(mt);
+                w.mnu().bits(mu);
+                w.st().bits(st);
+                w.su().bits(su)
             });
 
             rb.cr.modify(|_, w| w.alrae().set_bit());
@@ -251,32 +239,19 @@ impl Rtc {
                     .bits(alarm.subseconds)
             });
             rb.alrmbr.write(|w| unsafe {
-                w.wdsel()
-                    .bit(alarm.use_weekday)
-                    .msk1()
-                    .bit(alarm.seconds.is_none())
-                    .msk2()
-                    .bit(alarm.minutes.is_none())
-                    .msk3()
-                    .bit(alarm.hours.is_none())
-                    .msk4()
-                    .bit(alarm.day.is_none())
-                    .dt()
-                    .bits(dt)
-                    .du()
-                    .bits(du)
-                    .ht()
-                    .bits(ht)
-                    .hu()
-                    .bits(hu)
-                    .mnt()
-                    .bits(mt)
-                    .mnu()
-                    .bits(mu)
-                    .st()
-                    .bits(st)
-                    .su()
-                    .bits(su)
+                w.wdsel().bit(alarm.use_weekday);
+                w.msk1().bit(alarm.seconds.is_none());
+                w.msk2().bit(alarm.minutes.is_none());
+                w.msk3().bit(alarm.hours.is_none());
+                w.msk4().bit(alarm.day.is_none());
+                w.dt().bits(dt);
+                w.du().bits(du);
+                w.ht().bits(ht);
+                w.hu().bits(hu);
+                w.mnt().bits(mt);
+                w.mnu().bits(mu);
+                w.st().bits(st);
+                w.su().bits(su)
             });
 
             rb.cr.modify(|_, w| w.alrbe().set_bit());
@@ -322,7 +297,7 @@ impl Rtc {
     pub fn enable_calibration_output<PIN: RtcOutputPin>(
         &mut self,
         pin: PIN,
-        freq: RtcCalibrationFreqency,
+        freq: RtcCalibrationFrequency,
     ) {
         pin.setup();
         self.modify(|rb| {
@@ -332,7 +307,7 @@ impl Rtc {
                     .out2en()
                     .bit(pin.channel())
                     .cosel()
-                    .bit(freq == RtcCalibrationFreqency::F1Hz)
+                    .bit(freq == RtcCalibrationFrequency::F1Hz)
                     .tampoe()
                     .clear_bit()
                     .coe()
