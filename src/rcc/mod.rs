@@ -288,8 +288,8 @@ impl Rcc {
 
     pub(crate) fn enable_lse(&self, bypass: bool) {
         self.bdcr
-            .modify(|_, w| w.lseon().set_bit().lsebyp().bit(bypass));
-        while self.bdcr.read().lserdy().bit_is_clear() {}
+            .modify(|_, w| w.lseon().bit(!bypass).lsebyp().bit(bypass));
+        while !bypass && self.bdcr.read().lserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lsi(&self) {
@@ -305,34 +305,18 @@ impl Rcc {
     }
 
     pub(crate) fn enable_rtc(&self, src: RTCSrc) {
-        let rtc_sel = match src {
-            RTCSrc::LSE => {
-                self.enable_lse(false);
-                0b01
-            }
-            RTCSrc::LSE_BYPASS => {
-                self.enable_lse(true);
-                0b01
-            }
-            RTCSrc::LSI => {
-                self.enable_lsi();
-                0b10
-            }
-            RTCSrc::HSE => {
-                self.enable_hse(false);
-                0b11
-            }
-            RTCSrc::HSE_BYPASS => {
-                self.enable_hse(true);
-                0b11
-            }
-        };
-
+        self.unlock_rtc();
         self.apbenr1
             .modify(|_, w| w.rtcapben().set_bit().pwren().set_bit());
         self.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
-        self.unlock_rtc();
         self.bdcr.modify(|_, w| w.bdrst().set_bit());
+
+        let rtc_sel = match src {
+            RTCSrc::LSE | RTCSrc::LSE_BYPASS => 0b01,
+            RTCSrc::LSI => 0b10,
+            RTCSrc::HSE | RTCSrc::HSE_BYPASS => 0b11,
+        };
+
         self.bdcr.modify(|_, w| unsafe {
             w.rtcsel()
                 .bits(rtc_sel)
@@ -341,6 +325,15 @@ impl Rcc {
                 .bdrst()
                 .clear_bit()
         });
+
+        self.unlock_rtc();
+        match src {
+            RTCSrc::LSE => self.enable_lse(false),
+            RTCSrc::LSE_BYPASS => self.enable_lse(true),
+            RTCSrc::LSI => self.enable_lsi(),
+            RTCSrc::HSE => self.enable_hse(false),
+            RTCSrc::HSE_BYPASS => self.enable_hse(true),
+        };
     }
 }
 
