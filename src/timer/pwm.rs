@@ -271,7 +271,7 @@ pwm_advanced_hal! {
 
 #[cfg(any(feature = "stm32g070"))]
 pwm_advanced_hal! {
-    TIM15: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m1, ccr1, moe),
+    TIM15: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr1, moe),
 }
 
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]

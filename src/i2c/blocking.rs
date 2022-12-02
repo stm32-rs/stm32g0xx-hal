@@ -186,8 +186,14 @@ macro_rules! i2c {
                 });
 
                 if config.slave_address_1 > 0 {
+                    let addr = if config.address_11bits {
+                        config.slave_address_1
+                    } else {
+                        config.slave_address_1 << 1
+                    };
+
                     i2c.oar1.write(|w| unsafe {
-                        w.oa1_7_1().bits(config.slave_address_1 as u8)
+                        w.oa1().bits(addr)
                         .oa1mode().bit(config.address_11bits)
                         .oa1en().set_bit()
                     });
