@@ -268,11 +268,11 @@ macro_rules! i2c {
                         self.errors += 1;
                         self.watchdog = 0;
                         // Disable I2C processing, resetting all hardware state machines
-                        self.i2c.cr1.modify(|_, w| unsafe {w.pe().clear_bit() } );
+                        self.i2c.cr1.modify(|_, w| w.pe().clear_bit() );
                         // force enough wait states for the pe clear
                         let _ = self.i2c.cr1.read();
                         // Enable the I2C processing again
-                        self.i2c.cr1.modify(|_, w| unsafe {w.pe().set_bit() });
+                        self.i2c.cr1.modify(|_, w| w.pe().set_bit() );
                     },
                     _ => {self.watchdog -= 1},
                 }
@@ -372,16 +372,12 @@ macro_rules! i2c {
                         return Err( WouldBlock)
                     } else
                     if self.index == 0 {
-                        self.i2c.cr2.modify(|_, w| unsafe {
-                            w.stop().set_bit()
-                        });
+                        self.i2c.cr2.modify(|_, w| w.stop().set_bit() );
                         self.errors += 1;
                         return Err( Other(Error::Nack))
                     } else
                     {
-                        self.i2c.cr2.modify(|_, w| unsafe {
-                            w.stop().set_bit()
-                        });
+                        self.i2c.cr2.modify(|_, w| w.stop().set_bit() );
                         self.errors += 1;
                         return Err(Other(Error::IncorrectFrameSize(self.index)))
                     }
