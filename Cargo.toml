@@ -16,7 +16,7 @@ features = ["stm32g081", "rt"]
 default-target = "thumbv6m-none-eabi"
 
 [dependencies]
-cortex-m = "0.7.1"
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 nb = "1.0.0"
 fugit = "0.3.5"
 
