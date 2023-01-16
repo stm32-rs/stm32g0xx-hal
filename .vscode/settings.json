@@ -1,9 +1,6 @@
 {
-  "rust-analyzer.checkOnSave.allTargets": false,
-  "rust-analyzer.checkOnSave.extraArgs": [
-      "--target",
-      "thumbv6m-none-eabi"
-  ],
+  "rust-analyzer.check.allTargets": false,
+  "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
   "rust-analyzer.cargo.features": [
     "rt",
     "stm32g071"
