@@ -59,7 +59,7 @@ be specified as part of the `Cargo.toml` definition.
 
 ```
 [dependencies.stm32g0xx-hal]
-version = "0.1.5"
+version = "0.2.0"
 features = ["rt", "stm32g081"]
 ```
 
