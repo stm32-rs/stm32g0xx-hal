@@ -103,7 +103,6 @@ macro_rules! bus {
 bus! {
     CRC => (AHB, crcen, crcsmen, crcrst), // 12
     FLASH => (AHB, flashen, flashsmen, flashrst), // 8
-    DMA => (AHB, dmaen, dmasmen, dmarst), // 0
 
     DBG => (APB1, dbgen, dbgsmen, dbgrst), // 27
     I2C1 => (APB1, i2c1en, i2c1smen, i2c1rst), // 21
@@ -122,7 +121,11 @@ bus! {
     TIM16 => (APB2, tim16en, tim16smen, tim16rst), // 17
     TIM17 => (APB2, tim17en, tim17smen, tim17rst), // 18
     USART1 => (APB2, usart1en, usart1smen, usart1rst), // 14
+}
 
+#[cfg(not(feature = "stm32g0b1"))]
+bus! {
+    DMA => (AHB, dmaen, dmasmen, dmarst), // 0
     GPIOA => (IOP, iopaen, iopasmen, ioparst), // 0
     GPIOB => (IOP, iopben, iopbsmen, iopbrst), // 1
     GPIOC => (IOP, iopcen, iopcsmen, iopcrst), // 2
@@ -130,7 +133,29 @@ bus! {
     GPIOF => (IOP, iopfen, iopfsmen, iopfrst), // 5
 }
 
-#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
+#[cfg(feature = "stm32g0b1")]
+bus! {
+    DMA1 => (AHB, dma1en, dma1smen, dma1rst), // 0
+    DMA2 => (AHB, dma2en, dma2smen, dma2rst), // 1
+
+    GPIOA => (IOP, gpioaen, gpioasmen, gpioarst), // 0
+    GPIOB => (IOP, gpioben, gpiobsmen, gpiobrst), // 1
+    GPIOC => (IOP, gpiocen, gpiocsmen, gpiocrst), // 2
+    GPIOD => (IOP, gpioden, gpiodsmen, gpiodrst), // 3
+    GPIOE => (IOP, gpioeen, gpioesmen, gpioerst) , // 4
+    GPIOF => (IOP, gpiofen, gpiofsmen, gpiofrst), // 5
+
+    LPUART1 => (APB1, lpuart1en, lpuart1smen, lpuart1rst), // 20
+    LPUART2 => (APB1, lpuart2en, lpuart2smen, lpuart2rst), // 7
+    USART5 => (APB1, usart5en, usart5smen, usart5rst), // 8
+    USART6 => (APB1, usart6en, usart6smen, usart6rst), // 9
+
+    SPI3 => (APB1, spi3en, spi3smen, spi3rst), // 15
+
+    I2C3 => (APB1, i2c3en, i2c3smen, i2c3rst), // 23
+}
+
+#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041",))]
 bus! {
     SYSCFG => (APB2, syscfgen, syscfgsmen, syscfgrst), // 0
 }
@@ -141,7 +166,7 @@ bus! {
     RNG => (AHB, rngen, rngsmen, rngrst), // 18
 }
 
-#[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g071", feature = "stm32g081", feature = "stm32g0b1"))]
 bus! {
     HDMI_CEC => (APB1, cecen, cecsmen, cecrst), // 24
     DAC => (APB1, dac1en, dac1smen, dac1rst), // 29
@@ -153,11 +178,25 @@ bus! {
 bus! {
     LPTIM1 => (APB1, lptim1en, lptim1smen, lptim1rst), // 31
     LPTIM2 => (APB1, lptim2en, lptim2smen, lptim2rst), // 30
-    LPUART => (APB1, lpuart1en, lpuart1smen, lpuart1rst), // 20
     TIM2 => (APB1, tim2en, tim2smen, tim2rst), // 0
 }
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(
+    feature = "stm32g031",
+    feature = "stm32g041",
+    feature = "stm32g071",
+    feature = "stm32g081"
+))]
+bus! {
+    LPUART => (APB1, lpuarten, lpuartsmen, lpuartrst), // 20
+}
+
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g0b1"
+))]
 bus! {
     TIM6 => (APB1, tim6en, tim6smen, tim6rst), // 4
     TIM7 => (APB1, tim7en, tim7smen, tim7rst), // 5
