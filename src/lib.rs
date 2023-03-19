@@ -3,7 +3,7 @@
 
 #[cfg(not(feature = "device-selected"))]
 compile_error!(
-    "This crate requires one of the following features enabled: stm32g030, stm32g070, stm32g031, stm32g041, stm32g071, stm32g081"
+    "This crate requires one of the following features enabled: stm32g030, stm32g070, stm32g031, stm32g041, stm32g071, stm32g081, stm32g0b1"
 );
 
 extern crate bare_metal;
@@ -36,6 +36,9 @@ pub use stm32g0::stm32g081 as stm32;
 
 #[cfg(feature = "stm32g070")]
 pub use stm32g0::stm32g070 as stm32;
+
+#[cfg(feature = "stm32g0b1")]
+pub use stm32g0::stm32g0b1 as stm32;
 
 #[cfg(feature = "rt")]
 pub use crate::stm32::interrupt;
