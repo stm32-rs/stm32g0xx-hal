@@ -90,8 +90,12 @@ mod private {
 
     /// Channel methods private to this module
     pub trait Channel {
+        // FIXME B1 and C1 have two DMA channels, defaulting to CH1 for now
         /// Return the register block for this channel
+        #[cfg(not(feature = "stm32g0b1"))]
         fn ch(&self) -> &stm32::dma::CH;
+        #[cfg(feature = "stm32g0b1")]
+        fn ch(&self) -> &stm32::dma1::CH;
     }
 }
 
