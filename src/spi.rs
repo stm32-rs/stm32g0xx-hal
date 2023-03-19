@@ -186,7 +186,7 @@ macro_rules! spi {
                         .set_bit()
                         .rxonly()
                         .clear_bit()
-                        .dff()
+                        .crcl()
                         .clear_bit()
                         .bidimode()
                         .clear_bit()
@@ -279,6 +279,8 @@ macro_rules! spi {
     }
 }
 
+// TODO Add Port E mappings for SP1 on stm32g0b1
+
 spi!(
     SPI1,
     spi1,
@@ -332,3 +334,5 @@ spi!(
         (PD4<DefaultMode>, AltFunction::AF1),
     ],
 );
+
+// TODO - Implement SPI3 on STM32G0B1 utilizing the extended alternate functions (AF9)
