@@ -24,13 +24,23 @@ pub enum SlaveAddressMask {
     MaskAllBits,
 }
 
+/// Denotes which event marked the end of the I2C data
 #[derive(Debug, Clone, Copy)]
-pub enum I2cResult<'a> {
-    Data(u16, I2cDirection, &'a [u8]), // contains address, direction and data slice reference
-    Addressed(u16, I2cDirection),      // a slave is addressed by a master
+pub enum EndMarker {
+    /// A stop condition was encountered
+    Stop,
+    /// A start repeat condition was encountered
+    StartRepeat,
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum I2cResult<'a> {
+    /// Contains address, direction, data slice reference, and the packet delimeter
+    Data(u16, I2cDirection, &'a [u8], EndMarker),
+    Addressed(u16, I2cDirection), // a slave is addressed by a master
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum I2cDirection {
     MasterReadSlaveWrite = 0,
     MasterWriteSlaveRead = 1,
@@ -99,4 +109,5 @@ pub struct I2c<I2C, SDA, SCL> {
     length_write_read: usize, // for a master write_read operation this remembers the size of the read operation
     // for a slave device this must be 0
     data: [u8; 255], // during transfer the driver will be the owner of the buffer
+    current_direction: I2cDirection,
 }
