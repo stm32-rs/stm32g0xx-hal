@@ -87,7 +87,7 @@ macro_rules! pwm {
     (b32, $TIMX:ident: ($timX:ident, $arr:ident, $arr_h:ident)) => {
         impl Pwm<$TIMX> {
             /// Set only period register
-            pub fn set_period_register(&mut self, period: u16) {
+            pub fn set_period_register(&mut self, period: u32) {
                 unsafe {
                     self.tim.arr.write(|w| w.bits(period));
                 }
@@ -142,12 +142,10 @@ macro_rules! pwm {
                     let psc = (ratio - 1) / 0xffff;
                     let arr = ratio / (psc + 1) - 1;
 
-                    self.set_prescaler_register(psc as u16);
-                    self.set_period_register(arr as u16);
+                    self.set_prescaler_register(psc as _);
+                    self.set_period_register(arr as _);
 
-                    unsafe {
-                        self.tim.cr1.write(|w| w.cen().set_bit());
-                    }
+                    self.tim.cr1.write(|w| w.cen().set_bit());
                 }
 
                 /// Set only prescale register
@@ -376,7 +374,7 @@ pwm! {
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 pwm! {
-    TIM15: (tim15, arr),
+    b16, TIM15: (tim15, arr),
 }
 
 #[cfg(feature = "stm32g0x1")]
