@@ -68,7 +68,39 @@ impl<TIM> Pwm<TIM> {
 }
 
 macro_rules! pwm {
-    ($($TIMX:ident: ($timX:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
+    (b16, $TIMX:ident: ($timX:ident, $arr:ident)) => {
+        impl Pwm<$TIMX> {
+            /// Set only period register
+            pub fn set_period_register(&mut self, period: u16) {
+                unsafe {
+                    self.tim.arr.write(|w| w.$arr().bits(period as u16));
+                }
+            }
+
+            /// Get value of period register, this is often times the same as max duty cycle
+            pub fn get_period_register(&self) -> u16 {
+                self.tim.arr.read().$arr().bits() as u16
+            }
+        }
+    };
+
+    (b32, $TIMX:ident: ($timX:ident, $arr:ident, $arr_h:ident)) => {
+        impl Pwm<$TIMX> {
+            /// Set only period register
+            pub fn set_period_register(&mut self, period: u16) {
+                unsafe {
+                    self.tim.arr.write(|w| w.bits(period));
+                }
+            }
+
+            /// Get value of period register, this is often times the same as max duty cycle
+            pub fn get_period_register(&self) -> u32 {
+                self.tim.arr.read().bits()
+            }
+        }
+    };
+
+    ($($bits:ident, $TIMX:ident: ($timX:ident, $arr:ident$( ,$arr_h:ident)*),)+) => {
         $(
             impl PwmExt for $TIMX {
                 fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self> {
@@ -99,6 +131,8 @@ macro_rules! pwm {
                 pwm
             }
 
+            pwm!($bits, $TIMX: ($timX, $arr $(,$arr_h)*));
+
             impl Pwm<$TIMX> {
                 /// Set the PWM frequency. Actual frequency may differ from
                 /// requested due to precision of input clock. To check actual
@@ -114,21 +148,6 @@ macro_rules! pwm {
                     unsafe {
                         self.tim.cr1.write(|w| w.cen().set_bit());
                     }
-                }
-
-                /// Set only period register
-                pub fn set_period_register(&mut self, period: u16) {
-                    unsafe {
-                        self.tim.arr.write(|w| w.$arr().bits(period as u16));
-                        $(
-                            self.tim.arr.modify(|_, w| w.$arr_h().bits((period >> 16) as u16));
-                        )*
-                    }
-                }
-
-                /// Get value of period register, this is often times the same as max duty cycle
-                pub fn get_period_register(&mut self) -> u16 {
-                    self.tim.arr.read().bits() as u16
                 }
 
                 /// Set only prescale register
@@ -167,11 +186,11 @@ macro_rules! pwm {
                 }
 
                 pub fn start_timer(&mut self) {
-                    self.tim.cr1.modify(|w| w.cen().set_bit())
+                    self.tim.cr1.modify(|_, w| w.cen().set_bit())
                 }
 
-                pub fn pause_timer() {
-                    self.tim.cr1.modify(|w| w.cen().clear_bit())
+                pub fn pause_timer(&mut self) {
+                    self.tim.cr1.modify(|_, w| w.cen().clear_bit())
                 }
 
                 /// Resets counter value
@@ -183,11 +202,11 @@ macro_rules! pwm {
                 pub fn freq(&self) -> Hertz {
                     Hertz::from_raw(self.clk.raw()
                         / (self.tim.psc.read().bits() + 1)
-                        / (self.tim.arr.read().bits() + 1))
+                        / (self.get_period_register() as u32 + 1))
                 }
             }
         )+
-    }
+    };
 }
 
 #[allow(unused_macros)]
@@ -343,16 +362,16 @@ pwm_hal! {
 }
 
 pwm! {
-    TIM1: (tim1, arr),
-    TIM3: (tim3, arr_l, arr_h),
-    TIM14: (tim14, arr),
-    TIM16: (tim16, arr),
-    TIM17: (tim17, arr),
+    b16, TIM1: (tim1, arr),
+    b16, TIM3: (tim3, arr_l),
+    b16, TIM14: (tim14, arr),
+    b16, TIM16: (tim16, arr),
+    b16, TIM17: (tim17, arr),
 }
 
 #[cfg(feature = "stm32g0x1")]
 pwm! {
-    TIM2: (tim2, arr_l, arr_h),
+    b32, TIM2: (tim2, arr_l, arr_h),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
