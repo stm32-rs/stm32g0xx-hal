@@ -108,15 +108,50 @@ macro_rules! pwm {
                     let psc = (ratio - 1) / 0xffff;
                     let arr = ratio / (psc + 1) - 1;
 
+                    self.set_prescaler_register(psc as u16);
+                    self.set_period_register(arr as u16);
+
                     unsafe {
-                        self.tim.psc.write(|w| w.psc().bits(psc as u16));
-                        self.tim.arr.write(|w| w.$arr().bits(arr as u16));
-                        $(
-                            self.tim.arr.modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
-                        )*
-                        self.tim.cr1.write(|w| w.cen().set_bit())
+                        self.tim.cr1.write(|w| w.cen().set_bit());
                     }
                 }
+
+                /// Set only period register
+                pub fn set_period_register(&mut self, period: u16) {
+                    unsafe {
+                        self.tim.arr.write(|w| w.$arr().bits(period as u16));
+                        $(
+                            self.tim.arr.modify(|_, w| w.$arr_h().bits((period >> 16) as u16));
+                        )*
+                    }
+                }
+
+                /// Get value of period register, this is often times the same as max duty cycle
+                pub fn get_period_register(&mut self) -> u16 {
+                    self.tim.arr.read().bits() as u16
+                }
+
+                /// Set only prescale register
+                pub fn set_prescaler_register(&mut self, prescaler: u16) {
+                    unsafe {
+                        self.tim.psc.write(|w| w.psc().bits(prescaler));
+                    }
+                }
+
+                /// Set prescaler to be able to reach `freq` or higher
+                ///
+                /// NOTE: Actual lowest reachable frequency may be lower than requested
+                /// due to rounding errors
+                /// NOTE: This will not update the period register
+                pub fn set_min_frequency(&mut self, freq: Hertz) {
+                    let ratio = self.clk / freq;
+                    let psc = (ratio - 1) / 0xffff;
+
+                    unsafe {
+                        self.tim.psc.write(|w| w.psc().bits(psc as u16));
+                    }
+                }
+
                 /// Starts listening
                 pub fn listen(&mut self) {
                     self.tim.dier.write(|w| w.uie().set_bit());
@@ -129,6 +164,14 @@ macro_rules! pwm {
                 /// Clears interrupt flag
                 pub fn clear_irq(&mut self) {
                     self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                }
+
+                pub fn start_timer(&mut self) {
+                    self.tim.cr1.modify(|w| w.cen().set_bit())
+                }
+
+                pub fn pause_timer() {
+                    self.tim.cr1.modify(|w| w.cen().clear_bit())
                 }
 
                 /// Resets counter value
