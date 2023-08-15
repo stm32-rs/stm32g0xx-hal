@@ -165,6 +165,11 @@ pub trait Channel: private::Channel {
         self.ch().ndtr.write(|w| unsafe { w.ndt().bits(len) });
     }
 
+    /// Get the number of words left to transfer.
+    fn get_transfer_remaining(&mut self) -> u16 {
+        self.ch().ndtr.read().ndt().bits()
+    }
+
     /// Set the word size.
     fn set_word_size(&mut self, wsize: WordSize) {
         self.ch().cr.modify(|_, w| unsafe {
