@@ -21,7 +21,6 @@
 use crate::rcc::{Enable, Rcc, Reset};
 use crate::stm32::CRC;
 use core::hash::Hasher;
-use core::ptr;
 
 /// Extension trait to constrain the CRC peripheral.
 pub trait CrcExt {
@@ -174,11 +173,8 @@ impl Crc {
     pub fn feed(&mut self, data: &[u8]) {
         let crc = unsafe { &(*CRC::ptr()) };
         for byte in data {
-            unsafe {
-                // Workaround with svd2rust, it does not generate the byte interface to the DR
-                // register
-                ptr::write_volatile(&crc.dr as *const _ as *mut u8, *byte);
-            }
+            let ptr = &crc.dr as *const _;
+            unsafe { core::ptr::write_volatile(ptr as *mut u8, *byte) };
         }
     }
 

@@ -445,9 +445,9 @@ macro_rules! gpio {
                             let _ = &(*$GPIOX::ptr()).pupdr.modify(|r, w| {
                                 w.bits(r.bits() & !(0b11 << offset))
                             });
-                            &(*$GPIOX::ptr()).moder.modify(|r, w| {
+                            let _ = &(*$GPIOX::ptr()).moder.modify(|r, w| {
                                 w.bits(r.bits() & !(0b11 << offset))
-                            })
+                            });
                         };
                         let offset = ($i % 4) * 8;
                         let mask = $Pxn << offset;
@@ -475,9 +475,9 @@ macro_rules! gpio {
                     pub fn set_speed(self, speed: Speed) -> Self {
                         let offset = 2 * $i;
                         unsafe {
-                            &(*$GPIOX::ptr()).ospeedr.modify(|r, w| {
+                            let _ = &(*$GPIOX::ptr()).ospeedr.modify(|r, w| {
                                 w.bits((r.bits() & !(0b11 << offset)) | ((speed as u32) << offset))
-                            })
+                            });
                         };
                         self
                     }
