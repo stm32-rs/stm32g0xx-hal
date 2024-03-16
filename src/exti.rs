@@ -169,7 +169,7 @@ impl ExtiExt for EXTI {
             SignalEdge::Rising => self.rpr1.read().bits() & mask != 0,
             SignalEdge::Falling => self.fpr1.read().bits() & mask != 0,
             SignalEdge::All => {
-                (self.rpr1.read().bits() & mask != 0) && (self.fpr1.read().bits() & mask != 0)
+                (self.rpr1.read().bits() & mask != 0) || (self.fpr1.read().bits() & mask != 0)
             }
         }
     }
