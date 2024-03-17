@@ -2,7 +2,7 @@ use crate::gpio::*;
 use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
-use core::ptr;
+use core::{cell, ptr};
 pub use hal::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
 
 /// SPI error
@@ -264,8 +264,9 @@ macro_rules! spi {
                 } else if sr.crcerr().bit_is_set() {
                     nb::Error::Other(Error::Crc)
                 } else if sr.txe().bit_is_set() {
-                    let ptr = &self.spi.dr as *const _;
-                    unsafe { core::ptr::write_volatile(ptr as *mut u8, byte) };
+                    unsafe {
+                        ptr::write_volatile(cell::UnsafeCell::raw_get(&self.spi.dr as *const _ as _), byte)
+                    }
                     return Ok(());
                 } else {
                     nb::Error::WouldBlock
