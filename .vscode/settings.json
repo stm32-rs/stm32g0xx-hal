@@ -3,6 +3,6 @@
   "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
   "rust-analyzer.cargo.features": [
     "rt",
-    "stm32g071"
+    "stm32g0b1"
   ]
 }

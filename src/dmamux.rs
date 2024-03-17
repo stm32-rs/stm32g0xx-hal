@@ -66,9 +66,19 @@ pub enum DmaMuxIndex {
     TIM3_CH4 = 35,
     TIM3_TRIG = 36,
     TIM3_UP = 37,
-    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(
+        feature = "stm32g070",
+        feature = "stm32g071",
+        feature = "stm32g081",
+        feature = "stm32g0b1"
+    ))]
     TIM6_UP = 38,
-    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(
+        feature = "stm32g070",
+        feature = "stm32g071",
+        feature = "stm32g081",
+        feature = "stm32g0b1"
+    ))]
     TIM7_UP = 39,
     TIM15_CH1 = 40,
     TIM15_CH2 = 41,
@@ -85,23 +95,80 @@ pub enum DmaMuxIndex {
     USART1_TX = 51,
     USART2_RX = 52,
     USART2_TX = 53,
-    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(
+        feature = "stm32g070",
+        feature = "stm32g071",
+        feature = "stm32g081",
+        feature = "stm32g0b1"
+    ))]
     USART3_RX = 54,
-    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(
+        feature = "stm32g070",
+        feature = "stm32g071",
+        feature = "stm32g081",
+        feature = "stm32g0b1"
+    ))]
     USART3_TX = 55,
-    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(
+        feature = "stm32g070",
+        feature = "stm32g071",
+        feature = "stm32g081",
+        feature = "stm32g0b1"
+    ))]
     USART4_RX = 56,
-    #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(
+        feature = "stm32g070",
+        feature = "stm32g071",
+        feature = "stm32g081",
+        feature = "stm32g0b1"
+    ))]
     USART4_TX = 57,
 
-    #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g071", feature = "stm32g081", feature = "stm32g0b1"))]
     UCPD1_RX = 58,
-    #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g071", feature = "stm32g081", feature = "stm32g0b1"))]
     UCPD1_TX = 59,
-    #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g071", feature = "stm32g081", feature = "stm32g0b1"))]
     UCPD2_RX = 60,
-    #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
+    #[cfg(any(feature = "stm32g071", feature = "stm32g081", feature = "stm32g0b1"))]
     UCPD2_TX = 61,
+
+    #[cfg(feature = "stm32g0b1")]
+    I2C3_RX = 62,
+    #[cfg(feature = "stm32g0b1")]
+    I2C3_TX = 63,
+
+    #[cfg(feature = "stm32g0b1")]
+    LPUART2_RX = 64,
+    #[cfg(feature = "stm32g0b1")]
+    LPUART2_TX = 65,
+
+    #[cfg(feature = "stm32g0b1")]
+    SPI3_RX = 66,
+    #[cfg(feature = "stm32g0b1")]
+    SPI3_TX = 67,
+
+    #[cfg(feature = "stm32g0b1")]
+    TIM4_CH1 = 68,
+    #[cfg(feature = "stm32g0b1")]
+    TIM4_CH2 = 69,
+    #[cfg(feature = "stm32g0b1")]
+    TIM4_CH3 = 70,
+    #[cfg(feature = "stm32g0b1")]
+    TIM4_CH4 = 71,
+    #[cfg(feature = "stm32g0b1")]
+    TIM4_TRIG = 72,
+    #[cfg(feature = "stm32g0b1")]
+    TIM4_UP = 73,
+
+    #[cfg(feature = "stm32g0b1")]
+    USART5_RX = 74,
+    #[cfg(feature = "stm32g0b1")]
+    USART5_TX = 75,
+    #[cfg(feature = "stm32g0b1")]
+    USART6_RX = 76,
+    #[cfg(feature = "stm32g0b1")]
+    USART6_TX = 77,
 }
 
 impl DmaMuxIndex {
@@ -182,16 +249,21 @@ macro_rules! dma_mux {
     }
 }
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g0b1"
+))]
 dma_mux!(
     channels: {
-        C0: (ch0, dmamux_c0cr),
-        C1: (ch1, dmamux_c1cr),
-        C2: (ch2, dmamux_c2cr),
-        C3: (ch3, dmamux_c3cr),
-        C4: (ch4, dmamux_c4cr),
-        C5: (ch5, dmamux_c5cr),
-        C6: (ch6, dmamux_c6cr),
+        C0: (ch0, c0cr),
+        C1: (ch1, c1cr),
+        C2: (ch2, c2cr),
+        C3: (ch3, c3cr),
+        C4: (ch4, c4cr),
+        C5: (ch5, c5cr),
+        C6: (ch6, c6cr),
     },
 );
 
@@ -216,9 +288,19 @@ impl DmaMuxExt for DMAMUX {
             ch2: C2 { _0: () },
             ch3: C3 { _0: () },
             ch4: C4 { _0: () },
-            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            #[cfg(any(
+                feature = "stm32g070",
+                feature = "stm32g071",
+                feature = "stm32g081",
+                feature = "stm32g0b1"
+            ))]
             ch5: C5 { _0: () },
-            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            #[cfg(any(
+                feature = "stm32g070",
+                feature = "stm32g071",
+                feature = "stm32g081",
+                feature = "stm32g0b1"
+            ))]
             ch6: C6 { _0: () },
         }
     }

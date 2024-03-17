@@ -204,6 +204,10 @@ where
     }
 }
 
+// NOTE: There is some added complexity here for G0x1 devices where CR1 and ISR
+// both have FIFO enabled/disabled variants. Worst still, the LPUARTs have a different
+// name for that field
+
 macro_rules! uart_shared {
     ($USARTX:ident, $dmamux_rx:ident, $dmamux_tx:ident,
         tx: [ $(($PTX:ident, $TAF:expr),)+ ],
@@ -734,6 +738,25 @@ macro_rules! uart_full {
     };
 }
 
+#[cfg(not(feature = "stm32g0b1"))]
+uart_shared!(USART1, USART1_RX, USART1_TX,
+    tx: [
+        (PA9, AltFunction::AF1),
+        (PB6, AltFunction::AF0),
+        (PC4, AltFunction::AF1),
+    ],
+    rx: [
+        (PA10, AltFunction::AF1),
+        (PB7, AltFunction::AF0),
+        (PC5, AltFunction::AF1),
+    ],
+    de: [
+        (PA12, AltFunction::AF1),
+        (PB3, AltFunction::AF4),
+    ]
+);
+
+#[cfg(feature = "stm32g0b1")]
 uart_shared!(USART1, USART1_RX, USART1_TX,
     tx: [
         (PA9, AltFunction::AF1),
@@ -768,7 +791,12 @@ uart_shared!(USART2, USART2_RX, USART2_TX,
     ]
 );
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g0b1"
+))]
 uart_shared!(USART3, USART3_RX, USART3_TX,
     tx: [
         (PA5, AltFunction::AF4),
@@ -796,7 +824,14 @@ uart_shared!(USART3, USART3_RX, USART3_TX,
     ]
 );
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+// TODO Add Port E pins for 0b1
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g081",
+    feature = "stm32g0b1",
+))]
 uart_shared!(USART4, USART4_RX, USART4_TX,
     tx: [
         (PA0, AltFunction::AF4),
@@ -811,7 +846,39 @@ uart_shared!(USART4, USART4_RX, USART4_TX,
     ]
 );
 
-#[cfg(feature = "stm32g0x1")]
+#[cfg(feature = "stm32g0b1")]
+uart_shared!(USART5, USART5_RX, USART5_TX,
+    tx: [
+        (PE10, AltFunction::AF3),
+    ],
+    rx: [
+        (PE11, AltFunction::AF3),
+    ],
+    de: [
+        (PE7, AltFunction::AF3),
+    ]
+);
+
+#[cfg(feature = "stm32g0b1")]
+uart_shared!(USART6, USART6_RX, USART6_TX,
+    tx: [
+        (PF9, AltFunction::AF3),
+    ],
+    rx: [
+        (PF10, AltFunction::AF3),
+    ],
+    de: [
+        (PF3, AltFunction::AF3),
+        (PF11, AltFunction::AF3),
+    ]
+);
+
+#[cfg(any(
+    feature = "stm32g031",
+    feature = "stm32g041",
+    feature = "stm32g071",
+    feature = "stm32g081"
+))]
 uart_shared!(LPUART, LPUART_RX, LPUART_TX,
     tx: [
         (PA2, AltFunction::AF6),
@@ -829,22 +896,90 @@ uart_shared!(LPUART, LPUART_RX, LPUART_TX,
     ]
 );
 
+#[cfg(any(feature = "stm32g0b1",))]
+uart_shared!(LPUART1, LPUART_RX, LPUART_TX,
+    tx: [
+        (PA2, AltFunction::AF6),
+        (PB11, AltFunction::AF1),
+        (PC1, AltFunction::AF1),
+        (PF4, AltFunction::AF1),
+    ],
+    rx: [
+        (PA3, AltFunction::AF6),
+        (PB10, AltFunction::AF1),
+        (PC0, AltFunction::AF1),
+        (PF5, AltFunction::AF1),
+    ],
+    de: [
+        (PB1, AltFunction::AF6),
+        (PB12, AltFunction::AF1),
+        (PD15, AltFunction::AF1),
+        (PF6, AltFunction::AF1),
+    ]
+);
+
+#[cfg(any(feature = "stm32g0b1",))]
+uart_shared!(LPUART2, LPUART2_RX, LPUART2_TX,
+    tx: [
+        (PF2, AltFunction::AF1),
+        (PC6, AltFunction::AF3),
+    ],
+    rx: [
+        (PF3, AltFunction::AF1),
+        (PC7, AltFunction::AF3),
+    ],
+    de: [
+        (PD15, AltFunction::AF1),
+        (PC9, AltFunction::AF3),
+    ]
+);
+
 uart_full!(USART1, usart1, 1);
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g0b1"
+))]
 uart_full!(USART2, usart2, 1);
+
+#[cfg(feature = "stm32g0b1")]
+uart_full!(USART3, usart3, 1);
 
 #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 uart_basic!(USART2, usart2, 1);
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081",))]
 uart_basic!(USART3, usart3, 1);
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g0b1"
+))]
 uart_basic!(USART4, usart4, 1);
+
+#[cfg(feature = "stm32g0b1")]
+uart_basic!(USART5, usart5, 1);
+
+#[cfg(feature = "stm32g0b1")]
+uart_basic!(USART6, usart6, 1);
 
 // LPUART Should be given its own implementation when it needs to be used with features not present on
 // the basic feature set such as: Dual clock domain, FIFO or prescaler.
 // Or when Synchronous mode is implemented for the basic feature set, since the LP feature set does not have support.
-#[cfg(feature = "stm32g0x1")]
+#[cfg(any(
+    feature = "stm32g031",
+    feature = "stm32g041",
+    feature = "stm32g071",
+    feature = "stm32g081"
+))]
 uart_basic!(LPUART, lpuart, 256);
+
+#[cfg(feature = "stm32g0b1")]
+uart_basic!(LPUART1, lpuart1, 256);
+
+#[cfg(feature = "stm32g0b1")]
+uart_basic!(LPUART2, lpuart2, 256);

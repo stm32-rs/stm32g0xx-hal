@@ -118,7 +118,10 @@ impl Power {
                 while !self.rb.sr2.read().reglpf().bit_is_clear() {}
             }
             PowerMode::LowPower(sm) => {
+                #[cfg(not(feature = "stm32g0b1"))]
                 self.rb.cr3.modify(|_, w| w.ulpen().clear_bit());
+                #[cfg(feature = "stm32g0b1")]
+                self.rb.cr3.modify(|_, w| w.enb_ulp().clear_bit());
                 self.rb
                     .cr1
                     .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });
@@ -127,7 +130,10 @@ impl Power {
                 {}
             }
             PowerMode::UltraLowPower(sm) => {
+                #[cfg(not(feature = "stm32g0b1"))]
                 self.rb.cr3.modify(|_, w| w.ulpen().set_bit());
+                #[cfg(feature = "stm32g0b1")]
+                self.rb.cr3.modify(|_, w| w.enb_ulp().set_bit());
                 self.rb
                     .cr1
                     .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });
