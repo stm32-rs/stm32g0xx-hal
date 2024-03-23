@@ -186,7 +186,7 @@ macro_rules! spi {
                         .set_bit()
                         .rxonly()
                         .clear_bit()
-                        .dff()
+                        .crcl()
                         .clear_bit()
                         .bidimode()
                         .clear_bit()
