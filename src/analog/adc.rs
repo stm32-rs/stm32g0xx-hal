@@ -362,7 +362,7 @@ where
             .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
 
         self.rb
-            .chselr() // set activ channel acording chapter 15.12.9 (ADC_CFGR1; CHSELRMOD=0)
+            .chselr0() // set active channel acording chapter 15.12.9 (ADC_CFGR1; CHSELRMOD=0)
             .modify(|_, w| unsafe { w.chsel().bits(1 << PIN::channel()) });
     }
 }
@@ -415,7 +415,7 @@ where
             .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
 
         self.rb
-            .chselr()
+            .chselr0()
             .modify(|_, w| unsafe { w.chsel().bits(1 << PIN::channel()) });
 
         self.rb.isr.modify(|_, w| w.eos().set_bit());
