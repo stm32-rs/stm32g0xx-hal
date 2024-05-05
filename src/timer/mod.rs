@@ -166,7 +166,7 @@ macro_rules! timers {
                     let psc = cycles / 0xffff;
                     let arr = cycles / (psc + 1);
 
-                    self.tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
+                    self.tim.psc.write(|w| w.psc().bits(psc as u16) );
                     self.tim.arr.write(|w| unsafe { w.bits(arr) });
 
                     // Generate an update event so that PSC and ARR values are copied into their

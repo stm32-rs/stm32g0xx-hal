@@ -603,7 +603,7 @@ macro_rules! uart_full {
                 usart.cr2.reset();
                 usart.cr3.reset();
 
-                usart.cr2.write(|w| unsafe {
+                usart.cr2.write(|w| {
                     w.stop()
                         .bits(config.stopbits.bits())
                         .txinv()
@@ -617,7 +617,7 @@ macro_rules! uart_full {
                 if let Some(timeout) = config.receiver_timeout {
                     usart.cr1.write(|w| w.rtoie().set_bit());
                     usart.cr2.modify(|_, w| w.rtoen().set_bit());
-                    usart.rtor.write(|w| unsafe { w.rto().bits(timeout) });
+                    usart.rtor.write(|w| w.rto().bits(timeout));
                 }
 
                 usart.cr3.write(|w| unsafe {

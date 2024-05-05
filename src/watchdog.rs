@@ -32,10 +32,8 @@ impl IndependedWatchdog {
         // Enable access to RLR/PR
         self.iwdg.kr.write(|w| unsafe { w.key().bits(0x5555) });
 
-        self.iwdg.pr.write(|w| unsafe { w.pr().bits(psc) });
-        self.iwdg
-            .rlr
-            .write(|w| unsafe { w.rl().bits(reload as u16) });
+        self.iwdg.pr.write(|w| w.pr().bits(psc));
+        self.iwdg.rlr.write(|w| w.rl().bits(reload as u16));
 
         while self.iwdg.sr.read().bits() > 0 {}
 
@@ -83,7 +81,7 @@ pub struct WindowWatchdog {
 
 impl WindowWatchdog {
     pub fn feed(&mut self) {
-        self.wwdg.cr.write(|w| unsafe { w.t().bits(0xff) });
+        self.wwdg.cr.write(|w| w.t().bits(0xff));
     }
 
     pub fn set_window(&mut self, window: MicroSecond) {
@@ -101,7 +99,7 @@ impl WindowWatchdog {
         assert!(window <= 0x40);
         self.wwdg
             .cfr
-            .write(|w| unsafe { w.wdgtb().bits(psc).w().bits(window as u8) });
+            .write(|w| w.wdgtb().bits(psc).w().bits(window as u8));
     }
 
     pub fn listen(&mut self) {
