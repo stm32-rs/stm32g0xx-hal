@@ -185,13 +185,13 @@ macro_rules! dma_mux {
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 dma_mux!(
     channels: {
-        C0: (ch0, c0cr),
-        C1: (ch1, c1cr),
-        C2: (ch2, c2cr),
-        C3: (ch3, c3cr),
-        C4: (ch4, c4cr),
-        C5: (ch5, c5cr),
-        C6: (ch6, c6cr),
+        C0: (ch0, dmamux_c0cr),
+        C1: (ch1, dmamux_c1cr),
+        C2: (ch2, dmamux_c2cr),
+        C3: (ch3, dmamux_c3cr),
+        C4: (ch4, dmamux_c4cr),
+        C5: (ch5, dmamux_c5cr),
+        C6: (ch6, dmamux_c6cr),
     },
 );
 
