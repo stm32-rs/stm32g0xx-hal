@@ -83,7 +83,7 @@ pub struct WindowWatchdog {
 
 impl WindowWatchdog {
     pub fn feed(&mut self) {
-        self.wwdg.cr.write(|w| unsafe { w.t().bits(0xff) });
+        self.wwdg.cr.write(|w| w.t().bits(0xff));
     }
 
     pub fn set_window(&mut self, window: MicroSecond) {
@@ -101,7 +101,7 @@ impl WindowWatchdog {
         assert!(window <= 0x40);
         self.wwdg
             .cfr
-            .write(|w| unsafe { w.wdgtb().bits(psc).w().bits(window as u8) });
+            .write(|w| w.wdgtb().bits(psc).w().bits(window as u8));
     }
 
     pub fn listen(&mut self) {
