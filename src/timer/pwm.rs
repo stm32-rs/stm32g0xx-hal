@@ -220,14 +220,14 @@ macro_rules! pwm_q {
     }
 }
 
-#[cfg(any(feature = "stm32g0x1", feature = "stm32g070"))]
+#[cfg(any(feature = "stm32g030", feature = "stm32g0x1", feature = "stm32g070"))]
 macro_rules! pwm_hal {
     ($($TIMX:ident:
-        ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident),)+
+        ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident, $duty_t:ty),)+
     ) => {
         $(
             impl hal::PwmPin for PwmPin<$TIMX, $CH> {
-                type Duty = u32;
+                type Duty = $duty_t;
 
                 fn disable(&mut self) {
                     unsafe {
@@ -243,16 +243,16 @@ macro_rules! pwm_hal {
                     }
                 }
 
-                fn get_duty(&self) -> u32 {
-                    unsafe { (*$TIMX::ptr()).$ccrx.read().bits() }
+                fn get_duty(&self) -> Self::Duty {
+                    unsafe { (*$TIMX::ptr()).$ccrx.read().bits() as _ }
                 }
 
-                fn get_max_duty(&self) -> u32 {
-                    unsafe { (*$TIMX::ptr()).arr.read().bits() }
+                fn get_max_duty(&self) -> Self::Duty {
+                    unsafe { (*$TIMX::ptr()).arr.read().bits() as _ }
                 }
 
-                fn set_duty(&mut self, duty: u32) {
-                    unsafe { (*$TIMX::ptr()).$ccrx.write(|w| w.bits(duty)) }
+                fn set_duty(&mut self, duty: Self::Duty) {
+                    unsafe { (*$TIMX::ptr()).$ccrx.write(|w| w.bits(duty as u32)) }
                 }
             }
         )+
@@ -341,22 +341,22 @@ pwm_advanced_hal! {
 
 #[cfg(feature = "stm32g0x1")]
 pwm_hal! {
-    TIM2: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
-    TIM2: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
-    TIM2: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
-    TIM2: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
-    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
-    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
-    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
-    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+    TIM2: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h, u32),
+    TIM2: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h, u32),
+    TIM2: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h, u32),
+    TIM2: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h, u32),
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h, u32),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h, u32),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h, u32),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h, u32),
 }
 
-#[cfg(feature = "stm32g070")]
+#[cfg(any(feature = "stm32g030", feature = "stm32g070"))]
 pwm_hal! {
-    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
-    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
-    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
-    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h, u16),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h, u16),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h, u16),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h, u16),
 }
 
 pwm! {
