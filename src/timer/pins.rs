@@ -68,16 +68,16 @@ macro_rules! trigger_pins {
                     let ts = match edge {
                         SignalEdge::All => 0b100,
                         SignalEdge::Falling => {
-                            tim.ccer.modify(|_, w| w.$ccp().set_bit());
+                            tim.ccer().modify(|_, w| w.$ccp().set_bit());
                             0b101
                         },
                         SignalEdge::Rising => {
-                            tim.ccer.modify(|_, w| w.$ccp().clear_bit());
+                            tim.ccer().modify(|_, w| w.$ccp().clear_bit());
                             0b101
                         }
                     };
 
-                    tim.smcr.modify(|_, w| unsafe { w.ts().bits(ts) });
+                    tim.smcr().modify(|_, w| unsafe { w.ts().bits(ts) });
 
                     Self {
                         pin,

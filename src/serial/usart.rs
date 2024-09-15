@@ -250,43 +250,43 @@ macro_rules! uart_shared {
             /// Listen for a data interrupt event
             pub fn listen(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1.modify(|_, w| w.rxneie().set_bit());
+                usart.cr1().modify(|_, w| w.rxneie().set_bit());
             }
 
             /// Stop listening for a data interrupt event
             pub fn unlisten(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1.modify(|_, w| w.rxneie().clear_bit());
+                usart.cr1().modify(|_, w| w.rxneie().clear_bit());
             }
 
             /// Return true if the rx register is not empty (and can be read)
             pub fn is_rxne(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().rxne().bit_is_set()
+                usart.isr().read().rxne().bit_is_set()
             }
 
             /// Listen for an idle interrupt event
             pub fn listen_idle(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1.modify(|_, w| w.idleie().set_bit());
+                usart.cr1().modify(|_, w| w.idleie().set_bit());
             }
 
             /// Stop listening for an idle interrupt event
             pub fn unlisten_idle(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1.modify(|_, w| w.idleie().clear_bit());
+                usart.cr1().modify(|_, w| w.idleie().clear_bit());
             }
 
             /// Return true if the idle event occured
             pub fn is_idle(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().idle().bit_is_set()
+                usart.isr().read().idle().bit_is_set()
             }
 
             /// Clear the idle event flag
             pub fn clear_idle(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.icr.write(|w| w.idlecf().set_bit());
+                usart.icr().write(|w| w.idlecf().set_bit());
             }
         }
 
@@ -295,22 +295,22 @@ macro_rules! uart_shared {
 
             fn read(&mut self) -> nb::Result<u8, Error> {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                let isr = usart.isr.read();
+                let isr = usart.isr().read();
                 Err(
                     if isr.pe().bit_is_set() {
-                        usart.icr.write(|w| w.pecf().set_bit());
+                        usart.icr().write(|w| w.pecf().set_bit());
                         nb::Error::Other(Error::Parity)
                     } else if isr.fe().bit_is_set() {
-                        usart.icr.write(|w| w.fecf().set_bit());
+                        usart.icr().write(|w| w.fecf().set_bit());
                         nb::Error::Other(Error::Framing)
                     } else if isr.nf().bit_is_set() {
-                        usart.icr.write(|w| w.ncf().set_bit());
+                        usart.icr().write(|w| w.ncf().set_bit());
                         nb::Error::Other(Error::Noise)
                     } else if isr.ore().bit_is_set() {
-                        usart.icr.write(|w| w.orecf().set_bit());
+                        usart.icr().write(|w| w.orecf().set_bit());
                         nb::Error::Other(Error::Overrun)
                     } else if isr.rxne().bit_is_set() {
-                        return Ok(usart.rdr.read().bits() as u8)
+                        return Ok(usart.rdr().read().bits() as u8)
                     } else {
                         nb::Error::WouldBlock
                     }
@@ -331,19 +331,19 @@ macro_rules! uart_shared {
             /// Starts listening for an interrupt event
             pub fn listen(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1.modify(|_, w| w.txeie().set_bit());
+                usart.cr1().modify(|_, w| w.txeie().set_bit());
             }
 
             /// Stop listening for an interrupt event
             pub fn unlisten(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1.modify(|_, w| w.txeie().clear_bit());
+                usart.cr1().modify(|_, w| w.txeie().clear_bit());
             }
 
             /// Return true if the tx register is empty (and can accept data)
             pub fn is_txe(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().txe().bit_is_set()
+                usart.isr().read().txe().bit_is_set()
             }
 
         }
@@ -353,7 +353,7 @@ macro_rules! uart_shared {
 
             fn flush(&mut self) -> nb::Result<(), Self::Error> {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                if usart.isr.read().tc().bit_is_set() {
+                if usart.isr().read().tc().bit_is_set() {
                     Ok(())
                 } else {
                     Err(nb::Error::WouldBlock)
@@ -362,8 +362,8 @@ macro_rules! uart_shared {
 
             fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                if usart.isr.read().txe().bit_is_set() {
-                    usart.tdr.write(|w| unsafe { w.bits(byte as u32) });
+                if usart.isr().read().txe().bit_is_set() {
+                    usart.tdr().write(|w| unsafe { w.bits(byte as u32) });
                     Ok(())
                 } else {
                     Err(nb::Error::WouldBlock)
@@ -403,7 +403,7 @@ macro_rules! uart_shared {
             fn enable_dma(&mut self) {
                 // NOTE(unsafe) critical section prevents races
                 interrupt::free(|_| unsafe {
-                    let cr3 = &(*$USARTX::ptr()).cr3;
+                    let cr3 = &(*$USARTX::ptr()).cr3();
                     cr3.modify(|_, w| w.dmar().set_bit());
                 });
             }
@@ -411,7 +411,7 @@ macro_rules! uart_shared {
             fn disable_dma(&mut self) {
                 // NOTE(unsafe) critical section prevents races
                 interrupt::free(|_| unsafe {
-                    let cr3 = &(*$USARTX::ptr()).cr3;
+                    let cr3 = &(*$USARTX::ptr()).cr3();
                     cr3.modify(|_, w| w.dmar().clear_bit());
                 });
             }
@@ -426,7 +426,7 @@ macro_rules! uart_shared {
             fn enable_dma(&mut self) {
                 // NOTE(unsafe) critical section prevents races
                 interrupt::free(|_| unsafe {
-                    let cr3 = &(*$USARTX::ptr()).cr3;
+                    let cr3 = &(*$USARTX::ptr()).cr3();
                     cr3.modify(|_, w| w.dmat().set_bit());
                 });
             }
@@ -434,7 +434,7 @@ macro_rules! uart_shared {
             fn disable_dma(&mut self) {
                 // NOTE(unsafe) critical section prevents races
                 interrupt::free(|_| unsafe {
-                    let cr3 = &(*$USARTX::ptr()).cr3;
+                    let cr3 = &(*$USARTX::ptr()).cr3();
                     cr3.modify(|_, w| w.dmat().clear_bit());
                 });
             }
@@ -470,16 +470,16 @@ macro_rules! uart_basic {
                 let clk = rcc.clocks.apb_clk.raw() as u64;
                 let bdr = config.baudrate.0 as u64;
                 let div = ($clk_mul * clk) / bdr;
-                usart.brr.write(|w| unsafe { w.bits(div as u32) });
+                usart.brr().write(|w| unsafe { w.bits(div as u32) });
                 // Reset other registers to disable advanced USART features
-                usart.cr2.reset();
-                usart.cr3.reset();
+                usart.cr2().reset();
+                usart.cr3().reset();
 
                 // Disable USART, there are many bits where UE=0 is required
-                usart.cr1.modify(|_, w| w.ue().clear_bit());
+                usart.cr1().modify(|_, w| w.ue().clear_bit());
 
                 // Enable transmission and receiving
-                usart.cr1.write(|w| {
+                usart.cr1().write(|w| {
                     w.te()
                         .set_bit()
                         .re()
@@ -493,7 +493,7 @@ macro_rules! uart_basic {
                         .ps()
                         .bit(config.parity == Parity::ParityOdd)
                 });
-                usart.cr2.write(|w| unsafe {
+                usart.cr2().write(|w| unsafe {
                     w.stop()
                         .bits(match config.stopbits {
                             StopBits::STOP1 => 0b00,
@@ -509,13 +509,13 @@ macro_rules! uart_basic {
                         .bit(config.swap)
                 });
 
-                usart.cr3.write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
+                usart.cr3().write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
 
                 // Enable pins
                 pins.setup();
 
                 // Enable USART
-                usart.cr1.modify(|_, w| w.ue().set_bit());
+                usart.cr1().modify(|_, w| w.ue().set_bit());
 
                 Ok(Serial {
                     tx: Tx {
@@ -534,9 +534,9 @@ macro_rules! uart_basic {
             /// Starts listening for an interrupt event
             pub fn listen(&mut self, event: Event) {
                 match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
+                    Event::Rxne => self.usart.cr1().modify(|_, w| w.rxneie().set_bit()),
+                    Event::Txe => self.usart.cr1().modify(|_, w| w.txeie().set_bit()),
+                    Event::Idle => self.usart.cr1().modify(|_, w| w.idleie().set_bit()),
                     _ => {}
                 }
             }
@@ -544,16 +544,16 @@ macro_rules! uart_basic {
             /// Stop listening for an interrupt event
             pub fn unlisten(&mut self, event: Event) {
                 match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
+                    Event::Rxne => self.usart.cr1().modify(|_, w| w.rxneie().clear_bit()),
+                    Event::Txe => self.usart.cr1().modify(|_, w| w.txeie().clear_bit()),
+                    Event::Idle => self.usart.cr1().modify(|_, w| w.idleie().clear_bit()),
                     _ => {}
                 }
             }
 
             /// Check if interrupt event is pending
             pub fn is_pending(&mut self, event: Event) -> bool {
-                (self.usart.isr.read().bits() & event.val()) != 0
+                (self.usart.isr().read().bits() & event.val()) != 0
             }
 
             /// Clear pending interrupt
@@ -561,7 +561,7 @@ macro_rules! uart_basic {
                 // mask the allowed bits
                 let mask: u32 = 0x123BFF;
                 self.usart
-                    .icr
+                    .icr()
                     .write(|w| unsafe { w.bits(event.val() & mask) });
             }
         }
@@ -597,13 +597,13 @@ macro_rules! uart_full {
                 let bdr = config.baudrate.0 as u64;
                 let clk_mul = 1;
                 let div = (clk_mul * clk) / bdr;
-                usart.brr.write(|w| unsafe { w.bits(div as u32) });
+                usart.brr().write(|w| unsafe { w.bits(div as u32) });
 
-                usart.cr1.reset();
-                usart.cr2.reset();
-                usart.cr3.reset();
+                usart.cr1().reset();
+                usart.cr2().reset();
+                usart.cr3().reset();
 
-                usart.cr2.write(|w| {
+                usart.cr2().write(|w| unsafe {
                     w.stop()
                         .bits(config.stopbits.bits())
                         .txinv()
@@ -615,12 +615,12 @@ macro_rules! uart_full {
                 });
 
                 if let Some(timeout) = config.receiver_timeout {
-                    usart.cr1.write(|w| w.rtoie().set_bit());
-                    usart.cr2.modify(|_, w| w.rtoen().set_bit());
-                    usart.rtor.write(|w| w.rto().bits(timeout));
+                    usart.cr1().write(|w| w.rtoie().set_bit());
+                    usart.cr2().modify(|_, w| w.rtoen().set_bit());
+                    usart.rtor().write(|w| unsafe { w.rto().bits(timeout) });
                 }
 
-                usart.cr3.write(|w| unsafe {
+                usart.cr3().write(|w| unsafe {
                     w.txftcfg()
                         .bits(config.tx_fifo_threshold.bits())
                         .rxftcfg()
@@ -633,7 +633,7 @@ macro_rules! uart_full {
                         .bit(PINS::DRIVER_ENABLE)
                 });
 
-                usart.cr1.modify(|_, w| {
+                usart.cr1().modify(|_, w| {
                     w.ue()
                         .set_bit()
                         .te()
@@ -672,9 +672,9 @@ macro_rules! uart_full {
             /// Starts listening for an interrupt event
             pub fn listen(&mut self, event: Event) {
                 match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
+                    Event::Rxne => self.usart.cr1().modify(|_, w| w.rxneie().set_bit()),
+                    Event::Txe => self.usart.cr1().modify(|_, w| w.txeie().set_bit()),
+                    Event::Idle => self.usart.cr1().modify(|_, w| w.idleie().set_bit()),
                     _ => {}
                 }
             }
@@ -682,16 +682,16 @@ macro_rules! uart_full {
             /// Stop listening for an interrupt event
             pub fn unlisten(&mut self, event: Event) {
                 match event {
-                    Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
-                    Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
-                    Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
+                    Event::Rxne => self.usart.cr1().modify(|_, w| w.rxneie().clear_bit()),
+                    Event::Txe => self.usart.cr1().modify(|_, w| w.txeie().clear_bit()),
+                    Event::Idle => self.usart.cr1().modify(|_, w| w.idleie().clear_bit()),
                     _ => {}
                 }
             }
 
             /// Check if interrupt event is pending
             pub fn is_pending(&mut self, event: Event) -> bool {
-                (self.usart.isr.read().bits() & event.val()) != 0
+                (self.usart.isr().read().bits() & event.val()) != 0
             }
 
             /// Clear pending interrupt
@@ -699,7 +699,7 @@ macro_rules! uart_full {
                 // mask the allowed bits
                 let mask: u32 = 0x123BFF;
                 self.usart
-                    .icr
+                    .icr()
                     .write(|w| unsafe { w.bits(event.val() & mask) });
             }
         }
@@ -707,7 +707,7 @@ macro_rules! uart_full {
             /// Returns true if the tx fifo threshold has been reached.
             pub fn fifo_threshold_reached(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().txft().bit_is_set()
+                usart.isr().read().txft().bit_is_set()
             }
         }
 
@@ -716,19 +716,19 @@ macro_rules! uart_full {
             /// Returns the current state of the ISR RTOF bit
             pub fn timeout_lapsed(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().rtof().bit_is_set()
+                usart.isr().read().rtof().bit_is_set()
             }
 
             /// Clear pending receiver timeout interrupt
             pub fn clear_timeout(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.icr.write(|w| w.rtocf().set_bit());
+                usart.icr().write(|w| w.rtocf().set_bit());
             }
 
             /// Returns true if the rx fifo threshold has been reached.
             pub fn fifo_threshold_reached(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr.read().rxft().bit_is_set()
+                usart.isr().read().rxft().bit_is_set()
             }
         }
     };

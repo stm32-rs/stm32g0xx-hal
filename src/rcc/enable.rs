@@ -103,7 +103,7 @@ macro_rules! bus {
 bus! {
     CRC => (AHB, crcen, crcsmen, crcrst), // 12
     FLASH => (AHB, flashen, flashsmen, flashrst), // 8
-    DMA => (AHB, dmaen, dmasmen, dmarst), // 0
+    DMA1 => (AHB, dmaen, dmasmen, dmarst), // 0
 
     DBG => (APB1, dbgen, dbgsmen, dbgrst), // 27
     I2C1 => (APB1, i2c1en, i2c1smen, i2c1rst), // 21

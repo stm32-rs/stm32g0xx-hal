@@ -21,10 +21,16 @@ pub struct Timer<TIM> {
     tim: TIM,
 }
 
-pub struct Channel1;
-pub struct Channel2;
-pub struct Channel3;
-pub struct Channel4;
+pub struct Channel<const N: usize>;
+
+impl<const N: usize> Channel<N> {
+    const N: usize = N;
+}
+
+type Channel1 = Channel<0>;
+type Channel2 = Channel<1>;
+type Channel3 = Channel<2>;
+type Channel4 = Channel<3>;
 
 /// System timer
 impl Timer<SYST> {
@@ -114,73 +120,73 @@ macro_rules! timers {
 
                 /// Pauses timer
                 pub fn pause(&mut self) {
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().clear_bit());
                 }
 
                 /// Resumes timer
                 pub fn resume(&mut self) {
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().set_bit());
                 }
 
                 /// Starts listening
                 pub fn listen(&mut self) {
-                    self.tim.dier.write(|w| w.uie().set_bit());
+                    self.tim.dier().write(|w| w.uie().set_bit());
                 }
 
                 /// Stops listening
                 pub fn unlisten(&mut self) {
-                    self.tim.dier.write(|w| w.uie().clear_bit());
+                    self.tim.dier().write(|w| w.uie().clear_bit());
                 }
 
                 /// Clears interrupt flag
                 pub fn clear_irq(&mut self) {
-                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                    self.tim.sr().modify(|_, w| w.uif().clear_bit());
                 }
 
                 /// Resets counter value
                 pub fn reset(&mut self) {
-                    self.tim.cnt.reset();
+                    self.tim.cnt().reset();
                 }
 
                 /// Gets timer counter current value
                 pub fn get_current(&self) -> u32 {
                     let _high = 0;
                     $(
-                        let _high = self.tim.cnt.read().$cnt_h().bits() as u32;
+                        let _high = self.tim.cnt().read().$cnt_h().bits() as u32;
                     )*
-                    let low = self.tim.cnt.read().$cnt().bits() as u32;
+                    let low = self.tim.cnt().read().$cnt().bits() as u32;
                     low | (_high << 16)
                 }
 
                 pub fn start(&mut self, timeout: MicroSecond) {
                     // Pause the counter. Also set URS so that when we set UG below, it will
                     // generate an update event *without* triggering an interrupt.
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit().urs().set_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().clear_bit().urs().set_bit());
                     // reset counter
-                    self.tim.cnt.reset();
+                    self.tim.cnt().reset();
                     // clear interrupt flag
-                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                    self.tim.sr().modify(|_, w| w.uif().clear_bit());
 
                     // Calculate counter configuration
                     let cycles = crate::time::cycles(timeout, self.clk);
                     let psc = cycles / 0xffff;
                     let arr = cycles / (psc + 1);
 
-                    self.tim.psc.write(|w| w.psc().bits(psc as u16) );
-                    self.tim.arr.write(|w| unsafe { w.bits(arr) });
+                    self.tim.psc().write(|w| unsafe { w.psc().bits(psc as u16) });
+                    self.tim.arr().write(|w| unsafe { w.bits(arr) });
 
                     // Generate an update event so that PSC and ARR values are copied into their
                     // shadow registers.
-                    self.tim.egr.write(|w| w.ug().set_bit());
+                    self.tim.egr().write(|w| w.ug().set_bit());
 
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().set_bit());
                 }
 
                 pub fn wait(&mut self) -> nb::Result<(), Void> {
-                    if self.tim.sr.read().uif().bit_is_clear() {
+                    if self.tim.sr().read().uif().bit_is_clear() {
                         Err(nb::Error::WouldBlock)
                     } else {
-                        self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                        self.tim.sr().modify(|_, w| w.uif().clear_bit());
                         Ok(())
                     }
                 }
@@ -234,15 +240,15 @@ macro_rules! timers_external_clocks {
                     self.clk = freq;
                     match clk.mode() {
                         ExternalClockMode::Mode1 => {
-                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b111) });
+                            self.tim.smcr().modify(|_, w| unsafe { w.$sms().bits(0b111) });
                             $(
-                                self.tim.smcr.modify(|_, w| w.$ece().clear_bit());
+                                self.tim.smcr().modify(|_, w| w.$ece().clear_bit());
                             )*
                         },
                         ExternalClockMode::Mode2 => {
-                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b0) });
+                            self.tim.smcr().modify(|_, w| unsafe { w.$sms().bits(0b0) });
                             $(
-                                self.tim.smcr.modify(|_, w| w.$ece().set_bit());
+                                self.tim.smcr().modify(|_, w| w.$ece().set_bit());
                             )*
                         },
                     }
@@ -269,7 +275,7 @@ timers_external_clocks! {
 
 timers! {
     TIM1: (tim1, cnt),
-    TIM3: (tim3, cnt_l, cnt_h),
+    TIM3: (tim3, cnt),
     TIM14: (tim14, cnt),
     TIM16: (tim16, cnt),
     TIM17: (tim17, cnt),
@@ -277,7 +283,7 @@ timers! {
 
 #[cfg(feature = "stm32g0x1")]
 timers! {
-    TIM2: (tim2, cnt_l, cnt_h),
+    TIM2: (tim2, cnt),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]

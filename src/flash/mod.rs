@@ -33,14 +33,14 @@ pub trait FlashExt {
 impl FlashExt for FLASH {
     fn unlock(self) -> core::result::Result<UnlockedFlash, FLASH> {
         // Wait, while the memory interface is busy.
-        while self.sr.read().bsy().bit_is_set() {}
+        while self.sr().read().bsy().bit_is_set() {}
 
         // Unlock flash
-        self.keyr.write(|w| unsafe { w.keyr().bits(FLASH_KEY1) });
-        self.keyr.write(|w| unsafe { w.keyr().bits(FLASH_KEY2) });
+        self.keyr().write(|w| unsafe { w.key().bits(FLASH_KEY1) });
+        self.keyr().write(|w| unsafe { w.key().bits(FLASH_KEY2) });
 
         // Verify success
-        if self.cr.read().lock().bit_is_clear() {
+        if self.cr().read().lock().bit_is_clear() {
             Ok(UnlockedFlash { f: self })
         } else {
             Err(self)
@@ -56,7 +56,7 @@ pub struct UnlockedFlash {
 impl UnlockedFlash {
     /// Consumes the unlocked flash instance returning the locked one
     pub fn lock(self) -> FLASH {
-        self.f.cr.modify(|_, w| w.lock().set_bit());
+        self.f.cr().modify(|_, w| w.lock().set_bit());
         self.f
     }
 }
@@ -84,7 +84,7 @@ impl WriteErase for UnlockedFlash {
     type NativeType = u64;
 
     fn status(&self) -> Result {
-        let sr = self.f.sr.read();
+        let sr = self.f.sr().read();
 
         if sr.bsy().bit_is_set() {
             return Err(Error::Busy);
@@ -103,7 +103,7 @@ impl WriteErase for UnlockedFlash {
         }
 
         // Wait, while the memory interface is busy.
-        while self.f.sr.read().bsy().bit_is_set() {}
+        while self.f.sr().read().bsy().bit_is_set() {}
 
         self.clear_errors();
 
@@ -112,24 +112,24 @@ impl WriteErase for UnlockedFlash {
         // access to the vector table or interrupt handlers that might be
         // caused by an interrupt.
         interrupt::free(|_| {
-            self.f.cr.modify(|_, w| unsafe {
+            self.f.cr().modify(|_, w| unsafe {
                 w.per().set_bit().pnb().bits(page.0 as u8).strt().set_bit()
             });
         });
 
         let result = self.wait();
-        self.f.cr.modify(|_, w| w.per().clear_bit());
+        self.f.cr().modify(|_, w| w.per().clear_bit());
 
         result
     }
 
     fn write_native(&mut self, address: usize, array: &[Self::NativeType]) -> Result {
         // Wait, while the memory interface is busy.
-        while self.f.sr.read().bsy().bit_is_set() {}
+        while self.f.sr().read().bsy().bit_is_set() {}
 
         // Enable Flash programming
         self.clear_errors();
-        self.f.cr.modify(|_, w| w.pg().set_bit());
+        self.f.cr().modify(|_, w| w.pg().set_bit());
 
         // It is only possible to program a double word (2 x 32-bit data).
         let mut address = address as *mut u32;
@@ -151,12 +151,12 @@ impl WriteErase for UnlockedFlash {
 
             self.wait()?;
 
-            if self.f.sr.read().eop().bit_is_set() {
-                self.f.sr.modify(|_, w| w.eop().clear_bit());
+            if self.f.sr().read().eop().bit_is_set() {
+                self.f.sr().modify(|_, w| w.eop().clear_bit());
             }
         }
 
-        self.f.cr.modify(|_, w| w.pg().clear_bit());
+        self.f.cr().modify(|_, w| w.pg().clear_bit());
 
         Ok(())
     }
@@ -217,7 +217,7 @@ impl WriteErase for UnlockedFlash {
 
 impl UnlockedFlash {
     fn clear_errors(&mut self) {
-        self.f.sr.modify(|_, w| {
+        self.f.sr().modify(|_, w| {
             w.progerr()
                 .set_bit()
                 .pgserr()
@@ -236,7 +236,7 @@ impl UnlockedFlash {
     }
 
     fn wait(&self) -> Result {
-        while self.f.sr.read().bsy().bit_is_set() {}
+        while self.f.sr().read().bsy().bit_is_set() {}
         self.status()
     }
 }

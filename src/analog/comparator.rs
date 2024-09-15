@@ -27,7 +27,7 @@ impl COMP1 {
     pub fn csr(&self) -> &COMP1_CSR {
         // SAFETY: The COMP1 type is only constructed with logical ownership of
         // these registers.
-        &unsafe { &*COMP::ptr() }.comp1_csr
+        &unsafe { &*COMP::ptr() }.comp1_csr()
     }
 }
 
@@ -39,7 +39,7 @@ impl COMP2 {
     pub fn csr(&self) -> &COMP2_CSR {
         // SAFETY: The COMP1 type is only constructed with logical ownership of
         // these registers.
-        &unsafe { &*COMP::ptr() }.comp2_csr
+        &unsafe { &*COMP::ptr() }.comp2_csr()
     }
 }
 
@@ -499,11 +499,11 @@ pub fn window_comparator21<
 /// Enables the comparator peripheral, and splits the [`COMP`] into independent [`COMP1`] and [`COMP2`]
 pub fn split(_comp: COMP, rcc: &mut Rcc) -> (COMP1, COMP2) {
     // Enable COMP, SYSCFG, VREFBUF clocks
-    rcc.rb.apbenr2.modify(|_, w| w.syscfgen().set_bit());
+    rcc.rb.apbenr2().modify(|_, w| w.syscfgen().set_bit());
 
     // Reset COMP, SYSCFG, VREFBUF
-    rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().set_bit());
-    rcc.rb.apbrstr2.modify(|_, w| w.syscfgrst().clear_bit());
+    rcc.rb.apbrstr2().modify(|_, w| w.syscfgrst().set_bit());
+    rcc.rb.apbrstr2().modify(|_, w| w.syscfgrst().clear_bit());
 
     (COMP1 { _rb: PhantomData }, COMP2 { _rb: PhantomData })
 }

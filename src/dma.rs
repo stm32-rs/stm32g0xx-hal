@@ -91,7 +91,7 @@ mod private {
     /// Channel methods private to this module
     pub trait Channel {
         /// Return the register block for this channel
-        fn ch(&self) -> &stm32::dma::CH;
+        fn ch(&self) -> &stm32::dma1::CH;
     }
 }
 
@@ -115,10 +115,10 @@ pub trait Channel: private::Channel {
     /// Reset the control registers of this channel.
     /// This stops any ongoing transfers.
     fn reset(&mut self) {
-        self.ch().cr.reset();
-        self.ch().ndtr.reset();
-        self.ch().par.reset();
-        self.ch().mar.reset();
+        self.ch().cr().reset();
+        self.ch().ndtr().reset();
+        self.ch().par().reset();
+        self.ch().mar().reset();
         self.clear_event(Event::Any);
     }
 
@@ -133,8 +133,8 @@ pub trait Channel: private::Channel {
     fn set_peripheral_address(&mut self, address: u32, inc: bool) {
         assert!(!self.is_enabled());
 
-        self.ch().par.write(|w| unsafe { w.pa().bits(address) });
-        self.ch().cr.modify(|_, w| w.pinc().bit(inc));
+        self.ch().par().write(|w| unsafe { w.pa().bits(address) });
+        self.ch().cr().modify(|_, w| w.pinc().bit(inc));
     }
 
     /// Set the base address of the memory area from/to which
@@ -148,8 +148,8 @@ pub trait Channel: private::Channel {
     fn set_memory_address(&mut self, address: u32, inc: bool) {
         assert!(!self.is_enabled());
 
-        self.ch().mar.write(|w| unsafe { w.ma().bits(address) });
-        self.ch().cr.modify(|_, w| w.minc().bit(inc));
+        self.ch().mar().write(|w| unsafe { w.ma().bits(address) });
+        self.ch().cr().modify(|_, w| w.minc().bit(inc));
     }
 
     /// Set the number of words to transfer.
@@ -162,17 +162,17 @@ pub trait Channel: private::Channel {
     fn set_transfer_length(&mut self, len: u16) {
         assert!(!self.is_enabled());
 
-        self.ch().ndtr.write(|w| unsafe { w.ndt().bits(len) });
+        self.ch().ndtr().write(|w| unsafe { w.ndt().bits(len) });
     }
 
     /// Get the number of words left to transfer.
     fn get_transfer_remaining(&mut self) -> u16 {
-        self.ch().ndtr.read().ndt().bits()
+        self.ch().ndtr().read().ndt().bits()
     }
 
     /// Set the word size.
     fn set_word_size(&mut self, wsize: WordSize) {
-        self.ch().cr.modify(|_, w| unsafe {
+        self.ch().cr().modify(|_, w| unsafe {
             w.psize().bits(wsize as u8);
             w.msize().bits(wsize as u8)
         });
@@ -181,28 +181,28 @@ pub trait Channel: private::Channel {
     /// Set the priority level of this channel
     fn set_priority_level(&mut self, priority: Priority) {
         let pl = priority.into();
-        self.ch().cr.modify(|_, w| unsafe { w.pl().bits(pl) });
+        self.ch().cr().modify(|_, w| unsafe { w.pl().bits(pl) });
     }
 
     /// Set the transfer direction
     fn set_direction(&mut self, direction: Direction) {
         let dir = direction.into();
-        self.ch().cr.modify(|_, w| w.dir().bit(dir));
+        self.ch().cr().modify(|_, w| w.dir().bit(dir));
     }
 
     /// Set the circular mode of this channel
     fn set_circular_mode(&mut self, circular: bool) {
-        self.ch().cr.modify(|_, w| w.circ().bit(circular));
+        self.ch().cr().modify(|_, w| w.circ().bit(circular));
     }
 
     /// Enable the interrupt for the given event
     fn listen(&mut self, event: Event) {
         use Event::*;
         match event {
-            HalfTransfer => self.ch().cr.modify(|_, w| w.htie().set_bit()),
-            TransferComplete => self.ch().cr.modify(|_, w| w.tcie().set_bit()),
-            TransferError => self.ch().cr.modify(|_, w| w.teie().set_bit()),
-            Any => self.ch().cr.modify(|_, w| {
+            HalfTransfer => self.ch().cr().modify(|_, w| w.htie().set_bit()),
+            TransferComplete => self.ch().cr().modify(|_, w| w.tcie().set_bit()),
+            TransferError => self.ch().cr().modify(|_, w| w.teie().set_bit()),
+            Any => self.ch().cr().modify(|_, w| {
                 w.htie().set_bit();
                 w.tcie().set_bit();
                 w.teie().set_bit()
@@ -214,10 +214,10 @@ pub trait Channel: private::Channel {
     fn unlisten(&mut self, event: Event) {
         use Event::*;
         match event {
-            HalfTransfer => self.ch().cr.modify(|_, w| w.htie().clear_bit()),
-            TransferComplete => self.ch().cr.modify(|_, w| w.tcie().clear_bit()),
-            TransferError => self.ch().cr.modify(|_, w| w.teie().clear_bit()),
-            Any => self.ch().cr.modify(|_, w| {
+            HalfTransfer => self.ch().cr().modify(|_, w| w.htie().clear_bit()),
+            TransferComplete => self.ch().cr().modify(|_, w| w.tcie().clear_bit()),
+            TransferError => self.ch().cr().modify(|_, w| w.teie().clear_bit()),
+            Any => self.ch().cr().modify(|_, w| {
                 w.htie().clear_bit();
                 w.tcie().clear_bit();
                 w.teie().clear_bit()
@@ -228,17 +228,17 @@ pub trait Channel: private::Channel {
     /// Start a transfer
     fn enable(&mut self) {
         self.clear_event(Event::Any);
-        self.ch().cr.modify(|_, w| w.en().set_bit());
+        self.ch().cr().modify(|_, w| w.en().set_bit());
     }
 
     /// Stop the current transfer
     fn disable(&mut self) {
-        self.ch().cr.modify(|_, w| w.en().clear_bit());
+        self.ch().cr().modify(|_, w| w.en().clear_bit());
     }
 
     /// Is there a transfer in progress on this channel?
     fn is_enabled(&self) -> bool {
-        self.ch().cr.read().en().bit_is_set()
+        self.ch().cr().read().en().bit_is_set()
     }
 }
 

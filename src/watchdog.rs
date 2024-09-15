@@ -10,7 +10,7 @@ pub struct IndependedWatchdog {
 
 impl IndependedWatchdog {
     pub fn feed(&mut self) {
-        self.iwdg.kr.write(|w| unsafe { w.key().bits(0xaaaa) });
+        self.iwdg.kr().write(|w| unsafe { w.key().bits(0xaaaa) });
     }
 
     pub fn start(&mut self, period: MicroSecond) {
@@ -27,17 +27,19 @@ impl IndependedWatchdog {
         }
 
         // Enable watchdog
-        self.iwdg.kr.write(|w| unsafe { w.key().bits(0xcccc) });
+        self.iwdg.kr().write(|w| unsafe { w.key().bits(0xcccc) });
 
         // Enable access to RLR/PR
-        self.iwdg.kr.write(|w| unsafe { w.key().bits(0x5555) });
+        self.iwdg.kr().write(|w| unsafe { w.key().bits(0x5555) });
 
-        self.iwdg.pr.write(|w| w.pr().bits(psc));
-        self.iwdg.rlr.write(|w| w.rl().bits(reload as u16));
+        self.iwdg.pr().write(|w| unsafe { w.pr().bits(psc) });
+        self.iwdg
+            .rlr()
+            .write(|w| unsafe { w.rl().bits(reload as u16) });
 
-        while self.iwdg.sr.read().bits() > 0 {}
+        while self.iwdg.sr().read().bits() > 0 {}
 
-        self.iwdg.kr.write(|w| unsafe { w.key().bits(0xaaaa) });
+        self.iwdg.kr().write(|w| unsafe { w.key().bits(0xaaaa) });
     }
 }
 
@@ -81,7 +83,7 @@ pub struct WindowWatchdog {
 
 impl WindowWatchdog {
     pub fn feed(&mut self) {
-        self.wwdg.cr.write(|w| w.t().bits(0xff));
+        self.wwdg.cr().write(|w| unsafe { w.t().bits(0xff) });
     }
 
     pub fn set_window(&mut self, window: MicroSecond) {
@@ -97,17 +99,18 @@ impl WindowWatchdog {
             cycles /= 2;
         }
         assert!(window <= 0x40);
+
         self.wwdg
-            .cfr
-            .write(|w| w.wdgtb().bits(psc).w().bits(window as u8));
+            .cfr()
+            .write(|w| unsafe { w.wdgtb().bits(psc).w().bits(window as u8) });
     }
 
     pub fn listen(&mut self) {
-        self.wwdg.cfr.write(|w| w.ewi().set_bit());
+        self.wwdg.cfr().write(|w| w.ewi().set_bit());
     }
 
     pub fn unlisten(&mut self) {
-        self.wwdg.cfr.write(|w| w.ewi().clear_bit());
+        self.wwdg.cfr().write(|w| w.ewi().clear_bit());
     }
 
     pub fn release(self) -> WWDG {
@@ -117,7 +120,7 @@ impl WindowWatchdog {
     pub fn start(&mut self, period: MicroSecond) {
         self.set_window(period);
         self.feed();
-        self.wwdg.cr.write(|w| w.wdga().set_bit());
+        self.wwdg.cr().write(|w| w.wdga().set_bit());
     }
 }
 

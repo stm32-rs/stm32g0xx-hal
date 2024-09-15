@@ -36,22 +36,22 @@ pub trait I2cSlave {
 macro_rules! flush_txdr {
     ($i2c:expr) => {
         // If a pending TXIS flag is set, write dummy data to TXDR
-        if $i2c.isr.read().txis().bit_is_set() {
-            $i2c.txdr.write(|w| w.txdata().bits(0));
+        if $i2c.isr().read().txis().bit_is_set() {
+            $i2c.txdr().write(|w| unsafe { w.txdata().bits(0) });
         }
 
         // If TXDR is not flagged as empty, write 1 to flush it
-        if $i2c.isr.read().txe().bit_is_set() {
-            $i2c.isr.write(|w| w.txe().set_bit());
+        if $i2c.isr().read().txe().bit_is_set() {
+            $i2c.isr().write(|w| w.txe().set_bit());
         }
     };
 }
 /// Sequence to flush the RXDR register. This resets the TXIS and TXE flags
 macro_rules! flush_rxdr {
     ($i2c:expr) => {
-        if $i2c.isr.read().rxne().bit_is_set() {
+        if $i2c.isr().read().rxne().bit_is_set() {
             // flush
-            let _ = $i2c.rxdr.read().rxdata().bits();
+            let _ = $i2c.rxdr().read().rxdata().bits();
         };
     };
 }
@@ -62,25 +62,25 @@ macro_rules! flush_rxdr {
 macro_rules! busy_wait {
     ($i2c:expr, $flag:ident, $variant:ident, $idx:ident, $buflen:ident) => {
         loop {
-            let isr = $i2c.isr.read();
+            let isr = $i2c.isr().read();
 
             if isr.$flag().$variant() {
                 break
             } else  if isr.berr().bit_is_set() {
-                $i2c.icr.write(|w| w.berrcf().set_bit());
+                $i2c.icr().write(|w| w.berrcf().set_bit());
                 return Err(Error::BusError);
             } else if isr.arlo().bit_is_set() {
-                $i2c.icr.write(|w| w.arlocf().set_bit());
+                $i2c.icr().write(|w| w.arlocf().set_bit());
                 return Err(Error::ArbitrationLost);
             } else if isr.nackf().bit_is_set() {
-                $i2c.icr.write(|w| w.nackcf().set_bit());
+                $i2c.icr().write(|w| w.nackcf().set_bit());
                 // Make one extra loop to wait on the stop condition
             } else if isr.tcr().bit_is_set() {
                 // This condition Will only happen when reload == 1 and sbr == 1 (slave) and nbytes was written.
                 // Send a NACK, set nbytes to clear tcr flag
-                $i2c.cr2.modify(|_, w|
+                $i2c.cr2().modify(|_, w| unsafe {
                     w.nack().set_bit().nbytes().bits(1 as u8)
-                );
+                });
                 // Make one extra loop here to wait on the stop condition
             } else if isr.addr().bit_is_set() {
                 // in case of a master write_read operation, this flag is the only exit for the function.
@@ -93,7 +93,7 @@ macro_rules! busy_wait {
             } else if isr.stopf().bit_is_set() {
                 flush_txdr!($i2c);
                 // Clear the stop condition flag
-                $i2c.icr.write(|w| w.stopcf().set_bit());
+                $i2c.icr().write(|w| w.stopcf().set_bit());
                 if $idx == $buflen {
                     return Ok( () )
                 } else
@@ -169,40 +169,40 @@ macro_rules! i2c {
                 $I2CX::reset(rcc);
 
                 // Make sure the I2C unit is disabled so we can configure it
-                i2c.cr1.modify(|_, w| w.pe().clear_bit());
+                i2c.cr1().modify(|_, w| w.pe().clear_bit());
 
                 // Setup protocol timings
                 let timing_bits = config.timing_bits(rcc.clocks.apb_clk);
-                i2c.timingr.write(|w| unsafe { w.bits(timing_bits) });
+                i2c.timingr().write(|w| unsafe { w.bits(timing_bits) });
 
                 // Enable the I2C processing
-                i2c.cr1.modify(|_, w|
+                i2c.cr1().modify(|_, w| unsafe {
                     w.pe()
                         .set_bit()
                         .dnf()
                         .bits(config.digital_filter)
                         .anfoff()
                         .bit(!config.analog_filter)
-                );
+                });
 
                 if config.slave_address_1 > 0 {
-                    i2c.oar1.write(|w|
-                        w.oa1().bits(config.slave_address_1)
+                    i2c.oar1().write(|w|
+                        unsafe { w.oa1().bits(config.slave_address_1) }
                         .oa1mode().bit(config.address_11bits)
                         .oa1en().set_bit()
                     );
                     // Enable acknowlidge control
-                    i2c.cr1.modify(|_, w|  w.sbc().set_bit() );
+                    i2c.cr1().modify(|_, w|  w.sbc().set_bit() );
                 }
 
                 if config.slave_address_2 > 0 {
-                    i2c.oar2.write( |w|
-                        w.oa2msk().bits(  config.slave_address_mask as u8)
+                    i2c.oar2().write( |w| unsafe {
+                        w.oa2msk().bits(config.slave_address_mask as u8)
                         .oa2().bits(config.slave_address_2)
                         .oa2en().set_bit()
-                    );
+                    });
                     // Enable acknowlidge control
-                    i2c.cr1.modify(|_, w| w.sbc().set_bit() );
+                    i2c.cr1().modify(|_, w| w.sbc().set_bit() );
                 }
 
                 // Enable pins
@@ -214,21 +214,21 @@ macro_rules! i2c {
 
             pub fn listen(&mut self, ev: i2c::Event) {
                 match ev {
-                    i2c::Event::AddressMatch => self.i2c.cr1.modify(|_, w| w.addrie().set_bit()),
-                    i2c::Event::Rxne => self.i2c.cr1.modify(|_, w| w.rxie().set_bit()),
+                    i2c::Event::AddressMatch => self.i2c.cr1().modify(|_, w| w.addrie().set_bit()),
+                    i2c::Event::Rxne => self.i2c.cr1().modify(|_, w| w.rxie().set_bit()),
                 }
             }
 
             pub fn unlisten(&mut self, ev: i2c::Event) {
                 match ev {
-                    i2c::Event::AddressMatch => self.i2c.cr1.modify(|_, w| w.addrie().clear_bit()),
-                    i2c::Event::Rxne => self.i2c.cr1.modify(|_, w| w.rxie().clear_bit()),
+                    i2c::Event::AddressMatch => self.i2c.cr1().modify(|_, w| w.addrie().clear_bit()),
+                    i2c::Event::Rxne => self.i2c.cr1().modify(|_, w| w.rxie().clear_bit()),
                 }
             }
 
             pub fn clear_irq(&mut self, ev: i2c::Event) {
                 match ev {
-                    i2c::Event::AddressMatch => self.i2c.icr.write(|w| w.addrcf().set_bit()),
+                    i2c::Event::AddressMatch => self.i2c.icr().write(|w| w.addrcf().set_bit()),
                     _ => {},
                 }
             }
@@ -255,15 +255,15 @@ macro_rules! i2c {
 
                 // Wait for any previous address sequence to end automatically.
                 // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
-                while self.i2c.cr2.read().start().bit_is_set() {};
+                while self.i2c.cr2().read().start().bit_is_set() {};
 
                 // flush i2c tx register
-                self.i2c.isr.write(|w| w.txe().set_bit());
+                self.i2c.isr().write(|w| w.txe().set_bit());
 
                 // Set START and prepare to send `bytes`.
                 // The START bit can be set even if the bus is BUSY or
                 // I2C is in slave mode.
-                self.i2c.cr2.write(|w|
+                self.i2c.cr2().write(|w| unsafe {
                     w
                         // Set number of bytes to transfer
                         .nbytes().bits(sndlen as u8)
@@ -278,7 +278,7 @@ macro_rules! i2c {
                         .reload().clear_bit()
                         // Start transfer
                         .start().set_bit()
-                );
+                });
                 let mut idx = 0;
                 // Wait until we are allowed to send data
                 // (START has been ACKed or last byte went through)
@@ -286,7 +286,7 @@ macro_rules! i2c {
                 for byte in snd_buffer {
                     busy_wait!(self.i2c, txis, bit_is_set, idx, sndlen);
                     // Put byte on the wire
-                    self.i2c.txdr.write(|w|  w.txdata().bits(*byte) );
+                    self.i2c.txdr().write(|w| unsafe{ w.txdata().bits(*byte) } );
                     idx += 1;
                 }
                 // Wait until the write finishes before beginning to read.
@@ -294,7 +294,7 @@ macro_rules! i2c {
                 busy_wait!(self.i2c, tc, bit_is_set, idx, dummy );
 
                 // reSTART and prepare to receive bytes into `rcv_buffer`
-                self.i2c.cr2.write(|w|
+                self.i2c.cr2().write(|w| unsafe {
                     w
                         // Set number of bytes to transfer
                         .nbytes().bits(rcvlen as u8)
@@ -309,14 +309,14 @@ macro_rules! i2c {
                         .reload().clear_bit()
                         // Start transfer
                         .start().set_bit()
-                );
+                });
 
                 idx = 0;
                 loop {
                     // Wait until we have received something. Handle all state in busy_wait macro
                     busy_wait!(self.i2c, rxne, bit_is_set, idx, rcvlen);
                     if idx < rcvlen {
-                        rcv_buffer[idx] = self.i2c.rxdr.read().rxdata().bits();
+                        rcv_buffer[idx] = self.i2c.rxdr().read().rxdata().bits();
                         idx +=1;
                     }
                 }
@@ -332,9 +332,9 @@ macro_rules! i2c {
 
                 // Wait for any previous address sequence to end automatically.
                 // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
-                while self.i2c.cr2.read().start().bit_is_set() {};
+                while self.i2c.cr2().read().start().bit_is_set() {};
 
-                self.i2c.cr2.modify(|_, w|
+                self.i2c.cr2().modify(|_, w| unsafe {
                     w
                         // Start transfer
                         .start().set_bit()
@@ -347,7 +347,7 @@ macro_rules! i2c {
                         // Automatic end mode
                         .autoend().set_bit()
                         .reload().clear_bit()
-                );
+                });
 
                 let mut idx = 0;
                 loop {
@@ -356,7 +356,7 @@ macro_rules! i2c {
 
                     // Put byte on the wire
                     if idx < buflen {
-                        self.i2c.txdr.write(|w|  w.txdata().bits(bytes[idx]) );
+                        self.i2c.txdr().write(|w| unsafe { w.txdata().bits(bytes[idx]) } );
                         idx += 1;
                     }
                 }
@@ -373,14 +373,14 @@ macro_rules! i2c {
 
                 // Wait for any previous address sequence to end automatically.
                 // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
-                while self.i2c.cr2.read().start().bit_is_set() {};
+                while self.i2c.cr2().read().start().bit_is_set() {};
                 // Flush rxdr register
-                let _ = self.i2c.rxdr.read().rxdata().bits();
+                let _ = self.i2c.rxdr().read().rxdata().bits();
 
                 // Set START and prepare to receive bytes into `buffer`.
                 // The START bit can be set even if the bus
                 // is BUSY or I2C is in slave mode.
-                self.i2c.cr2.modify(|_, w|
+                self.i2c.cr2().modify(|_, w| unsafe {
                     w
                         // Start transfer
                         .start().set_bit()
@@ -393,13 +393,13 @@ macro_rules! i2c {
                         // automatic end mode
                         .autoend().set_bit()
                         .reload().clear_bit()
-                    );
+                });
                 let mut idx = 0;
                 loop {
                     // Wait until we have received something
                     busy_wait!(self.i2c, rxne, bit_is_set, idx, buflen);
                     if idx < buflen {
-                        bytes[idx] = self.i2c.rxdr.read().rxdata().bits();
+                        bytes[idx] = self.i2c.rxdr().read().rxdata().bits();
                         idx +=1;
                     }
                 }
@@ -410,12 +410,12 @@ macro_rules! i2c {
 
             fn slave_sbc(&mut self, sbc_enabled: bool)  {
                 // Enable Slave byte control
-                self.i2c.cr1.modify(|_, w|  w.sbc().bit(sbc_enabled) );
+                self.i2c.cr1().modify(|_, w|  w.sbc().bit(sbc_enabled) );
             }
 
             fn slave_addressed(&mut self) -> Result<Option<(u16, I2cDirection)>, Error> {
-                if self.i2c.isr.read().addr().bit_is_set() {
-                    let isr = self.i2c.isr.read();
+                if self.i2c.isr().read().addr().bit_is_set() {
+                    let isr = self.i2c.isr().read();
                     let current_address = isr.addcode().bits() as u16;
 
                     // if the dir bit is set it is a master write slave read operation
@@ -447,14 +447,14 @@ macro_rules! i2c {
                 assert!(buflen < 256 && buflen > 0);
 
                 // Set the nbytes and prepare to send bytes into `buffer`.
-                self.i2c.cr2.modify(|_, w|
+                self.i2c.cr2().modify(|_, w| unsafe {
                     w.nbytes().bits( buflen as u8)
                     .reload().clear_bit()
-                );
+                });
                 // flush i2c tx register
-                self.i2c.isr.write(|w| w.txe().set_bit());
+                self.i2c.isr().write(|w| w.txe().set_bit());
                 // end address phase, release clock stretching
-                self.i2c.icr.write(|w| w.addrcf().set_bit() );
+                self.i2c.icr().write(|w| w.addrcf().set_bit() );
 
                 let mut idx = 0;
                 loop {
@@ -463,13 +463,13 @@ macro_rules! i2c {
 
                     // Put byte on the wire
                     if idx < buflen {
-                        self.i2c.txdr.write(|w| w.txdata().bits(bytes[idx]) );
+                        self.i2c.txdr().write(|w| unsafe { w.txdata().bits(bytes[idx]) } );
                         idx += 1;
                     } else {
                         // we will never reach here. In case the master wants to read more than buflen
                         // the hardware will send 0xFF
                         // Also means that on slave side we cannot detect this error case
-                        self.i2c.txdr.write(|w| w.txdata().bits(0x21) );
+                        self.i2c.txdr().write(|w| unsafe { w.txdata().bits(0x21) } );
                     }
                 }
             }
@@ -480,15 +480,15 @@ macro_rules! i2c {
                 assert!(buflen < 256 && buflen > 0);
 
                 // Set the nbytes START and prepare to receive bytes into `buffer`.
-                self.i2c.cr2.modify(|_, w|
+                self.i2c.cr2().modify(|_, w| unsafe {
                     w
                         // Set number of bytes to transfer: maximum as all incoming bytes will be ACK'ed
                         .nbytes().bits(buflen as u8)
                         // during sending nbytes automatically send a ACK, stretch clock after last byte
                         .reload().set_bit()
-                );
+                });
                 // end address phase, release clock stretching
-                self.i2c.icr.write(|w|
+                self.i2c.icr().write(|w|
                     w.addrcf().set_bit()
                 );
                 flush_rxdr!(self.i2c);
@@ -500,7 +500,7 @@ macro_rules! i2c {
 
                     // read byte from wire
                     if idx < buflen {
-                        bytes[idx] = self.i2c.rxdr.read().rxdata().bits();
+                        bytes[idx] = self.i2c.rxdr().read().rxdata().bits();
                         idx += 1;
                     }
                 }

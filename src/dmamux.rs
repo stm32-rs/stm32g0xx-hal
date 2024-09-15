@@ -149,77 +149,53 @@ pub trait DmaMuxChannel {
     fn select_peripheral(&mut self, index: DmaMuxIndex);
 }
 
-macro_rules! dma_mux {
-    (
-        channels: {
-            $( $Ci:ident: ($chi:ident, $cr:ident), )+
-        },
-    ) => {
+pub struct Channel<const N: usize> {
+    _0: (),
+}
 
-        /// DMAMUX channels
-        pub struct Channels {
-            $( pub $chi: $Ci, )+
-        }
-
-        $(
-            /// Singleton that represents a DMAMUX channel
-            pub struct $Ci {
-                _0: (),
-            }
-
-            impl DmaMuxChannel for $Ci {
-                fn select_peripheral(&mut self, index: DmaMuxIndex) {
-                    let reg = unsafe { &(*DMAMUX::ptr()).$cr };
-                    reg.write( |w| unsafe {
-                        w.dmareq_id().bits(index.val())
-                        .ege().set_bit()
-                    });
-
-                }
-            }
-        )+
-
+impl<const N: usize> DmaMuxChannel for Channel<N> {
+    fn select_peripheral(&mut self, index: DmaMuxIndex) {
+        let reg = unsafe { &(*DMAMUX::ptr()).ccr(N) };
+        reg.write(|w| unsafe { w.dmareq_id().bits(index.val()).ege().set_bit() });
     }
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-dma_mux!(
-    channels: {
-        C0: (ch0, c0cr),
-        C1: (ch1, c1cr),
-        C2: (ch2, c2cr),
-        C3: (ch3, c3cr),
-        C4: (ch4, c4cr),
-        C5: (ch5, c5cr),
-        C6: (ch6, c6cr),
-    },
-);
+/// DMAMUX channels
+pub struct Channels {
+    pub ch0: Channel<0>,
+    pub ch1: Channel<1>,
+    pub ch2: Channel<2>,
+    pub ch3: Channel<3>,
+    pub ch4: Channel<4>,
+    pub ch5: Channel<5>,
+    pub ch6: Channel<6>,
+}
 
 #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
-dma_mux!(
-    channels: {
-        C0: (ch0, c0cr),
-        C1: (ch1, c1cr),
-        C2: (ch2, c2cr),
-        C3: (ch3, c3cr),
-        C4: (ch4, c4cr),
-    },
-);
+/// DMAMUX channels
+pub struct Channels {
+    pub ch0: Channel<0>,
+    pub ch1: Channel<1>,
+    pub ch2: Channel<2>,
+    pub ch3: Channel<3>,
+    pub ch4: Channel<4>,
+}
 
 impl DmaMuxExt for DMAMUX {
     type Channels = Channels;
 
     fn split(self) -> Self::Channels {
         Channels {
-            ch0: C0 { _0: () },
-            ch1: C1 { _0: () },
-            ch2: C2 { _0: () },
-            ch3: C3 { _0: () },
-            ch4: C4 { _0: () },
+            ch0: Channel::<0> { _0: () },
+            ch1: Channel::<1> { _0: () },
+            ch2: Channel::<2> { _0: () },
+            ch3: Channel::<3> { _0: () },
+            ch4: Channel::<4> { _0: () },
             #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-            ch5: C5 { _0: () },
+            ch5: Channel::<5> { _0: () },
             #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-            ch6: C6 { _0: () },
+            ch6: Channel::<6> { _0: () },
         }
     }
 }

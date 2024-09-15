@@ -118,7 +118,7 @@ impl Adc {
         // Enable ADC clocks
         ADC::enable(rcc);
 
-        adc.cr.modify(|_, w| w.advregen().set_bit());
+        adc.cr().modify(|_, w| w.advregen().set_bit());
 
         Self {
             rb: adc,
@@ -132,11 +132,14 @@ impl Adc {
     /// Sets ADC source
     pub fn set_clock_source(&mut self, clock_source: ClockSource) {
         match clock_source {
-            ClockSource::Pclk(div) => self.rb.cfgr2.modify(|_, w| w.ckmode().bits(div as u8)),
+            ClockSource::Pclk(div) => self
+                .rb
+                .cfgr2()
+                .modify(|_, w| unsafe { w.ckmode().bits(div as u8) }),
             ClockSource::Async(div) => {
-                self.rb.cfgr2.modify(|_, w| w.ckmode().bits(0));
+                self.rb.cfgr2().modify(|_, w| unsafe { w.ckmode().bits(0) });
                 self.rb
-                    .ccr
+                    .ccr()
                     .modify(|_, w| unsafe { w.presc().bits(div as u8) });
             }
         }
@@ -149,8 +152,8 @@ impl Adc {
     ///
     /// Do not call if an ADC reading is ongoing.
     pub fn calibrate(&mut self) {
-        self.rb.cr.modify(|_, w| w.adcal().set_bit());
-        while self.rb.cr.read().adcal().bit_is_set() {}
+        self.rb.cr().modify(|_, w| w.adcal().set_bit());
+        while self.rb.cr().read().adcal().bit_is_set() {}
     }
 
     /// Returns the calibration factors used by the ADC
@@ -163,7 +166,7 @@ impl Adc {
     /// Note that VDDA changes and to a lesser extent temperature changes affect the ADC operating conditions and
     /// calibration should be run again for the best accuracy.
     pub fn get_calibration(&self) -> CalibrationFactor {
-        CalibrationFactor(self.rb.calfact.read().calfact().bits())
+        CalibrationFactor(self.rb.calfact().read().calfact().bits())
     }
 
     /// Writes the calibration factors used by the ADC
@@ -172,7 +175,9 @@ impl Adc {
     ///
     /// Do not call if an ADC reading is ongoing.
     pub fn set_calibration(&mut self, calfact: CalibrationFactor) {
-        self.rb.calfact.write(|w| w.calfact().bits(calfact.0));
+        self.rb
+            .calfact()
+            .write(|w| unsafe { w.calfact().bits(calfact.0) });
     }
 
     /// Set the Adc sampling time
@@ -193,24 +198,26 @@ impl Adc {
     /// The nuber of bits, the oversampling result is shifted in bits at the end of oversampling
     pub fn set_oversampling_shift(&mut self, nrbits: u8) {
         self.rb
-            .cfgr2
+            .cfgr2()
             .modify(|_, w| unsafe { w.ovss().bits(nrbits) });
     }
 
     /// Oversampling of adc according to datasheet of stm32g0, when oversampling is enabled
     pub fn set_oversampling_ratio(&mut self, ratio: OversamplingRatio) {
-        self.rb.cfgr2.modify(|_, w| w.ovsr().bits(ratio as u8));
+        self.rb
+            .cfgr2()
+            .modify(|_, w| unsafe { w.ovsr().bits(ratio as u8) });
     }
 
     pub fn oversampling_enable(&mut self, enable: bool) {
-        self.rb.cfgr2.modify(|_, w| w.ovse().bit(enable));
+        self.rb.cfgr2().modify(|_, w| w.ovse().bit(enable));
     }
 
     pub fn start_injected(&mut self) {
-        self.rb.cr.modify(|_, w| w.adstart().set_bit());
+        self.rb.cr().modify(|_, w| w.adstart().set_bit());
         // ADSTART bit is cleared to 0 bevor using this function
         // enable self.rb.isr.eos() flag is set after each converstion
-        self.rb.ier.modify(|_, w| w.eocie().set_bit()); // end of sequence interupt enable
+        self.rb.ier().modify(|_, w| w.eocie().set_bit()); // end of sequence interupt enable
     }
 
     pub fn stop_injected(&mut self) {
@@ -218,7 +225,7 @@ impl Adc {
         // ADSTART bit is cleared to 0 bevor using this function
         // disable EOS interrupt
         // maybe self.rb.cr.adstp().set_bit() must be performed before interrupt is disabled + wait abortion
-        self.rb.ier.modify(|_, w| w.eocie().clear_bit()); // end of sequence interupt disable
+        self.rb.ier().modify(|_, w| w.eocie().clear_bit()); // end of sequence interupt disable
     }
 
     /// Read actual VREF voltage using the internal reference
@@ -301,15 +308,15 @@ impl Adc {
     }
 
     fn power_up(&mut self) {
-        self.rb.isr.modify(|_, w| w.adrdy().set_bit());
-        self.rb.cr.modify(|_, w| w.aden().set_bit());
-        while self.rb.isr.read().adrdy().bit_is_clear() {}
+        self.rb.isr().modify(|_, w| w.adrdy().set_bit());
+        self.rb.cr().modify(|_, w| w.aden().set_bit());
+        while self.rb.isr().read().adrdy().bit_is_clear() {}
     }
 
     fn power_down(&mut self) {
-        self.rb.cr.modify(|_, w| w.addis().set_bit());
-        self.rb.isr.modify(|_, w| w.adrdy().set_bit());
-        while self.rb.cr.read().aden().bit_is_set() {}
+        self.rb.cr().modify(|_, w| w.addis().set_bit());
+        self.rb.isr().modify(|_, w| w.adrdy().set_bit());
+        while self.rb.cr().read().aden().bit_is_set() {}
     }
 }
 
@@ -338,10 +345,10 @@ where
 
     fn prepare_injected(&mut self, _pin: &mut PIN, triger_source: InjTrigSource) {
         self.rb
-            .cfgr1
+            .cfgr1()
             .modify(|_, w| unsafe { w.exten().bits(1).extsel().bits(triger_source as u8) });
 
-        self.rb.cfgr1.modify(|_, w| {
+        self.rb.cfgr1().modify(|_, w| unsafe {
             w.res() // set ADC resolution bits (ADEN must be =0)
                 .bits(self.precision as u8)
                 .align() // set alignment bit is  (ADSTART must be 0)
@@ -351,12 +358,12 @@ where
         self.power_up();
 
         self.rb
-            .smpr // set sampling time set 1 (ADSTART must be 0)
-            .modify(|_, w| w.smp1().bits(self.sample_time as u8));
+            .smpr() // set sampling time set 1 (ADSTART must be 0)
+            .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
 
         self.rb
             .chselr0() // set active channel acording chapter 15.12.9 (ADC_CFGR1; CHSELRMOD=0)
-            .modify(|_, w| unsafe { w.chsel().bits(1 << PIN::channel()) });
+            .modify(|_, w| unsafe { w.bits(1 << PIN::channel()) });
     }
 }
 
@@ -372,17 +379,17 @@ impl DmaMode<Adc> for Adc {
 
     fn dma_enable(&mut self, enable: bool) {
         if enable {
-            self.rb.cfgr1.modify(|_, w| w.dmaen().set_bit()); //  enable dma beeing called
+            self.rb.cfgr1().modify(|_, w| w.dmaen().set_bit()); //  enable dma beeing called
         } else {
-            self.rb.cfgr1.modify(|_, w| w.dmaen().clear_bit()); //  disable dma beeing called
+            self.rb.cfgr1().modify(|_, w| w.dmaen().clear_bit()); //  disable dma beeing called
         }
     }
 
     fn dma_circualr_mode(&mut self, enable: bool) {
         if enable {
-            self.rb.cfgr1.modify(|_, w| w.dmacfg().set_bit()); // activate circular mode
+            self.rb.cfgr1().modify(|_, w| w.dmacfg().set_bit()); // activate circular mode
         } else {
-            self.rb.cfgr1.modify(|_, w| w.dmacfg().clear_bit()); // disable circular mode
+            self.rb.cfgr1().modify(|_, w| w.dmacfg().clear_bit()); // disable circular mode
         }
     }
 }
@@ -396,7 +403,7 @@ where
 
     fn read(&mut self, _pin: &mut PIN) -> nb::Result<WORD, Self::Error> {
         self.power_up();
-        self.rb.cfgr1.modify(|_, w| {
+        self.rb.cfgr1().modify(|_, w| unsafe {
             w.res()
                 .bits(self.precision as u8)
                 .align()
@@ -404,18 +411,18 @@ where
         });
 
         self.rb
-            .smpr
-            .modify(|_, w| w.smp1().bits(self.sample_time as u8));
+            .smpr()
+            .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
 
         self.rb
             .chselr0()
-            .modify(|_, w| unsafe { w.chsel().bits(1 << PIN::channel()) });
+            .modify(|_, w| unsafe { w.bits(1 << PIN::channel()) });
 
-        self.rb.isr.modify(|_, w| w.eos().set_bit());
-        self.rb.cr.modify(|_, w| w.adstart().set_bit());
-        while self.rb.isr.read().eos().bit_is_clear() {}
+        self.rb.isr().modify(|_, w| w.eos().set_bit());
+        self.rb.cr().modify(|_, w| w.adstart().set_bit());
+        while self.rb.isr().read().eos().bit_is_clear() {}
 
-        let res = self.rb.dr.read().bits() as u16;
+        let res = self.rb.dr().read().bits() as u16;
         let val = if self.align == Align::Left && self.precision == Precision::B_6 {
             res << 8
         } else {
@@ -438,15 +445,15 @@ macro_rules! int_adc {
                 }
 
                 pub fn enable(&mut self, adc: &mut Adc) {
-                    adc.rb.ccr.modify(|_, w| w.$en().set_bit());
+                    adc.rb.ccr().modify(|_, w| w.$en().set_bit());
                 }
 
                 pub fn disable(&mut self, adc: &mut Adc) {
-                    adc.rb.ccr.modify(|_, w| w.$en().clear_bit());
+                    adc.rb.ccr().modify(|_, w| w.$en().clear_bit());
                 }
 
                 pub fn enabled(&self, adc: &Adc) -> bool {
-                    adc.rb.ccr.read().$en().bit_is_set()
+                    adc.rb.ccr().read().$en().bit_is_set()
                 }
             }
 
