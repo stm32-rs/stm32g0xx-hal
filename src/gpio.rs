@@ -715,6 +715,26 @@ gpio!(GPIOD, gpiod, PD, 3, [
     PD15: (pd15, 15),
 ]);
 
+#[cfg(feature = "stm32g0b1")]
+gpio!(GPIOE, gpioe, PE, 4, [
+    PE0: (pe0, 0),
+    PE1: (pe1, 1),
+    PE2: (pe2, 2),
+    PE3: (pe3, 3),
+    PE4: (pe4, 4),
+    PE5: (pe5, 5),
+    PE6: (pe6, 6),
+    PE7: (pe7, 7),
+    PE8: (pe8, 8),
+    PE9: (pe9, 9),
+    PE10: (pe10, 10),
+    PE11: (pe11, 11),
+    PE12: (pe12, 12),
+    PE13: (pe13, 13),
+    PE14: (pe14, 14),
+    PE15: (pe15, 15),
+]);
+
 gpio!(GPIOF, gpiof, PF, 5, [
     PF0: (pf0, 0),
     PF1: (pf1, 1),
