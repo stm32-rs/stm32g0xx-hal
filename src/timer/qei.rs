@@ -57,7 +57,10 @@ macro_rules! qei {
                     });
 
                     // Encoder mode 2.
+                    #[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
                     tim.smcr().write(|w| unsafe { w.sms().bits(0b010) });
+                    #[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+                    tim.smcr().write(|w| unsafe { w.sms1().bits(0b010) });
 
                     // Enable and configure to capture on rising edge
                     tim.ccer().write(|w| {

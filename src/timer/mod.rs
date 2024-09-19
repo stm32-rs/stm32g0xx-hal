@@ -258,17 +258,31 @@ macro_rules! timers_external_clocks {
     }
 }
 
+#[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
 timers_external_clocks! {
     TIM1: (tim1, sms, ece),
     TIM3: (tim3, sms, ece),
 }
 
+#[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+timers_external_clocks! {
+    TIM1: (tim1, sms1, ece),
+    TIM2: (tim2, sms1, ece),
+    TIM3: (tim3, sms1, ece),
+}
+
+#[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
 #[cfg(feature = "stm32g0x1")]
 timers_external_clocks! {
     TIM2: (tim2, sms, ece),
 }
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071"))]
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g0b1",
+    feature = "stm32g0c1"
+))]
 timers_external_clocks! {
     TIM15: (tim15, sms1),
 }
