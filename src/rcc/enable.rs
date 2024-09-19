@@ -103,7 +103,6 @@ macro_rules! bus {
 bus! {
     CRC => (AHB, crcen, crcsmen, crcrst), // 12
     FLASH => (AHB, flashen, flashsmen, flashrst), // 8
-    DMA1 => (AHB, dmaen, dmasmen, dmarst), // 0
 
     DBG => (APB1, dbgen, dbgsmen, dbgrst), // 27
     I2C1 => (APB1, i2c1en, i2c1smen, i2c1rst), // 21
@@ -139,6 +138,17 @@ bus! {
 bus! {
     AES => (AHB, aesen, aessmen, aesrst), // 16
     RNG => (AHB, rngen, rngsmen, rngrst), // 18
+}
+
+#[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
+bus! {
+    DMA1 => (AHB, dmaen, dmasmen, dmarst), // 0
+}
+
+#[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+bus! {
+    DMA1 => (AHB, dma1en, dma1smen, dma1rst), // 0
+    DMA2 => (AHB, dma2en, dma2smen, dma2rst), // 1
 }
 
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
