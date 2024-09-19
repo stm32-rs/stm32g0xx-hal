@@ -288,10 +288,10 @@ impl Rtc {
 
     pub fn unpend(&mut self, ev: Event) {
         self.modify(|rb| match ev {
-            Event::WakeupTimer => rb.scr().modify(|_, w| w.cwutf().set_bit()),
-            Event::AlarmA => rb.scr().modify(|_, w| w.calraf().set_bit()),
-            Event::AlarmB => rb.scr().modify(|_, w| w.calrbf().set_bit()),
-            Event::Timestamp => rb.scr().modify(|_, w| w.ctsf().set_bit()),
+            Event::WakeupTimer => rb.scr().write(|w| w.cwutf().set_bit()),
+            Event::AlarmA => rb.scr().write(|w| w.calraf().set_bit()),
+            Event::AlarmB => rb.scr().write(|w| w.calrbf().set_bit()),
+            Event::Timestamp => rb.scr().write(|w| w.ctsf().set_bit()),
         });
     }
 
