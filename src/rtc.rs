@@ -260,20 +260,24 @@ impl Rtc {
     }
 
     pub fn listen(&mut self, ev: Event) {
-        self.modify(|rb| match ev {
-            Event::WakeupTimer => rb.cr().modify(|_, w| w.wutie().set_bit()),
-            Event::AlarmA => rb.cr().modify(|_, w| w.alraie().set_bit()),
-            Event::AlarmB => rb.cr().modify(|_, w| w.alrbie().set_bit()),
-            Event::Timestamp => rb.cr().modify(|_, w| w.tsie().set_bit()),
+        self.modify(|rb| {
+            match ev {
+                Event::WakeupTimer => rb.cr().modify(|_, w| w.wutie().set_bit()),
+                Event::AlarmA => rb.cr().modify(|_, w| w.alraie().set_bit()),
+                Event::AlarmB => rb.cr().modify(|_, w| w.alrbie().set_bit()),
+                Event::Timestamp => rb.cr().modify(|_, w| w.tsie().set_bit()),
+            };
         })
     }
 
     pub fn unlisten(&mut self, ev: Event) {
-        self.modify(|rb| match ev {
-            Event::WakeupTimer => rb.cr().modify(|_, w| w.wutie().clear_bit()),
-            Event::AlarmA => rb.cr().modify(|_, w| w.alraie().clear_bit()),
-            Event::AlarmB => rb.cr().modify(|_, w| w.alrbie().clear_bit()),
-            Event::Timestamp => rb.cr().modify(|_, w| w.tsie().clear_bit()),
+        self.modify(|rb| {
+            match ev {
+                Event::WakeupTimer => rb.cr().modify(|_, w| w.wutie().clear_bit()),
+                Event::AlarmA => rb.cr().modify(|_, w| w.alraie().clear_bit()),
+                Event::AlarmB => rb.cr().modify(|_, w| w.alrbie().clear_bit()),
+                Event::Timestamp => rb.cr().modify(|_, w| w.tsie().clear_bit()),
+            };
         })
     }
 
@@ -287,11 +291,13 @@ impl Rtc {
     }
 
     pub fn unpend(&mut self, ev: Event) {
-        self.modify(|rb| match ev {
-            Event::WakeupTimer => rb.scr().write(|w| w.cwutf().set_bit()),
-            Event::AlarmA => rb.scr().write(|w| w.calraf().set_bit()),
-            Event::AlarmB => rb.scr().write(|w| w.calrbf().set_bit()),
-            Event::Timestamp => rb.scr().write(|w| w.ctsf().set_bit()),
+        self.modify(|rb| {
+            match ev {
+                Event::WakeupTimer => rb.scr().write(|w| w.cwutf().set_bit()),
+                Event::AlarmA => rb.scr().write(|w| w.calraf().set_bit()),
+                Event::AlarmB => rb.scr().write(|w| w.calrbf().set_bit()),
+                Event::Timestamp => rb.scr().write(|w| w.ctsf().set_bit()),
+            };
         });
     }
 

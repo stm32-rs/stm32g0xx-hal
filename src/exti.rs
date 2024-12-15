@@ -124,7 +124,7 @@ impl ExtiExt for EXTI {
             line => self
                 .imr2()
                 .modify(|r, w| unsafe { w.bits(r.bits() | 1 << (line - 32)) }),
-        }
+        };
     }
 
     fn unlisten(&self, ev: Event) {
@@ -162,7 +162,7 @@ impl ExtiExt for EXTI {
             line => {
                 let mask = !(1 << (line - 32));
                 self.imr2()
-                    .modify(|r, w| unsafe { w.bits(r.bits() & mask) })
+                    .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
             }
         }
     }

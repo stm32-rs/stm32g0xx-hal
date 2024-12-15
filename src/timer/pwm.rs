@@ -114,7 +114,7 @@ macro_rules! pwm {
                         $(
                             self.tim.arr().modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
                         )*
-                        self.tim.cr1().write(|w| w.cen().set_bit())
+                        self.tim.cr1().write(|w| w.cen().set_bit());
                     }
                 }
                 /// Starts listening
@@ -192,7 +192,7 @@ macro_rules! pwm_hal {
                 }
 
                 fn set_duty(&mut self, duty: u32) {
-                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.bits(duty)) }
+                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.bits(duty)); }
                 }
             }
         )+
@@ -243,7 +243,7 @@ macro_rules! pwm_advanced_hal {
                 }
 
                 fn set_duty(&mut self, duty: u16) {
-                    unsafe { (*$TIMX::ptr()).$ccrx(<$CH>::N).write(|w| w.$ccrx().bits(duty)) }
+                    unsafe { (*$TIMX::ptr()).$ccrx(<$CH>::N).write(|w| w.$ccrx().bits(duty)); }
                 }
             }
 
@@ -271,7 +271,7 @@ pwm_advanced_hal! {
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 pwm_advanced_hal! {
-    TIM15: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m1, ccr, moe),
+    TIM15: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr, moe),
 }
 
 #[cfg(feature = "stm32g0x1")]

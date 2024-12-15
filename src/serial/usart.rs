@@ -534,9 +534,15 @@ macro_rules! uart_basic {
             /// Starts listening for an interrupt event
             pub fn listen(&mut self, event: Event) {
                 match event {
-                    Event::Rxne => self.usart.cr1().modify(|_, w| w.rxneie().set_bit()),
-                    Event::Txe => self.usart.cr1().modify(|_, w| w.txeie().set_bit()),
-                    Event::Idle => self.usart.cr1().modify(|_, w| w.idleie().set_bit()),
+                    Event::Rxne => {
+                        self.usart.cr1().modify(|_, w| w.rxneie().set_bit());
+                    }
+                    Event::Txe => {
+                        self.usart.cr1().modify(|_, w| w.txeie().set_bit());
+                    }
+                    Event::Idle => {
+                        self.usart.cr1().modify(|_, w| w.idleie().set_bit());
+                    }
                     _ => {}
                 }
             }
@@ -544,9 +550,15 @@ macro_rules! uart_basic {
             /// Stop listening for an interrupt event
             pub fn unlisten(&mut self, event: Event) {
                 match event {
-                    Event::Rxne => self.usart.cr1().modify(|_, w| w.rxneie().clear_bit()),
-                    Event::Txe => self.usart.cr1().modify(|_, w| w.txeie().clear_bit()),
-                    Event::Idle => self.usart.cr1().modify(|_, w| w.idleie().clear_bit()),
+                    Event::Rxne => {
+                        self.usart.cr1().modify(|_, w| w.rxneie().clear_bit());
+                    }
+                    Event::Txe => {
+                        self.usart.cr1().modify(|_, w| w.txeie().clear_bit());
+                    }
+                    Event::Idle => {
+                        self.usart.cr1().modify(|_, w| w.idleie().clear_bit());
+                    }
                     _ => {}
                 }
             }
@@ -672,9 +684,15 @@ macro_rules! uart_full {
             /// Starts listening for an interrupt event
             pub fn listen(&mut self, event: Event) {
                 match event {
-                    Event::Rxne => self.usart.cr1().modify(|_, w| w.rxneie().set_bit()),
-                    Event::Txe => self.usart.cr1().modify(|_, w| w.txeie().set_bit()),
-                    Event::Idle => self.usart.cr1().modify(|_, w| w.idleie().set_bit()),
+                    Event::Rxne => {
+                        self.usart.cr1().modify(|_, w| w.rxneie().set_bit());
+                    }
+                    Event::Txe => {
+                        self.usart.cr1().modify(|_, w| w.txeie().set_bit());
+                    }
+                    Event::Idle => {
+                        self.usart.cr1().modify(|_, w| w.idleie().set_bit());
+                    }
                     _ => {}
                 }
             }
@@ -682,9 +700,15 @@ macro_rules! uart_full {
             /// Stop listening for an interrupt event
             pub fn unlisten(&mut self, event: Event) {
                 match event {
-                    Event::Rxne => self.usart.cr1().modify(|_, w| w.rxneie().clear_bit()),
-                    Event::Txe => self.usart.cr1().modify(|_, w| w.txeie().clear_bit()),
-                    Event::Idle => self.usart.cr1().modify(|_, w| w.idleie().clear_bit()),
+                    Event::Rxne => {
+                        self.usart.cr1().modify(|_, w| w.rxneie().clear_bit());
+                    }
+                    Event::Txe => {
+                        self.usart.cr1().modify(|_, w| w.txeie().clear_bit());
+                    }
+                    Event::Idle => {
+                        self.usart.cr1().modify(|_, w| w.idleie().clear_bit());
+                    }
                     _ => {}
                 }
             }

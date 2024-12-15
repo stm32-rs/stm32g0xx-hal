@@ -216,19 +216,21 @@ macro_rules! i2c {
                 match ev {
                     i2c::Event::AddressMatch => self.i2c.cr1().modify(|_, w| w.addrie().set_bit()),
                     i2c::Event::Rxne => self.i2c.cr1().modify(|_, w| w.rxie().set_bit()),
-                }
+                };
             }
 
             pub fn unlisten(&mut self, ev: i2c::Event) {
                 match ev {
                     i2c::Event::AddressMatch => self.i2c.cr1().modify(|_, w| w.addrie().clear_bit()),
                     i2c::Event::Rxne => self.i2c.cr1().modify(|_, w| w.rxie().clear_bit()),
-                }
+                };
             }
 
             pub fn clear_irq(&mut self, ev: i2c::Event) {
                 match ev {
-                    i2c::Event::AddressMatch => self.i2c.icr().write(|w| w.addrcf().set_bit()),
+                    i2c::Event::AddressMatch => {
+                        self.i2c.icr().write(|w| w.addrcf().set_bit());
+                    }
                     _ => {},
                 }
             }

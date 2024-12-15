@@ -75,12 +75,16 @@ macro_rules! gpio_trait {
 
             fn set_high(&self, pos: u8) {
                 // NOTE(unsafe) atomic write to a stateless register
-                unsafe { self.bsrr().write(|w| w.bits(1 << pos)) }
+                unsafe {
+                    self.bsrr().write(|w| w.bits(1 << pos));
+                }
             }
 
             fn set_low(&self, pos: u8) {
                 // NOTE(unsafe) atomic write to a stateless register
-                unsafe { self.bsrr().write(|w| w.bits(1 << (pos + 16))) }
+                unsafe {
+                    self.bsrr().write(|w| w.bits(1 << (pos + 16)));
+                }
             }
         }
     };
@@ -466,7 +470,7 @@ macro_rules! gpio {
                                 w.bits(r.bits() & reset | mask)
                             }),
                             _ => unreachable!(),
-                        }
+                        };
                         exti.listen(Event::from_code($i), edge);
                         $PXi { _mode: PhantomData }
                     }

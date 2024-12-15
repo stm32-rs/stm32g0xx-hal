@@ -1,0 +1,15 @@
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "cargo": {
+          "features": ["stm32g071", "rt"]
+        },
+        "check": {
+          "allTargets": false,
+          "targets": "thumbv6m-none-eabi"
+        }
+      }
+    }
+  }
+}

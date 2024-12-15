@@ -136,7 +136,7 @@ macro_rules! window_input_pin {
     ($COMP:ident, $pin:ty) => {
         impl PositiveInput<$COMP> for $pin {
             fn setup(&self, comp: &$COMP) {
-                comp.csr().modify(|_, w| w.winmode().set_bit())
+                comp.csr().modify(|_, w| w.winmode().set_bit());
             }
         }
     };
@@ -149,7 +149,7 @@ macro_rules! positive_input_pin {
     ($COMP:ident, $pin:ty, $bits:expr) => {
         impl PositiveInput<$COMP> for $pin {
             fn setup(&self, comp: &$COMP) {
-                comp.csr().modify(|_, w| unsafe { w.inpsel().bits($bits) })
+                comp.csr().modify(|_, w| unsafe { w.inpsel().bits($bits) });
             }
         }
     };
@@ -169,7 +169,7 @@ macro_rules! negative_input_pin {
     ($COMP:ident, $pin:ty, $bits:expr) => {
         impl NegativeInput<$COMP> for $pin {
             fn setup(&self, comp: &$COMP) {
-                comp.csr().modify(|_, w| unsafe { w.inmsel().bits($bits) })
+                comp.csr().modify(|_, w| unsafe { w.inmsel().bits($bits) });
             }
         }
     };
@@ -200,7 +200,7 @@ macro_rules! refint_input {
         impl NegativeInput<$COMP> for RefintInput {
             fn setup(&self, comp: &$COMP) {
                 comp.csr()
-                    .modify(|_, w| unsafe { w.inmsel().bits(*self as u8) })
+                    .modify(|_, w| unsafe { w.inmsel().bits(*self as u8) });
             }
         }
     };
@@ -213,7 +213,7 @@ macro_rules! dac_input {
     ($COMP:ident, $channel:ty, $bits:expr) => {
         impl<ED> NegativeInput<$COMP> for &$channel {
             fn setup(&self, comp: &$COMP) {
-                comp.csr().modify(|_, w| unsafe { w.inmsel().bits($bits) })
+                comp.csr().modify(|_, w| unsafe { w.inmsel().bits($bits) });
             }
         }
     };

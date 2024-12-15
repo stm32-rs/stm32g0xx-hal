@@ -158,7 +158,7 @@ impl Rcc {
                 } else {
                     0b010
                 })
-            })
+            });
         }
 
         self.cfgr().modify(|_, w| unsafe {

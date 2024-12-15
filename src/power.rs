@@ -56,11 +56,21 @@ impl Power {
 
     pub fn clear_wakeup_flag<L: Into<WakeUp>>(&mut self, lane: L) {
         match lane.into() {
-            WakeUp::Line1 => self.rb.scr().write(|w| w.cwuf1().set_bit()),
-            WakeUp::Line2 => self.rb.scr().write(|w| w.cwuf2().set_bit()),
-            WakeUp::Line4 => self.rb.scr().write(|w| w.cwuf4().set_bit()),
-            WakeUp::Line5 => self.rb.scr().write(|w| w.cwuf5().set_bit()),
-            WakeUp::Line6 => self.rb.scr().write(|w| w.cwuf6().set_bit()),
+            WakeUp::Line1 => {
+                self.rb.scr().write(|w| w.cwuf1().set_bit());
+            }
+            WakeUp::Line2 => {
+                self.rb.scr().write(|w| w.cwuf2().set_bit());
+            }
+            WakeUp::Line4 => {
+                self.rb.scr().write(|w| w.cwuf4().set_bit());
+            }
+            WakeUp::Line5 => {
+                self.rb.scr().write(|w| w.cwuf5().set_bit());
+            }
+            WakeUp::Line6 => {
+                self.rb.scr().write(|w| w.cwuf6().set_bit());
+            }
             _ => {}
         }
     }
@@ -96,7 +106,9 @@ impl Power {
                 self.rb.cr3().modify(|_, w| w.ewup6().set_bit());
                 self.rb.cr4().modify(|_, w| w.wp6().bit(edge));
             }
-            WakeUp::InternalLine => self.rb.cr3().modify(|_, w| w.eiwul().set_bit()),
+            WakeUp::InternalLine => {
+                self.rb.cr3().modify(|_, w| w.eiwul().set_bit());
+            }
         }
     }
 
@@ -108,7 +120,7 @@ impl Power {
             WakeUp::Line5 => self.rb.cr3().modify(|_, w| w.ewup5().clear_bit()),
             WakeUp::Line6 => self.rb.cr3().modify(|_, w| w.ewup6().clear_bit()),
             WakeUp::InternalLine => self.rb.cr3().modify(|_, w| w.eiwul().clear_bit()),
-        }
+        };
     }
 
     pub fn set_mode(&mut self, mode: PowerMode) {
@@ -118,7 +130,13 @@ impl Power {
                 while !self.rb.sr2().read().reglpf().bit_is_clear() {}
             }
             PowerMode::LowPower(sm) => {
-                self.rb.cr3().modify(|_, w| w.enb_ulp().clear_bit());
+                self.rb.cr3().modify(|_, w| {
+                    #[cfg(not(feature = "stm32g071"))]
+                    w.enb_ulp().clear_bit();
+                    #[cfg(feature = "stm32g071")]
+                    w.ulpen().clear_bit();
+                    w
+                });
                 self.rb
                     .cr1()
                     .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });
@@ -127,7 +145,13 @@ impl Power {
                 {}
             }
             PowerMode::UltraLowPower(sm) => {
-                self.rb.cr3().modify(|_, w| w.enb_ulp().set_bit());
+                self.rb.cr3().modify(|_, w| {
+                    #[cfg(not(feature = "stm32g071"))]
+                    w.enb_ulp().set_bit();
+                    #[cfg(feature = "stm32g071")]
+                    w.ulpen().set_bit();
+                    w
+                });
                 self.rb
                     .cr1()
                     .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });

@@ -207,7 +207,7 @@ pub trait Channel: private::Channel {
                 w.tcie().set_bit();
                 w.teie().set_bit()
             }),
-        }
+        };
     }
 
     /// Disable the interrupt for the given event
@@ -222,7 +222,7 @@ pub trait Channel: private::Channel {
                 w.tcie().clear_bit();
                 w.teie().clear_bit()
             }),
-        }
+        };
     }
 
     /// Start a transfer
