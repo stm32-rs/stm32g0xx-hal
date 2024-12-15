@@ -3,7 +3,9 @@ use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
 use core::{cell, ptr};
-pub use hal::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
+use hal::delay::DelayNs;
+pub use hal::spi::*;
+use nb::block;
 
 /// SPI error
 #[derive(Debug)]
@@ -14,6 +16,16 @@ pub enum Error {
     ModeFault,
     /// CRC error
     Crc,
+}
+
+impl hal::spi::Error for Error {
+    fn kind(&self) -> ErrorKind {
+        match self {
+            Error::Overrun => ErrorKind::Overrun,
+            Error::ModeFault => ErrorKind::ModeFault,
+            Error::Crc => ErrorKind::Other,
+        }
+    }
 }
 
 /// A filler type for when the SCK pin is unnecessary
@@ -60,14 +72,27 @@ where
     }
 }
 
+pub struct NoDelay;
+
+impl DelayNs for NoDelay {
+    fn delay_ns(&mut self, _: u32) {}
+}
+
 #[derive(Debug)]
-pub struct Spi<SPI, PINS> {
+pub struct Spi<SPI, PINS, DELAY: DelayNs> {
     spi: SPI,
     pins: PINS,
+    delay: DELAY,
 }
 
 pub trait SpiExt: Sized {
-    fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<Self, PINS>
+    fn spi<PINS>(
+        self,
+        pins: PINS,
+        mode: Mode,
+        freq: Hertz,
+        rcc: &mut Rcc,
+    ) -> Spi<Self, PINS, NoDelay>
     where
         PINS: Pins<Self>;
 }
@@ -136,12 +161,13 @@ macro_rules! spi {
             }
         )*
 
-        impl<PINS: Pins<$SPIX>> Spi<$SPIX, PINS> {
+        impl<PINS: Pins<$SPIX>, DELAY: DelayNs> Spi<$SPIX, PINS, DELAY> {
             pub fn $spiX(
                 spi: $SPIX,
                 pins: PINS,
                 mode: Mode,
                 speed: Hertz,
+                delay: DELAY,
                 rcc: &mut Rcc
             ) -> Self {
                 $SPIX::enable(rcc);
@@ -194,7 +220,7 @@ macro_rules! spi {
                         .set_bit()
                 });
 
-                Spi { spi, pins }
+                Spi { spi, pins, delay }
             }
 
             pub fn data_size(&mut self, nr_bits: u8) {
@@ -221,15 +247,15 @@ macro_rules! spi {
         }
 
         impl SpiExt for $SPIX {
-            fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<$SPIX, PINS>
+            fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<$SPIX, PINS, NoDelay>
             where
                 PINS: Pins<$SPIX>,
             {
-                Spi::$spiX(self, pins, mode, freq, rcc)
+                Spi::$spiX(self, pins, mode, freq, NoDelay, rcc)
             }
         }
 
-        impl<PINS> Spi<$SPIX, PINS> {
+        impl<PINS, DELAY: DelayNs> Spi<$SPIX, PINS, DELAY> {
             pub fn read(&mut self) -> nb::Result<u8, Error> {
                 let sr = self.spi.sr.read();
 
@@ -267,6 +293,44 @@ macro_rules! spi {
                 } else {
                     nb::Error::WouldBlock
                 })
+            }
+        }
+
+        impl<PINS, DELAY: DelayNs> ErrorType for Spi<$SPIX, PINS, DELAY> {
+            type Error = Error;
+        }
+
+        impl<PINS, DELAY: DelayNs> SpiDevice for Spi<$SPIX, PINS, DELAY> {
+            fn transaction(&mut self, operations: &mut [Operation<'_, u8>]) -> Result<(), Self::Error> {
+                for op in operations {
+                    match op {
+                        Operation::Read(buffer) => {
+                            for word in buffer.iter_mut() {
+                                *word = block!(self.read())?;
+                            }
+                        },
+                        Operation::Write(buffer) => {
+                            for word in buffer.iter() {
+                                block!(self.send(word.clone()))?;
+                                block!(self.read())?;
+                            }
+                        },
+                        Operation::Transfer(read, write) =>{
+                            for (r, w) in read.iter_mut().zip(write.iter()) {
+                                block!(self.send(w.clone()))?;
+                                *r = block!(self.read())?;
+                            }
+                        },
+                        Operation::TransferInPlace(buffer) => {
+                            for word in buffer.iter_mut() {
+                                block!(self.send(word.clone()))?;
+                                *word = block!(self.read())?;
+                            }
+                        },
+                        Operation::DelayNs(ns) => self.delay.delay_ns(*ns),
+                    }
+                }
+                Ok(())
             }
         }
     }
