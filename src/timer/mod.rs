@@ -69,7 +69,6 @@ impl Timer<SYST> {
     }
 }
 
-
 pub trait TimerExt<TIM> {
     fn timer(self, rcc: &mut Rcc) -> Timer<TIM>;
 }

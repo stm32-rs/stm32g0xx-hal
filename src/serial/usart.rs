@@ -1,11 +1,11 @@
-use core::fmt;
-use core::marker::PhantomData;
 use crate::dma;
 use crate::dmamux::DmaMuxIndex;
 use crate::gpio::{AltFunction, *};
 use crate::rcc::*;
 use crate::serial::config::*;
 use crate::stm32::*;
+use core::fmt;
+use core::marker::PhantomData;
 use cortex_m::interrupt;
 use nb::block;
 
@@ -530,7 +530,6 @@ macro_rules! uart_basic {
                     .write(|w| unsafe { w.bits(event.val() & mask) });
             }
         }
-    
 
         impl fmt::Write for Tx<$USARTX, BasicConfig> {
             fn write_str(&mut self, s: &str) -> fmt::Result {

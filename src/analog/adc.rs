@@ -277,8 +277,11 @@ impl Adc {
             adc_mv as u16
         })
     }
-    
-    pub fn read<PIN: Channel<Adc, ID = u8>>(&mut self, _pin: &mut PIN) -> nb::Result<u16, Infallible> {
+
+    pub fn read<PIN: Channel<Adc, ID = u8>>(
+        &mut self,
+        _pin: &mut PIN,
+    ) -> nb::Result<u16, Infallible> {
         self.power_up();
         self.rb.cfgr1.modify(|_, w| {
             w.res()

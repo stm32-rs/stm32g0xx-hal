@@ -334,7 +334,6 @@ macro_rules! dma {
     }
 }
 
-
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 dma!(
     channels: {

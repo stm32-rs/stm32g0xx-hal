@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 
 use crate::rcc::Rcc;
 use core::convert::Infallible;
-use hal::digital::{InputPin, OutputPin, StatefulOutputPin, ErrorType, PinState};
+use hal::digital::{ErrorType, InputPin, OutputPin, PinState, StatefulOutputPin};
 
 /// Default pin mode
 pub type DefaultMode = Analog;

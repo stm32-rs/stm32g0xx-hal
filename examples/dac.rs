@@ -12,10 +12,10 @@ extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
 use hal::analog::dac::GeneratorConfig;
-use hal::timer::qei::Direction;
 use hal::prelude::*;
 use hal::rcc::Config;
 use hal::stm32;
+use hal::timer::qei::Direction;
 use rt::entry;
 
 #[entry]

@@ -23,13 +23,11 @@ use rt::entry;
 use core::cell::RefCell;
 use cortex_m::interrupt::Mutex;
 
-use crate::hal::stm32::{interrupt, Interrupt};
-use hal::analog::adc::{InjTrigSource, Precision, SampleTime}; //, VTemp
-
-use hal::dma::{self, Target, Channel};
-
 use crate::hal::analog::adc::DmaMode;
 use crate::hal::analog::adc::InjectMode;
+use crate::hal::stm32::{interrupt, Interrupt};
+use hal::analog::adc::{InjTrigSource, Precision, SampleTime}; //, VTemp
+use hal::dma::{self, Channel, Target};
 
 // Make dma globally available
 static G_DMA: Mutex<RefCell<Option<hal::dma::Channels>>> = Mutex::new(RefCell::new(None));
