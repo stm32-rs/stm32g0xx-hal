@@ -242,22 +242,17 @@ pub trait Channel: private::Channel {
     }
 }
 
-// TODO: Blocked by https://github.com/stm32-rs/stm32-rs/pull/695
-#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 macro_rules! dma {
     (
         channels: {
-            $( $Ci:ident: (
-                $chi:ident,
-                $htifi:ident, $tcifi:ident, $teifi:ident, $gifi:ident,
-                $chtifi:ident, $ctcifi:ident, $cteifi:ident, $cgifi:ident,
-                $MuxCi: ident
-            ), )+
+            $(
+                $Ci:ident: ($chi:ident, $i: literal),
+            )+
         },
     ) => {
         use crate::dmamux;
         use crate::rcc::{Enable, Reset};
-        use crate::stm32::{self, DMA};
+        use crate::stm32::{self, DMA1 as DMA};
 
         use crate::dmamux::DmaMuxExt;
 
@@ -278,13 +273,13 @@ macro_rules! dma {
         $(
             /// Singleton that represents a DMA channel
             pub struct $Ci {
-                mux: dmamux::$MuxCi,
+                mux: dmamux::Channel<$i>,
             }
 
             impl private::Channel for $Ci {
-                fn ch(&self) -> &stm32::dma::CH {
+                fn ch(&self) -> &stm32::dma1::CH {
                     // NOTE(unsafe) $Ci grants exclusive access to this register
-                    unsafe { &(*DMA::ptr()).$chi }
+                    unsafe { &(*DMA::ptr()).ch($i) }
                 }
             }
 
@@ -304,12 +299,12 @@ macro_rules! dma {
                     use Event::*;
 
                     // NOTE(unsafe) atomic read
-                    let flags = unsafe { (*DMA::ptr()).isr.read() };
+                    let flags = unsafe { (*DMA::ptr()).isr().read() };
                     match event {
-                        HalfTransfer => flags.$htifi().bit_is_set(),
-                        TransferComplete => flags.$tcifi().bit_is_set(),
-                        TransferError => flags.$teifi().bit_is_set(),
-                        Any => flags.$gifi().bit_is_set(),
+                        HalfTransfer => flags.htif($i).bit_is_set(),
+                        TransferComplete => flags.tcif($i).bit_is_set(),
+                        TransferError => flags.teif($i).bit_is_set(),
+                        Any => flags.gif($i).bit_is_set(),
                     }
                 }
 
@@ -318,11 +313,11 @@ macro_rules! dma {
 
                     // NOTE(unsafe) atomic write to a stateless register
                     unsafe {
-                        let _ = &(*DMA::ptr()).ifcr.write(|w| match event {
-                            HalfTransfer => w.$chtifi().set_bit(),
-                            TransferComplete => w.$ctcifi().set_bit(),
-                            TransferError => w.$cteifi().set_bit(),
-                            Any => w.$cgifi().set_bit(),
+                        let _ = &(*DMA::ptr()).ifcr().write(|w| match event {
+                            HalfTransfer => w.chtif($i).set_bit(),
+                            TransferComplete => w.ctcif($i).set_bit(),
+                            TransferError => w.cteif($i).set_bit(),
+                            Any => w.cgif($i).set_bit(),
                         });
                     }
                 }
@@ -332,32 +327,30 @@ macro_rules! dma {
     }
 }
 
-// TODO: Blocked by https://github.com/stm32-rs/stm32-rs/pull/695
-// #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-// dma!(
-//     channels: {
-//         C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
-//         C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
-//         C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
-//         C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
-//         C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
-//         C6: (ch6, htif6, tcif6, teif6, gif6, chtif6, ctcif6, cteif6, cgif6, C5),
-//         C7: (ch7, htif7, tcif7, teif7, gif7, chtif7, ctcif7, cteif7, cgif7, C6),
-//     },
-// );
-
-#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 dma!(
     channels: {
-        C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
-        C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
-        C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
-        C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
-        C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
+        C1: (ch1, 0),
+        C2: (ch2, 1),
+        C3: (ch3, 2),
+        C4: (ch4, 3),
+        C5: (ch5, 4),
+        C6: (ch6, 5),
+        C7: (ch7, 6),
     },
 );
 
 #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
+dma!(
+    channels: {
+        C1: (ch1, 0),
+        C2: (ch2, 1),
+        C3: (ch3, 2),
+        C4: (ch4, 3),
+        C5: (ch5, 4),
+    },
+);
+
 impl DmaExt for DMA {
     type Channels = Channels;
 

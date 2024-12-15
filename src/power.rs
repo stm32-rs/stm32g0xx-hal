@@ -123,6 +123,7 @@ impl Power {
         };
     }
 
+    #[cfg(not(feature = "stm32g0x0"))]
     pub fn set_mode(&mut self, mode: PowerMode) {
         match mode {
             PowerMode::Run => {

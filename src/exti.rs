@@ -113,7 +113,7 @@ impl ExtiExt for EXTI {
             feature = "stm32g031",
             feature = "stm32g041"
         ))]
-        self.imr1
+        self.imr1()
             .modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
 
         #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
@@ -139,10 +139,13 @@ impl ExtiExt for EXTI {
         {
             let line = ev as u8;
             let mask = !(1 << line);
-            self.imr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+            self.imr1()
+                .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
             if line <= TRIGGER_MAX {
-                self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
-                self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+                self.rtsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+                self.ftsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
             }
         }
 

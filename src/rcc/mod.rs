@@ -190,6 +190,7 @@ impl Rcc {
             .modify(|_, w| unsafe { w.hsitrim().bits(value) });
     }
 
+    #[cfg(not(feature = "stm32g0x0"))]
     pub fn set_reset_mode(&mut self, mode: ResetMode) {
         unsafe {
             let flash = &(*FLASH::ptr());

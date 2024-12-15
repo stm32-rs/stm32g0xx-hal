@@ -121,7 +121,19 @@ bus! {
     TIM16 => (APB2, tim16en, tim16smen, tim16rst), // 17
     TIM17 => (APB2, tim17en, tim17smen, tim17rst), // 18
     USART1 => (APB2, usart1en, usart1smen, usart1rst), // 14
+}
 
+#[cfg(any(feature = "stm32g0x0"))]
+bus! {
+    GPIOA => (IOP, gpioaen, gpioasmen, gpioarst), // 0
+    GPIOB => (IOP, gpioben, gpiobsmen, gpiobrst), // 1
+    GPIOC => (IOP, gpiocen, gpiocsmen, gpiocrst), // 2
+    GPIOD => (IOP, gpioden, gpiodsmen, gpiodrst), // 3
+    GPIOF => (IOP, gpiofen, gpiofsmen, gpiofrst), // 5
+}
+
+#[cfg(not(any(feature = "stm32g0x0")))]
+bus! {
     GPIOA => (IOP, iopaen, iopasmen, ioparst), // 0
     GPIOB => (IOP, iopben, iopbsmen, iopbrst), // 1
     GPIOC => (IOP, iopcen, iopcsmen, iopcrst), // 2
@@ -140,14 +152,17 @@ bus! {
     RNG => (AHB, rngen, rngsmen, rngrst), // 18
 }
 
-#[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
+#[cfg(not(any(feature = "stm32g0x0", feature = "stm32g0b1", feature = "stm32g0c1")))]
 bus! {
     DMA1 => (AHB, dmaen, dmasmen, dmarst), // 0
 }
 
-#[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+#[cfg(any(feature = "stm32g0x0", feature = "stm32g0b1", feature = "stm32g0c1"))]
 bus! {
     DMA1 => (AHB, dma1en, dma1smen, dma1rst), // 0
+}
+#[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+bus! {
     DMA2 => (AHB, dma2en, dma2smen, dma2rst), // 1
 }
 
