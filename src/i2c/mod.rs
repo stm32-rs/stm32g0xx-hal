@@ -11,6 +11,7 @@ pub mod config;
 
 use crate::rcc::*;
 pub use config::Config;
+use hal::i2c::{ErrorKind, NoAcknowledgeSource};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SlaveAddressMask {
@@ -61,6 +62,18 @@ pub enum Error {
     BusError,
     ArbitrationLost,
     IncorrectFrameSize(usize),
+}
+
+impl hal::i2c::Error for Error {
+    fn kind(&self) -> ErrorKind {
+        match self {
+            Error::Overrun => ErrorKind::Overrun,
+            Error::BusError => ErrorKind::Bus,
+            Error::ArbitrationLost => ErrorKind::ArbitrationLoss,
+            Error::Nack => ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown),
+            _ => ErrorKind::Other,
+        }
+    }
 }
 
 /// I2C SDA pin

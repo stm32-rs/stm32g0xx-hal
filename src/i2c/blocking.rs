@@ -85,7 +85,7 @@ macro_rules! busy_wait {
                 // in case of a master write_read operation, this flag is the only exit for the function.
                 // Leave the bit set, so it can be detected in the wait_addressed function
                 if $idx == $buflen {
-                    return Ok( () )
+                    return Ok(())
                 } else {
                   return Err(Error::IncorrectFrameSize($idx))
                 }
@@ -94,7 +94,7 @@ macro_rules! busy_wait {
                 // Clear the stop condition flag
                 $i2c.icr.write(|w| w.stopcf().set_bit());
                 if $idx == $buflen {
-                    return Ok( () )
+                    return Ok(())
                 } else
                 if $idx == 0 {
                     return Err(Error::Nack)
@@ -400,7 +400,6 @@ macro_rules! i2c {
         }
 
         impl<SDA, SCL> I2cSlave for I2c<$I2CX, SDA, SCL> {
-
             fn slave_sbc(&mut self, sbc_enabled: bool)  {
                 // Enable Slave byte control
                 self.i2c.cr1.modify(|_, w|  w.sbc().bit(sbc_enabled) );
@@ -497,6 +496,30 @@ macro_rules! i2c {
                         idx += 1;
                     }
                 }
+            }
+        }
+
+        impl<SDA, SCL> hal::i2c::ErrorType for I2c<$I2CX, SDA, SCL> {
+            type Error = Error;
+        }
+
+        impl<SDA, SCL> hal::i2c::I2c for I2c<$I2CX, SDA, SCL> {
+            fn transaction(
+                &mut self,
+                address: hal::i2c::SevenBitAddress,
+                operations: &mut [hal::i2c::Operation<'_>],
+            ) -> Result<(), Self::Error> {
+                for op in operations {
+                    match op {
+                        hal::i2c::Operation::Read(buffer) => {
+                            self.read(address, buffer)?;
+                        }
+                        hal::i2c::Operation::Write(buffer) => {
+                            self.write(address, buffer)?;
+                        }
+                    }
+                }
+                Ok(())
             }
         }
     }
