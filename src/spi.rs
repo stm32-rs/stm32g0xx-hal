@@ -171,19 +171,17 @@ macro_rules! spi {
 
                 #[rustfmt::skip]
                 spi.cr1().write(|w| {
-                    unsafe {
-                    w.cpha().bit(mode.phase == Phase::CaptureOnSecondTransition)
-                        .cpol().bit(mode.polarity == Polarity::IdleHigh)
-                        .mstr().set_bit()
-                        .br().bits(br)
-                        .lsbfirst().clear_bit()
-                        .ssm().set_bit()
-                        .ssi().set_bit()
-                        .rxonly().clear_bit()
-                        .crcl().clear_bit()
-                        .bidimode().clear_bit()
-                        .spe().set_bit()
-                    }
+                    w.cpha().bit(mode.phase == Phase::CaptureOnSecondTransition);
+                    w.cpol().bit(mode.polarity == Polarity::IdleHigh);
+                    w.mstr().set_bit();
+                    w.br().set(br);
+                    w.lsbfirst().clear_bit();
+                    w.ssm().set_bit();
+                    w.ssi().set_bit();
+                    w.rxonly().clear_bit();
+                    w.crcl().clear_bit();
+                    w.bidimode().clear_bit();
+                    w.spe().set_bit()
                 });
 
                 Spi { spi, pins }

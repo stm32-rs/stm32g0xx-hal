@@ -133,12 +133,10 @@ impl Adc {
     pub fn set_clock_source(&mut self, clock_source: ClockSource) {
         match clock_source {
             ClockSource::Pclk(div) => {
-                self.rb
-                    .cfgr2()
-                    .modify(|_, w| unsafe { w.ckmode().bits(div as u8) });
+                self.rb.cfgr2().modify(|_, w| w.ckmode().set(div as u8));
             }
             ClockSource::Async(div) => {
-                self.rb.cfgr2().modify(|_, w| unsafe { w.ckmode().bits(0) });
+                self.rb.cfgr2().modify(|_, w| w.ckmode().set(0));
                 self.rb
                     .ccr()
                     .modify(|_, w| unsafe { w.presc().bits(div as u8) });
@@ -176,9 +174,7 @@ impl Adc {
     ///
     /// Do not call if an ADC reading is ongoing.
     pub fn set_calibration(&mut self, calfact: CalibrationFactor) {
-        self.rb
-            .calfact()
-            .write(|w| unsafe { w.calfact().bits(calfact.0) });
+        self.rb.calfact().write(|w| w.calfact().set(calfact.0));
     }
 
     /// Set the Adc sampling time
@@ -205,9 +201,7 @@ impl Adc {
 
     /// Oversampling of adc according to datasheet of stm32g0, when oversampling is enabled
     pub fn set_oversampling_ratio(&mut self, ratio: OversamplingRatio) {
-        self.rb
-            .cfgr2()
-            .modify(|_, w| unsafe { w.ovsr().bits(ratio as u8) });
+        self.rb.cfgr2().modify(|_, w| w.ovsr().set(ratio as u8));
     }
 
     pub fn oversampling_enable(&mut self, enable: bool) {
@@ -360,7 +354,7 @@ where
 
         self.rb
             .smpr() // set sampling time set 1 (ADSTART must be 0)
-            .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
+            .modify(|_, w| w.smp1().set(self.sample_time as u8));
 
         self.rb
             .chselr0() // set active channel acording chapter 15.12.9 (ADC_CFGR1; CHSELRMOD=0)
@@ -413,7 +407,7 @@ where
 
         self.rb
             .smpr()
-            .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
+            .modify(|_, w| w.smp1().set(self.sample_time as u8));
 
         self.rb
             .chselr0()

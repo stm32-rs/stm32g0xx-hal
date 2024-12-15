@@ -40,7 +40,7 @@ macro_rules! stopwatches {
                 ///
                 /// The counter frequency is equal to the input clock divided by the prescaler + 1.
                 pub fn set_prescaler(&mut self, prescaler: u16) {
-                    self.tim.psc().write(|w| unsafe { w.psc().bits(prescaler) } );
+                    self.tim.psc().write(|w| w.psc().set(prescaler));
                     self.tim.egr().write(|w| w.ug().set_bit());
                 }
 

@@ -615,15 +615,11 @@ macro_rules! uart_full {
                 usart.cr2().reset();
                 usart.cr3().reset();
 
-                usart.cr2().write(|w| unsafe {
-                    w.stop()
-                        .bits(config.stopbits.bits())
-                        .txinv()
-                        .bit(config.inverted_tx)
-                        .rxinv()
-                        .bit(config.inverted_rx)
-                        .swap()
-                        .bit(config.swap)
+                usart.cr2().write(|w| {
+                    w.stop().set(config.stopbits.bits());
+                    w.txinv().bit(config.inverted_tx);
+                    w.rxinv().bit(config.inverted_rx);
+                    w.swap().bit(config.swap)
                 });
 
                 if let Some(timeout) = config.receiver_timeout {
