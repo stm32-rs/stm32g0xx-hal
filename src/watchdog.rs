@@ -2,7 +2,6 @@ use crate::prelude::*;
 use crate::rcc::{Enable, Rcc};
 use crate::stm32::{IWDG, WWDG};
 use crate::time::{Hertz, MicroSecond};
-use hal::watchdog;
 
 pub struct IndependedWatchdog {
     iwdg: IWDG,
@@ -38,23 +37,6 @@ impl IndependedWatchdog {
         while self.iwdg.sr.read().bits() > 0 {}
 
         self.iwdg.kr.write(|w| unsafe { w.key().bits(0xaaaa) });
-    }
-}
-
-impl watchdog::Watchdog for IndependedWatchdog {
-    fn feed(&mut self) {
-        self.feed();
-    }
-}
-
-impl watchdog::WatchdogEnable for IndependedWatchdog {
-    type Time = MicroSecond;
-
-    fn start<T>(&mut self, period: T)
-    where
-        T: Into<MicroSecond>,
-    {
-        self.start(period.into())
     }
 }
 
@@ -118,23 +100,6 @@ impl WindowWatchdog {
         self.set_window(period);
         self.feed();
         self.wwdg.cr.write(|w| w.wdga().set_bit());
-    }
-}
-
-impl watchdog::Watchdog for WindowWatchdog {
-    fn feed(&mut self) {
-        self.feed();
-    }
-}
-
-impl watchdog::WatchdogEnable for WindowWatchdog {
-    type Time = MicroSecond;
-
-    fn start<T>(&mut self, period: T)
-    where
-        T: Into<MicroSecond>,
-    {
-        self.start(period.into())
     }
 }
 

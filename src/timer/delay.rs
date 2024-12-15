@@ -2,7 +2,7 @@
 use core::cmp;
 use cortex_m::peripheral::{syst::SystClkSource, SYST};
 use fugit::ExtU32;
-use hal::blocking::delay::{DelayMs, DelayUs};
+use hal::delay::DelayNs;
 
 use crate::rcc::*;
 use crate::stm32::*;
@@ -47,39 +47,9 @@ impl Delay<SYST> {
     }
 }
 
-impl DelayUs<u32> for Delay<SYST> {
-    fn delay_us(&mut self, us: u32) {
-        self.delay(us.micros())
-    }
-}
-
-impl DelayUs<u16> for Delay<SYST> {
-    fn delay_us(&mut self, us: u16) {
-        self.delay_us(us as u32)
-    }
-}
-
-impl DelayUs<u8> for Delay<SYST> {
-    fn delay_us(&mut self, us: u8) {
-        self.delay_us(us as u32)
-    }
-}
-
-impl DelayMs<u32> for Delay<SYST> {
-    fn delay_ms(&mut self, ms: u32) {
-        self.delay_us(ms.saturating_mul(1_000));
-    }
-}
-
-impl DelayMs<u16> for Delay<SYST> {
-    fn delay_ms(&mut self, ms: u16) {
-        self.delay_ms(ms as u32);
-    }
-}
-
-impl DelayMs<u8> for Delay<SYST> {
-    fn delay_ms(&mut self, ms: u8) {
-        self.delay_ms(ms as u32);
+impl DelayNs for Delay<SYST> {
+    fn delay_ns(&mut self, ns: u32) {
+        self.delay(ns.nanos())
     }
 }
 
@@ -123,39 +93,9 @@ macro_rules! delays {
                 }
             }
 
-            impl DelayUs<u32> for Delay<$TIM> {
-                fn delay_us(&mut self, us: u32) {
-                    self.delay(us.micros())
-                }
-            }
-
-            impl DelayUs<u16> for Delay<$TIM> {
-                fn delay_us(&mut self, us: u16) {
-                    self.delay_us(us as u32)
-                }
-            }
-
-            impl DelayUs<u8> for Delay<$TIM> {
-                fn delay_us(&mut self, us: u8) {
-                    self.delay_us(us as u32)
-                }
-            }
-
-            impl DelayMs<u32> for Delay<$TIM> {
-                fn delay_ms(&mut self, ms: u32) {
-                    self.delay_us(ms.saturating_mul(1_000));
-                }
-            }
-
-            impl DelayMs<u16> for Delay<$TIM> {
-                fn delay_ms(&mut self, ms: u16) {
-                    self.delay_ms(ms as u32);
-                }
-            }
-
-            impl DelayMs<u8> for Delay<$TIM> {
-                fn delay_ms(&mut self, ms: u8) {
-                    self.delay_ms(ms as u32);
+            impl DelayNs for Delay<$TIM> {
+                fn delay_ns(&mut self, ns: u32) {
+                    self.delay(ns.nanos())
                 }
             }
 

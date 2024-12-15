@@ -41,6 +41,6 @@ fn main() -> ! {
     loop {
         let u_mv = adc.read_voltage(&mut adc_pin).expect("adc read failed");
         let u_bat = adc.read_voltage(&mut vbat).expect("adc read failed");
-        hprintln!("VBat: {}mV | PA0: {}mV", u_bat * 3, u_mv).unwrap();
+        hprintln!("VBat: {}mV | PA0: {}mV", u_bat * 3, u_mv);
     }
 }

@@ -2,7 +2,6 @@
 // command build: cargo build --example adc_ext_trig_double_dma_serial --features stm32g031
 // command run: cargo run --example adc_ext_trig_double_dma_serial --features stm32g031
 
-#![deny(warnings)]
 #![no_main]
 #![no_std]
 
@@ -27,7 +26,7 @@ use cortex_m::interrupt::Mutex;
 use crate::hal::stm32::{interrupt, Interrupt};
 use hal::analog::adc::{InjTrigSource, Precision, SampleTime}; //, VTemp
 
-use hal::dma::{self, Channel, Target};
+use hal::dma::{self, Target, Channel};
 
 use crate::hal::analog::adc::DmaMode;
 use crate::hal::analog::adc::InjectMode;
@@ -120,10 +119,10 @@ fn main() -> ! {
         .set_peripheral_address(adc_data_register_addr, false);
     dma.ch1.set_transfer_length(adc_buffer1.len() as u16);
 
-    hprintln!("adc_data_register_addr {:?}", adc_buffer1_addr).unwrap(); // will output addr in dec
-                                                                         // in gdb read the data bytes with:  x /32xh 0x???????   (last is addr in hex)
-                                                                         // or put addr in dec format:   x /32xh 536878092
-                                                                         // https://sourceware.org/gdb/current/onlinedocs/gdb/Memory.html
+    hprintln!("adc_data_register_addr {:?}", adc_buffer1_addr); // will output addr in dec
+                                                                // in gdb read the data bytes with:  x /32xh 0x???????   (last is addr in hex)
+                                                                // or put addr in dec format:   x /32xh 536878092
+                                                                // https://sourceware.org/gdb/current/onlinedocs/gdb/Memory.html
 
     // dma ch1 reads from ADC register into memory
     dma.ch1.select_peripheral(hal::dmamux::DmaMuxIndex::ADC);
@@ -162,9 +161,9 @@ fn main() -> ! {
     adc.set_sample_time(SampleTime::T_80);
     adc.set_precision(Precision::B_12);
     let mut pa3 = gpioa.pa5.into_analog();
-    let u_raw: u32 = adc.read(&mut pa3).expect("adc read failed");
+    let u_raw = adc.read(&mut pa3).expect("adc read failed");
     let u = u_raw.saturating_sub(32) as f32 / 4_096_f32 * 3.3;
-    hprintln!("u: {:.4} V ", u).unwrap();
+    hprintln!("u: {:.4} V ", u);
 
     adc.set_oversampling_ratio(adc::OversamplingRatio::X_16);
     adc.set_oversampling_shift(4);

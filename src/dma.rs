@@ -161,7 +161,9 @@ pub trait Channel: private::Channel {
     /// Panics if this channel is enabled.
     fn set_transfer_length(&mut self, len: u16) {
         assert!(!self.is_enabled());
-
+        #[cfg(not(any(feature = "stm32g070")))]
+        self.ch().ndtr.write(|w| w.ndt().bits(len));
+        #[cfg(feature = "stm32g070")]
         self.ch().ndtr.write(|w| unsafe { w.ndt().bits(len) });
     }
 
@@ -181,6 +183,9 @@ pub trait Channel: private::Channel {
     /// Set the priority level of this channel
     fn set_priority_level(&mut self, priority: Priority) {
         let pl = priority.into();
+        #[cfg(not(any(feature = "stm32g070")))]
+        self.ch().cr.modify(|_, w| w.pl().bits(pl));
+        #[cfg(feature = "stm32g070")]
         self.ch().cr.modify(|_, w| unsafe { w.pl().bits(pl) });
     }
 
@@ -242,8 +247,6 @@ pub trait Channel: private::Channel {
     }
 }
 
-// TODO: Blocked by https://github.com/stm32-rs/stm32-rs/pull/695
-#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 macro_rules! dma {
     (
         channels: {
@@ -258,7 +261,6 @@ macro_rules! dma {
         use crate::dmamux;
         use crate::rcc::{Enable, Reset};
         use crate::stm32::{self, DMA};
-
         use crate::dmamux::DmaMuxExt;
 
         /// DMA channels
@@ -332,19 +334,19 @@ macro_rules! dma {
     }
 }
 
-// TODO: Blocked by https://github.com/stm32-rs/stm32-rs/pull/695
-// #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-// dma!(
-//     channels: {
-//         C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
-//         C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
-//         C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
-//         C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
-//         C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
-//         C6: (ch6, htif6, tcif6, teif6, gif6, chtif6, ctcif6, cteif6, cgif6, C5),
-//         C7: (ch7, htif7, tcif7, teif7, gif7, chtif7, ctcif7, cteif7, cgif7, C6),
-//     },
-// );
+
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+dma!(
+    channels: {
+        C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
+        C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
+        C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
+        C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
+        C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
+        C6: (ch6, htif6, tcif6, teif6, gif6, chtif6, ctcif6, cteif6, cgif6, C5),
+        C7: (ch7, htif7, tcif7, teif7, gif7, chtif7, ctcif7, cteif7, cgif7, C6),
+    },
+);
 
 #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 dma!(
@@ -357,7 +359,6 @@ dma!(
     },
 );
 
-#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 impl DmaExt for DMA {
     type Channels = Channels;
 

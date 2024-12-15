@@ -229,10 +229,8 @@ macro_rules! spi {
             }
         }
 
-        impl<PINS> hal::spi::FullDuplex<u8> for Spi<$SPIX, PINS> {
-            type Error = Error;
-
-            fn read(&mut self) -> nb::Result<u8, Error> {
+        impl<PINS> Spi<$SPIX, PINS> {
+            pub fn read(&mut self) -> nb::Result<u8, Error> {
                 let sr = self.spi.sr.read();
 
                 Err(if sr.ovr().bit_is_set() {
@@ -252,7 +250,7 @@ macro_rules! spi {
                 })
             }
 
-            fn send(&mut self, byte: u8) -> nb::Result<(), Error> {
+            pub fn send(&mut self, byte: u8) -> nb::Result<(), Error> {
                 let sr = self.spi.sr.read();
 
                 Err(if sr.ovr().bit_is_set() {
@@ -271,10 +269,6 @@ macro_rules! spi {
                 })
             }
         }
-
-        impl<PINS> ::hal::blocking::spi::transfer::Default<u8> for Spi<$SPIX, PINS> {}
-
-        impl<PINS> ::hal::blocking::spi::write::Default<u8> for Spi<$SPIX, PINS> {}
     }
 }
 

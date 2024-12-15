@@ -5,7 +5,6 @@ use crate::time::{Hertz, MicroSecond};
 use core::marker::PhantomData;
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::SYST;
-use hal::timer::{CountDown, Periodic};
 use void::Void;
 
 pub mod delay;
@@ -70,20 +69,6 @@ impl Timer<SYST> {
     }
 }
 
-impl CountDown for Timer<SYST> {
-    type Time = MicroSecond;
-
-    fn start<T>(&mut self, timeout: T)
-    where
-        T: Into<MicroSecond>,
-    {
-        self.start(timeout.into())
-    }
-
-    fn wait(&mut self) -> nb::Result<(), Void> {
-        self.wait()
-    }
-}
 
 pub trait TimerExt<TIM> {
     fn timer(self, rcc: &mut Rcc) -> Timer<TIM>;
@@ -94,8 +79,6 @@ impl TimerExt<SYST> for SYST {
         Timer::syst(self, rcc)
     }
 }
-
-impl Periodic for Timer<SYST> {}
 
 macro_rules! timers {
     ($($TIM:ident: ($tim:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
@@ -196,23 +179,6 @@ macro_rules! timers {
                     Timer::$tim(self, rcc)
                 }
             }
-
-            impl CountDown for Timer<$TIM> {
-                type Time = MicroSecond;
-
-                fn start<T>(&mut self, timeout: T)
-                where
-                    T: Into<MicroSecond>,
-                {
-                    self.start(timeout.into())
-                }
-
-                fn wait(&mut self) -> nb::Result<(), Void> {
-                    self.wait()
-                }
-            }
-
-            impl Periodic for Timer<$TIM> {}
         )+
     }
 }

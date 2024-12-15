@@ -21,13 +21,13 @@ fn main() -> ! {
     let gpioa = dp.GPIOA.split(&mut rcc);
     let gpioc = dp.GPIOC.split(&mut rcc);
 
-    let switch = gpioc.pc5.into_pull_up_input();
+    let mut switch = gpioc.pc5.into_pull_up_input();
     let qei = dp.TIM1.qei((gpioa.pa8, gpioa.pa9), &mut rcc);
 
     loop {
         let count = qei.count();
         if switch.is_low().unwrap() {
-            hprintln!("Counter: {}", count).unwrap();
+            hprintln!("Counter: {}", count);
         }
     }
 }
