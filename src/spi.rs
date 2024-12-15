@@ -3,7 +3,6 @@ use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
 use core::{cell, ptr};
-use hal::delay::DelayNs;
 pub use hal::spi::*;
 use nb::block;
 
@@ -72,27 +71,14 @@ where
     }
 }
 
-pub struct NoDelay;
-
-impl DelayNs for NoDelay {
-    fn delay_ns(&mut self, _: u32) {}
-}
-
 #[derive(Debug)]
-pub struct Spi<SPI, PINS, DELAY: DelayNs> {
+pub struct Spi<SPI, PINS> {
     spi: SPI,
     pins: PINS,
-    delay: DELAY,
 }
 
 pub trait SpiExt: Sized {
-    fn spi<PINS>(
-        self,
-        pins: PINS,
-        mode: Mode,
-        freq: Hertz,
-        rcc: &mut Rcc,
-    ) -> Spi<Self, PINS, NoDelay>
+    fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<Self, PINS>
     where
         PINS: Pins<Self>;
 }
@@ -161,13 +147,12 @@ macro_rules! spi {
             }
         )*
 
-        impl<PINS: Pins<$SPIX>, DELAY: DelayNs> Spi<$SPIX, PINS, DELAY> {
+        impl<PINS: Pins<$SPIX>> Spi<$SPIX, PINS> {
             pub fn $spiX(
                 spi: $SPIX,
                 pins: PINS,
                 mode: Mode,
                 speed: Hertz,
-                delay: DELAY,
                 rcc: &mut Rcc
             ) -> Self {
                 $SPIX::enable(rcc);
@@ -220,7 +205,7 @@ macro_rules! spi {
                         .set_bit()
                 });
 
-                Spi { spi, pins, delay }
+                Spi { spi, pins }
             }
 
             pub fn data_size(&mut self, nr_bits: u8) {
@@ -247,15 +232,15 @@ macro_rules! spi {
         }
 
         impl SpiExt for $SPIX {
-            fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<$SPIX, PINS, NoDelay>
+            fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<$SPIX, PINS>
             where
                 PINS: Pins<$SPIX>,
             {
-                Spi::$spiX(self, pins, mode, freq, NoDelay, rcc)
+                Spi::$spiX(self, pins, mode, freq, rcc)
             }
         }
 
-        impl<PINS, DELAY: DelayNs> Spi<$SPIX, PINS, DELAY> {
+        impl<PINS> Spi<$SPIX, PINS> {
             pub fn read(&mut self) -> nb::Result<u8, Error> {
                 let sr = self.spi.sr.read();
 
@@ -296,40 +281,43 @@ macro_rules! spi {
             }
         }
 
-        impl<PINS, DELAY: DelayNs> ErrorType for Spi<$SPIX, PINS, DELAY> {
+        impl<PINS> ErrorType for Spi<$SPIX, PINS> {
             type Error = Error;
         }
 
-        impl<PINS, DELAY: DelayNs> SpiDevice for Spi<$SPIX, PINS, DELAY> {
-            fn transaction(&mut self, operations: &mut [Operation<'_, u8>]) -> Result<(), Self::Error> {
-                for op in operations {
-                    match op {
-                        Operation::Read(buffer) => {
-                            for word in buffer.iter_mut() {
-                                *word = block!(self.read())?;
-                            }
-                        },
-                        Operation::Write(buffer) => {
-                            for word in buffer.iter() {
-                                block!(self.send(word.clone()))?;
-                                block!(self.read())?;
-                            }
-                        },
-                        Operation::Transfer(read, write) =>{
-                            for (r, w) in read.iter_mut().zip(write.iter()) {
-                                block!(self.send(w.clone()))?;
-                                *r = block!(self.read())?;
-                            }
-                        },
-                        Operation::TransferInPlace(buffer) => {
-                            for word in buffer.iter_mut() {
-                                block!(self.send(word.clone()))?;
-                                *word = block!(self.read())?;
-                            }
-                        },
-                        Operation::DelayNs(ns) => self.delay.delay_ns(*ns),
-                    }
+        impl<PINS> SpiBus for Spi<$SPIX, PINS> {
+            fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+                for word in words.iter_mut() {
+                    *word = block!(self.read())?;
                 }
+                Ok(())
+            }
+
+            fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+                for word in words.iter() {
+                    block!(self.send(word.clone()))?;
+                    block!(self.read())?;
+                }
+                Ok(())
+            }
+
+            fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
+                for (r, w) in read.iter_mut().zip(write.iter()) {
+                    block!(self.send(w.clone()))?;
+                    *r = block!(self.read())?;
+                }
+                Ok(())
+            }
+
+            fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+                for word in words.iter_mut() {
+                    block!(self.send(word.clone()))?;
+                    *word = block!(self.read())?;
+                }
+                Ok(())
+            }
+
+            fn flush(&mut self) -> Result<(), Self::Error> {
                 Ok(())
             }
         }
