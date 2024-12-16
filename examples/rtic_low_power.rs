@@ -2,12 +2,11 @@
 #![no_main]
 #![deny(warnings)]
 
-extern crate cortex_m;
-extern crate cortex_m_rt as rt;
-extern crate panic_semihosting;
+extern crate panic_probe;
 extern crate rtic;
 extern crate stm32g0xx_hal as hal;
 
+use defmt_rtt as _;
 use hal::exti::Event;
 use hal::gpio::*;
 use hal::power::{LowPowerMode, PowerMode};
@@ -25,19 +24,17 @@ mod app {
     #[local]
     struct Local {
         exti: stm32::EXTI,
-        led: PA5<Output<PushPull>>,
+        led: PA15<Output<PushPull>>,
     }
 
     #[init]
-    fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(ctx: init::Context) -> (Shared, Local) {
         let mut rcc = ctx.device.RCC.freeze(rcc::Config::hsi(Prescaler::Div16));
         let mut exti = ctx.device.EXTI;
 
         let gpioa = ctx.device.GPIOA.split(&mut rcc);
-        let gpioc = ctx.device.GPIOC.split(&mut rcc);
-
-        let led = gpioa.pa5.into_push_pull_output();
-        let mut button = gpioc.pc13.listen(SignalEdge::Falling, &mut exti);
+        let led = gpioa.pa15.into_push_pull_output();
+        let mut button = gpioa.pa2.into_pull_up_input().listen(SignalEdge::Falling, &mut exti);
 
         let mut power = ctx.device.PWR.constrain(&mut rcc);
         power.set_mode(PowerMode::UltraLowPower(LowPowerMode::StopMode2));
@@ -47,13 +44,13 @@ mod app {
             scb.set_sleepdeep();
         }
 
-        (Shared {}, Local { exti, led }, init::Monotonics())
+        (Shared {}, Local { exti, led })
     }
 
-    #[task(binds = EXTI4_15, local = [exti, led])]
+    #[task(binds = EXTI2, local = [exti, led])]
     fn button_click(ctx: button_click::Context) {
         ctx.local.led.toggle().unwrap();
-        ctx.local.exti.unpend(Event::GPIO13);
+        ctx.local.exti.unpend(Event::GPIO2);
     }
 
     #[idle]

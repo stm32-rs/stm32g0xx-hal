@@ -2,13 +2,10 @@
 #![no_main]
 #![deny(warnings)]
 
-extern crate cortex_m;
-extern crate cortex_m_rt as rt;
-extern crate panic_semihosting;
-extern crate rtic;
+extern crate panic_probe;
 extern crate stm32g0xx_hal as hal;
 
-use cortex_m_semihosting::hprintln;
+use defmt_rtt as _;
 use hal::exti::Event;
 use hal::gpio::*;
 use hal::prelude::*;
@@ -28,22 +25,21 @@ mod app {
     struct Local {
         exti: stm32::EXTI,
         timer: Timer<stm32::TIM17>,
-        led: PA5<Output<PushPull>>,
+        led: PA15<Output<PushPull>>,
         rtc: Rtc,
     }
 
     #[init]
-    fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(ctx: init::Context) -> (Shared, Local) {
         let mut rcc = ctx.device.RCC.constrain();
         let gpioa = ctx.device.GPIOA.split(&mut rcc);
-        let gpioc = ctx.device.GPIOC.split(&mut rcc);
 
         let mut timer = ctx.device.TIM17.timer(&mut rcc);
         timer.start(Hertz::Hz(3).into_duration());
         timer.listen();
 
         let mut exti = ctx.device.EXTI;
-        gpioc.pc13.listen(SignalEdge::Falling, &mut exti);
+        gpioa.pa2.into_pull_up_input().listen(SignalEdge::Falling, &mut exti);
 
         let mut rtc = ctx.device.RTC.constrain(&mut rcc);
         rtc.set_date(&Date::new(2019.year(), 11.month(), 24.day()));
@@ -55,9 +51,8 @@ mod app {
                 timer,
                 rtc,
                 exti,
-                led: gpioa.pa5.into_push_pull_output(),
+                led: gpioa.pa15.into_push_pull_output(),
             },
-            init::Monotonics(),
         )
     }
 
@@ -67,18 +62,15 @@ mod app {
         ctx.local.timer.clear_irq();
     }
 
-    #[task(binds = EXTI4_15, local = [exti, rtc])]
+    #[task(binds = EXTI2_3, local = [exti, rtc])]
     fn button_click(ctx: button_click::Context) {
         let date = ctx.local.rtc.get_date();
         let time = ctx.local.rtc.get_time();
-        hprintln!("Button pressed @ {:?} {:?}", date, time);
-        ctx.local.exti.unpend(Event::GPIO13);
-    }
-
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::wfi();
-        }
+        defmt::info!(
+            "Button pressed @ {:?} {:?}",
+            defmt::Debug2Format(&date),
+            defmt::Debug2Format(&time)
+        );
+        ctx.local.exti.unpend(Event::GPIO2);
     }
 }
