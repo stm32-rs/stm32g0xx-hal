@@ -58,7 +58,9 @@ impl FifoThreshold {
         self as u8
     }
 }
-#[derive(Eq, PartialEq, PartialOrd, Clone, Copy)]
+
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BasicConfig {
     pub(crate) baudrate: Bps,
     pub(crate) wordlength: WordLength,
@@ -69,7 +71,8 @@ pub struct BasicConfig {
     pub(crate) swap: bool,
 }
 
-#[derive(Eq, PartialEq, PartialOrd, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct FullConfig {
     pub(crate) baudrate: Bps,
     pub(crate) wordlength: WordLength,
