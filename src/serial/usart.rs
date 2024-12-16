@@ -879,7 +879,12 @@ uart_full!(USART1, usart1, 1);
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 uart_full!(USART2, usart2, 1);
 
-#[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041", feature = "stm32g0b1"))]
+#[cfg(any(
+    feature = "stm32g030",
+    feature = "stm32g031",
+    feature = "stm32g041",
+    feature = "stm32g0b1"
+))]
 uart_basic!(USART2, usart2, 1);
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
