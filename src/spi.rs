@@ -3,8 +3,10 @@ use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
 use core::ptr;
+pub use hal::spi::{
+    ErrorKind, ErrorType, Mode, Phase, Polarity, SpiBus, MODE_0, MODE_1, MODE_2, MODE_3,
+};
 use nb::block;
-pub use hal::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3, ErrorKind, ErrorType, SpiBus};
 
 /// SPI error
 #[derive(Debug)]
