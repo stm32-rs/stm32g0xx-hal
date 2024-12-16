@@ -1,9 +1,9 @@
 //! Direct Memory Access Engine
 
 // TODO: add DMA2 for B1, C1
-use crate::dmamux::DmaMuxIndex;
-use crate::rcc::Rcc;
-use crate::stm32::DMAMUX;
+use crate::dmamux::{self, DmaMuxExt, DmaMuxIndex};
+use crate::rcc::{Enable, Rcc, Reset};
+use crate::stm32::{self, DMA1 as DMA, DMAMUX};
 
 /// Extension trait to split a DMA peripheral into independent channels
 pub trait DmaExt {
@@ -243,6 +243,57 @@ pub trait Channel: private::Channel {
     }
 }
 
+/// Singleton that represents a DMA channel
+pub struct C<const N: u8> {
+    mux: dmamux::Channel<N>,
+}
+
+impl<const N: u8> private::Channel for C<N> {
+    fn ch(&self) -> &stm32::dma1::CH {
+        // NOTE(unsafe) $Ci grants exclusive access to this register
+        unsafe { &(*DMA::ptr()).ch(N as usize) }
+    }
+}
+
+impl<const N: u8> C<N> {
+    pub fn mux(&mut self) -> &mut dyn dmamux::DmaMuxChannel {
+        &mut self.mux
+    }
+}
+
+impl<const N: u8> Channel for C<N> {
+    fn select_peripheral(&mut self, index: DmaMuxIndex) {
+        self.mux().select_peripheral(index);
+    }
+
+    fn event_occurred(&self, event: Event) -> bool {
+        use Event::*;
+
+        // NOTE(unsafe) atomic read
+        let flags = unsafe { (*DMA::ptr()).isr().read() };
+        match event {
+            HalfTransfer => flags.htif(N).bit_is_set(),
+            TransferComplete => flags.tcif(N).bit_is_set(),
+            TransferError => flags.teif(N).bit_is_set(),
+            Any => flags.gif(N).bit_is_set(),
+        }
+    }
+
+    fn clear_event(&mut self, event: Event) {
+        use Event::*;
+
+        // NOTE(unsafe) atomic write to a stateless register
+        unsafe {
+            let _ = &(*DMA::ptr()).ifcr().write(|w| match event {
+                HalfTransfer => w.chtif(N).set_bit(),
+                TransferComplete => w.ctcif(N).set_bit(),
+                TransferError => w.cteif(N).set_bit(),
+                Any => w.cgif(N).set_bit(),
+            });
+        }
+    }
+}
+
 macro_rules! dma {
     (
         channels: {
@@ -251,11 +302,6 @@ macro_rules! dma {
             )+
         },
     ) => {
-        use crate::dmamux;
-        use crate::rcc::{Enable, Reset};
-        use crate::stm32::{self, DMA1 as DMA};
-        use crate::dmamux::DmaMuxExt;
-
         /// DMA channels
         pub struct Channels {
             $( pub $chi: $Ci, )+
@@ -269,60 +315,8 @@ macro_rules! dma {
             }
         }
 
-
         $(
-            /// Singleton that represents a DMA channel
-            pub struct $Ci {
-                mux: dmamux::Channel<$i>,
-            }
-
-            impl private::Channel for $Ci {
-                fn ch(&self) -> &stm32::dma1::CH {
-                    // NOTE(unsafe) $Ci grants exclusive access to this register
-                    unsafe { &(*DMA::ptr()).ch($i) }
-                }
-            }
-
-            impl $Ci {
-                pub fn mux(&mut self) -> &mut dyn dmamux::DmaMuxChannel {
-                    &mut self.mux
-                }
-            }
-
-            impl Channel for $Ci {
-
-                fn select_peripheral(&mut self, index: DmaMuxIndex) {
-                    self.mux().select_peripheral(index);
-                }
-
-                fn event_occurred(&self, event: Event) -> bool {
-                    use Event::*;
-
-                    // NOTE(unsafe) atomic read
-                    let flags = unsafe { (*DMA::ptr()).isr().read() };
-                    match event {
-                        HalfTransfer => flags.htif($i).bit_is_set(),
-                        TransferComplete => flags.tcif($i).bit_is_set(),
-                        TransferError => flags.teif($i).bit_is_set(),
-                        Any => flags.gif($i).bit_is_set(),
-                    }
-                }
-
-                fn clear_event(&mut self, event: Event) {
-                    use Event::*;
-
-                    // NOTE(unsafe) atomic write to a stateless register
-                    unsafe {
-                        let _ = &(*DMA::ptr()).ifcr().write(|w| match event {
-                            HalfTransfer => w.chtif($i).set_bit(),
-                            TransferComplete => w.ctcif($i).set_bit(),
-                            TransferError => w.cteif($i).set_bit(),
-                            Any => w.cgif($i).set_bit(),
-                        });
-                    }
-                }
-
-            }
+            pub type $Ci = C<$i>;
         )+
     }
 }
