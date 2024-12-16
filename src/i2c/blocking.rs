@@ -3,7 +3,7 @@ use super::config::Config;
 use super::{Error, I2c, I2cDirection, I2cExt, Instance, SCLPin, SDAPin};
 use crate::gpio::*;
 use crate::rcc::*;
-use crate::stm32::{I2C1, I2C2};
+use crate::stm32 as pac;
 
 pub trait I2cSlave {
     /// Enable/Disable Slave Byte Control. Default SBC is switched on.
@@ -111,7 +111,7 @@ macro_rules! busy_wait {
 }
 
 macro_rules! i2c {
-    ($I2CX:ident, $i2cx:ident,
+    ($I2CX:ty,
         sda: [ $($PSDA:ty,)+ ],
         scl: [ $($PSCL:ty,)+ ],
     ) => {
@@ -229,11 +229,8 @@ where
     }
 
     pub fn clear_irq(&mut self, ev: super::Event) {
-        match ev {
-            super::Event::AddressMatch => {
-                self.i2c.icr().write(|w| w.addrcf().set_bit());
-            }
-            _ => {}
+        if ev == super::Event::AddressMatch {
+            self.i2c.icr().write(|w| w.addrcf().set_bit());
         }
     }
 
@@ -521,8 +518,7 @@ impl<I2C: Instance, SDA, SCL> hal::i2c::I2c for I2c<I2C, SDA, SCL> {
 }
 
 i2c!(
-    I2C1,
-    i2c1,
+    pac::I2C1,
     sda: [
         PA10<Output<OpenDrain>>,
         PB7<Output<OpenDrain>>,
@@ -536,8 +532,7 @@ i2c!(
 );
 
 i2c!(
-    I2C2,
-    i2c2,
+    pac::I2C2,
     sda: [
         PA12<Output<OpenDrain>>,
         PB11<Output<OpenDrain>>,

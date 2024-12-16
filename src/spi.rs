@@ -1,6 +1,6 @@
 use crate::gpio::*;
 use crate::rcc::{self, Rcc};
-use crate::stm32::{spi1, SPI1, SPI2};
+use crate::stm32::{self as pac, spi1};
 use crate::time::Hertz;
 use core::ptr;
 pub use hal::spi::{
@@ -92,7 +92,7 @@ pub trait SpiExt: Sized {
 }
 
 macro_rules! spi {
-    ($SPIX:ident, $spiX:ident,
+    ($SPIX:ty,
         sck: [ $(($SCK:ty, $SCK_AF:expr),)+ ],
         miso: [ $(($MISO:ty, $MISO_AF:expr),)+ ],
         mosi: [ $(($MOSI:ty, $MOSI_AF:expr),)+ ],
@@ -308,8 +308,7 @@ impl<SPI: Instance, PINS> SpiBus for Spi<SPI, PINS> {
 }
 
 spi!(
-    SPI1,
-    spi1,
+    pac::SPI1,
     sck: [
         (PA1<DefaultMode>, AltFunction::AF0),
         (PA5<DefaultMode>, AltFunction::AF0),
@@ -332,8 +331,7 @@ spi!(
 );
 
 spi!(
-    SPI2,
-    spi2,
+    pac::SPI2,
     sck: [
         (PA0<DefaultMode>, AltFunction::AF0),
         (PB8<DefaultMode>, AltFunction::AF1),

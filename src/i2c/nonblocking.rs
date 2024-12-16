@@ -4,7 +4,7 @@ use super::{EndMarker, Error, I2c, I2cDirection, I2cExt, I2cResult, Instance, SC
 use crate::gpio::*;
 use crate::gpio::{AltFunction, OpenDrain, Output};
 use crate::rcc::Rcc;
-use crate::stm32::{I2C1, I2C2};
+use crate::stm32 as pac;
 use nb::Error::{Other, WouldBlock};
 
 pub trait I2cControl {
@@ -100,7 +100,7 @@ macro_rules! flush_rxdr {
 }
 
 macro_rules! i2c {
-    ($I2CX:ident, $i2cx:ident,
+    ($I2CX:ty,
         sda: [ $($PSDA:ty,)+ ],
         scl: [ $($PSCL:ty,)+ ],
     ) => {
@@ -224,40 +224,26 @@ impl<I2C: Instance, SDA, SCL> I2cControl for I2c<I2C, SDA, SCL> {
     /// Starts listening for an interrupt event
     fn listen(&mut self) {
         self.i2c.cr1().modify(|_, w| {
-            w.txie()
-                .set_bit()
-                .addrie()
-                .set_bit()
-                .rxie()
-                .set_bit()
-                .nackie()
-                .set_bit()
-                .stopie()
-                .set_bit()
-                .errie()
-                .set_bit()
-                .tcie()
-                .set_bit()
+            w.txie().set_bit();
+            w.addrie().set_bit();
+            w.rxie().set_bit();
+            w.nackie().set_bit();
+            w.stopie().set_bit();
+            w.errie().set_bit();
+            w.tcie().set_bit()
         });
     }
 
     /// Stop listening for an interrupt event
     fn unlisten(&mut self) {
         self.i2c.cr1().modify(|_, w| {
-            w.txie()
-                .clear_bit()
-                .rxie()
-                .clear_bit()
-                .addrie()
-                .clear_bit()
-                .nackie()
-                .clear_bit()
-                .stopie()
-                .clear_bit()
-                .tcie()
-                .clear_bit()
-                .errie()
-                .clear_bit()
+            w.txie().clear_bit();
+            w.rxie().clear_bit();
+            w.addrie().clear_bit();
+            w.nackie().clear_bit();
+            w.stopie().clear_bit();
+            w.tcie().clear_bit();
+            w.errie().clear_bit()
         });
     }
 
@@ -366,27 +352,19 @@ impl<I2C: Instance, SDA, SCL> I2cControl for I2c<I2C, SDA, SCL> {
                 self.length_write_read = 0;
                 self.index = 0;
                 self.i2c.cr2().write(|w| unsafe {
-                    w
-                        // Set number of bytes to transfer
-                        .nbytes()
-                        .bits(self.length as u8)
-                        // Set address to transfer to/from
-                        .sadd()
-                        .bits((self.address << 1) as u16)
-                        // 7-bit addressing mode
-                        .add10()
-                        .clear_bit()
-                        // Set transfer direction to read
-                        .rd_wrn()
-                        .set_bit()
-                        // Automatic end mode
-                        .autoend()
-                        .set_bit()
-                        .reload()
-                        .clear_bit()
-                        // Start transfer
-                        .start()
-                        .set_bit()
+                    // Set number of bytes to transfer
+                    w.nbytes().bits(self.length as u8);
+                    // Set address to transfer to/from
+                    w.sadd().bits((self.address << 1) as u16);
+                    // 7-bit addressing mode
+                    w.add10().clear_bit();
+                    // Set transfer direction to read
+                    w.rd_wrn().set_bit();
+                    // Automatic end mode
+                    w.autoend().set_bit();
+                    w.reload().clear_bit();
+                    // Start transfer
+                    w.start().set_bit()
                 });
                 // not yet ready here
                 return Err(WouldBlock);
@@ -402,9 +380,10 @@ impl<I2C: Instance, SDA, SCL> I2cControl for I2c<I2C, SDA, SCL> {
         } else if isr.tcr().bit_is_set() {
             // This condition Will only happen when reload == 1 and sbr == 1 (slave) and nbytes was written.
             // Send a NACK, set nbytes to clear tcr flag
-            self.i2c
-                .cr2()
-                .modify(|_, w| unsafe { w.nack().set_bit().nbytes().bits(1 as u8) });
+            self.i2c.cr2().modify(|_, w| unsafe {
+                w.nack().set_bit();
+                w.nbytes().bits(1 as u8)
+            });
             // Make one extra loop here to wait on the stop condition
             return Err(WouldBlock);
         } else if isr.addr().bit_is_set() {
@@ -436,11 +415,9 @@ impl<I2C: Instance, SDA, SCL> I2cControl for I2c<I2C, SDA, SCL> {
                 self.index = 0;
                 self.i2c.cr2().modify(|_, w| unsafe {
                     // Set number of bytes to transfer: as many as internal buffer
-                    w.nbytes()
-                        .bits(self.length as u8)
-                        // during sending nbytes automatically send a ACK, stretch clock after last byte
-                        .reload()
-                        .set_bit()
+                    w.nbytes().bits(self.length as u8);
+                    // during sending nbytes automatically send a ACK, stretch clock after last byte
+                    w.reload().set_bit()
                 });
                 // end address phase, release clock stretching
                 self.i2c.icr().write(|w| w.addrcf().set_bit());
@@ -471,24 +448,17 @@ impl<I2C: Instance, SDA, SCL> I2cMaster for I2c<I2C, SDA, SCL> {
         self.length_write_read = 0;
 
         self.i2c.cr2().modify(|_, w| unsafe {
-            w
-                // Start transfer
-                .start()
-                .set_bit()
-                // Set number of bytes to transfer
-                .nbytes()
-                .bits(buflen as u8)
-                // Set address to transfer to/from
-                .sadd()
-                .bits((addr << 1) as u16)
-                // Set transfer direction to write
-                .rd_wrn()
-                .clear_bit()
-                // Automatic end mode
-                .autoend()
-                .bit(true)
-                .reload()
-                .clear_bit()
+            // Start transfer
+            w.start().set_bit();
+            // Set number of bytes to transfer
+            w.nbytes().bits(buflen as u8);
+            // Set address to transfer to/from
+            w.sadd().bits((addr << 1) as u16);
+            // Set transfer direction to write
+            w.rd_wrn().clear_bit();
+            // Automatic end mode
+            w.autoend().bit(true);
+            w.reload().clear_bit()
         });
         // in non-blocking mode the result is not yet available
         Ok(())
@@ -508,24 +478,17 @@ impl<I2C: Instance, SDA, SCL> I2cMaster for I2c<I2C, SDA, SCL> {
         self.length_write_read = read_len as usize;
 
         self.i2c.cr2().modify(|_, w| unsafe {
-            w
-                // Start transfer
-                .start()
-                .set_bit()
-                // Set number of bytes to transfer
-                .nbytes()
-                .bits(buflen as u8)
-                // Set address to transfer to/from
-                .sadd()
-                .bits((addr << 1) as u16)
-                // Set transfer direction to write
-                .rd_wrn()
-                .clear_bit()
-                // Automatic end mode
-                .autoend()
-                .bit(false)
-                .reload()
-                .clear_bit()
+            // Start transfer
+            w.start().set_bit();
+            // Set number of bytes to transfer
+            w.nbytes().bits(buflen as u8);
+            // Set address to transfer to/from
+            w.sadd().bits((addr << 1) as u16);
+            // Set transfer direction to write
+            w.rd_wrn().clear_bit();
+            // Automatic end mode
+            w.autoend().bit(false);
+            w.reload().clear_bit()
         });
         // in non-blocking mode the result is not yet available
         Ok(())
@@ -552,24 +515,17 @@ impl<I2C: Instance, SDA, SCL> I2cMaster for I2c<I2C, SDA, SCL> {
         // The START bit can be set even if the bus
         // is BUSY or I2C is in slave mode.
         self.i2c.cr2().modify(|_, w| unsafe {
-            w
-                // Start transfer
-                .start()
-                .set_bit()
-                // Set number of bytes to transfer
-                .nbytes()
-                .bits(length as u8)
-                // Set address to transfer to/from
-                .sadd()
-                .bits((addr << 1) as u16)
-                // Set transfer direction to read
-                .rd_wrn()
-                .set_bit()
-                // automatic end mode
-                .autoend()
-                .set_bit()
-                .reload()
-                .clear_bit()
+            // Start transfer
+            w.start().set_bit();
+            // Set number of bytes to transfer
+            w.nbytes().bits(length as u8);
+            // Set address to transfer to/from
+            w.sadd().bits((addr << 1) as u16);
+            // Set transfer direction to read
+            w.rd_wrn().set_bit();
+            // automatic end mode
+            w.autoend().set_bit();
+            w.reload().clear_bit()
         });
         // in non-blocking mode the result is not yet available
         Ok(())
@@ -592,17 +548,15 @@ impl<I2C: Instance, SDA, SCL> I2cSlave for I2c<I2C, SDA, SCL> {
     }
 
     fn set_address(&mut self, address: u16) {
-        self.i2c
-            .oar1()
-            .write(|w| unsafe { w.oa1_7_1().bits(address as u8).oa1en().clear_bit() });
+        self.i2c.oar1().write(|w| unsafe {
+            w.oa1_7_1().bits(address as u8);
+            w.oa1en().clear_bit()
+        });
         // set the 7 bits address
         self.i2c.oar1().write(|w| unsafe {
-            w.oa1_7_1()
-                .bits(address as u8)
-                .oa1mode()
-                .clear_bit()
-                .oa1en()
-                .set_bit()
+            w.oa1_7_1().bits(address as u8);
+            w.oa1mode().clear_bit();
+            w.oa1en().set_bit()
         });
     }
 
@@ -661,8 +615,7 @@ impl<I2C: Instance, SDA, SCL> hal::i2c::I2c for I2c<I2C, SDA, SCL> {
 }
 
 i2c!(
-    I2C1,
-    i2c1,
+    pac::I2C1,
     sda: [
         PA10<Output<OpenDrain>>,
         PB7<Output<OpenDrain>>,
@@ -676,8 +629,7 @@ i2c!(
 );
 
 i2c!(
-    I2C2,
-    i2c2,
+    pac::I2C2,
     sda: [
         PA12<Output<OpenDrain>>,
         PB11<Output<OpenDrain>>,
