@@ -79,12 +79,12 @@ macro_rules! delays {
                     while cycles > 0 {
                         let reload = cmp::min(cycles, 0xffff);
                         cycles -= reload;
-                        self.tim.arr.write(|w| unsafe { w.bits(reload) });
-                        self.tim.cnt.reset();
-                        self.tim.cr1.modify(|_, w| w.cen().set_bit().urs().set_bit());
-                        while self.tim.sr.read().uif().bit_is_clear() {}
-                        self.tim.sr.modify(|_, w| w.uif().clear_bit());
-                        self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                        self.tim.arr().write(|w| unsafe { w.bits(reload) });
+                        self.tim.cnt().reset();
+                        self.tim.cr1().modify(|_, w| w.cen().set_bit().urs().set_bit());
+                        while self.tim.sr().read().uif().bit_is_clear() {}
+                        self.tim.sr().modify(|_, w| w.uif().clear_bit());
+                        self.tim.cr1().modify(|_, w| w.cen().clear_bit());
                     }
                 }
 

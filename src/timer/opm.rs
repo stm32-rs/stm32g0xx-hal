@@ -66,17 +66,17 @@ macro_rules! opm {
                     let reload = crate::time::cycles(pulse, freq);
                     unsafe {
                         let tim = &*$TIMX::ptr();
-                        tim.psc.write(|w| w.psc().bits(psc as u16));
-                        tim.arr.write(|w| w.$arr().bits(reload as u16));
+                        tim.psc().write(|w| w.psc().bits(psc as u16));
+                        tim.arr().write(|w| w.$arr().bits((reload as u16).into()));
                         $(
-                            tim.arr.modify(|_, w| w.$arr_h().bits((reload >> 16) as u16));
+                            tim.arr().modify(|_, w| w.$arr_h().bits((reload >> 16) as u16));
                         )*
                     }
                 }
 
                 pub fn generate(&mut self) {
                     let tim =  unsafe {&*$TIMX::ptr()};
-                    tim.cr1.write(|w| w.opm().set_bit().cen().set_bit());
+                    tim.cr1().write(|w| w.opm().set_bit().cen().set_bit());
                 }
             }
         )+
@@ -91,17 +91,17 @@ macro_rules! opm_hal {
             impl OpmPin<$TIMX, $CH> {
                 pub fn enable(&mut self) {
                     let tim =  unsafe {&*$TIMX::ptr()};
-                    tim.ccer.modify(|_, w| w.$ccxe().set_bit());
+                    tim.ccer().modify(|_, w| w.$ccxe().set_bit());
                     self.setup();
                 }
 
                 pub fn disable(&mut self) {
                     let tim =  unsafe {&*$TIMX::ptr()};
-                    tim.ccer.modify(|_, w| w.$ccxe().clear_bit());
+                    tim.ccer().modify(|_, w| w.$ccxe().clear_bit());
                 }
 
                 pub fn get_max_delay(&mut self) -> u32 {
-                    unsafe { (*$TIMX::ptr()).arr.read().bits() }
+                    unsafe { (*$TIMX::ptr()).arr().read().bits() }
                 }
 
                 pub fn set_delay(&mut self, delay: u32) {
@@ -112,7 +112,7 @@ macro_rules! opm_hal {
                 fn setup(&mut self) {
                     unsafe {
                         let tim = &*$TIMX::ptr();
-                        tim.$ccrx.write(|w| w.bits(self.delay));
+                        tim.$ccrx().write(|w| w.bits(self.delay));
                         tim.$ccmrx_output().modify(|_, w| w.$ocxm().bits(7).$ocxfe().set_bit());
                     }
                 }
@@ -145,7 +145,7 @@ opm_hal! {
 
 opm! {
     TIM1: (tim1, arr),
-    TIM3: (tim3, arr_l, arr_h),
+    TIM3: (tim3, arr),
     TIM14: (tim14, arr),
     TIM16: (tim16, arr),
     TIM17: (tim17, arr),
@@ -153,7 +153,7 @@ opm! {
 
 #[cfg(feature = "stm32g0x1")]
 opm! {
-    TIM2: (tim2, arr_l, arr_h),
+    TIM2: (tim2, arr),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]

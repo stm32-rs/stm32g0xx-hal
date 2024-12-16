@@ -1,4 +1,6 @@
 //! Direct Memory Access Engine
+
+// TODO: add DMA2 for B1, C1
 use crate::dmamux::DmaMuxIndex;
 use crate::rcc::Rcc;
 use crate::stm32::DMAMUX;
@@ -91,7 +93,7 @@ mod private {
     /// Channel methods private to this module
     pub trait Channel {
         /// Return the register block for this channel
-        fn ch(&self) -> &stm32::dma::CH;
+        fn ch(&self) -> &stm32::dma1::CH;
     }
 }
 
@@ -115,10 +117,10 @@ pub trait Channel: private::Channel {
     /// Reset the control registers of this channel.
     /// This stops any ongoing transfers.
     fn reset(&mut self) {
-        self.ch().cr.reset();
-        self.ch().ndtr.reset();
-        self.ch().par.reset();
-        self.ch().mar.reset();
+        self.ch().cr().reset();
+        self.ch().ndtr().reset();
+        self.ch().par().reset();
+        self.ch().mar().reset();
         self.clear_event(Event::Any);
     }
 
@@ -133,8 +135,8 @@ pub trait Channel: private::Channel {
     fn set_peripheral_address(&mut self, address: u32, inc: bool) {
         assert!(!self.is_enabled());
 
-        self.ch().par.write(|w| unsafe { w.pa().bits(address) });
-        self.ch().cr.modify(|_, w| w.pinc().bit(inc));
+        self.ch().par().write(|w| unsafe { w.pa().bits(address) });
+        self.ch().cr().modify(|_, w| w.pinc().bit(inc));
     }
 
     /// Set the base address of the memory area from/to which
@@ -148,8 +150,8 @@ pub trait Channel: private::Channel {
     fn set_memory_address(&mut self, address: u32, inc: bool) {
         assert!(!self.is_enabled());
 
-        self.ch().mar.write(|w| unsafe { w.ma().bits(address) });
-        self.ch().cr.modify(|_, w| w.minc().bit(inc));
+        self.ch().mar().write(|w| unsafe { w.ma().bits(address) });
+        self.ch().cr().modify(|_, w| w.minc().bit(inc));
     }
 
     /// Set the number of words to transfer.
@@ -161,20 +163,17 @@ pub trait Channel: private::Channel {
     /// Panics if this channel is enabled.
     fn set_transfer_length(&mut self, len: u16) {
         assert!(!self.is_enabled());
-        #[cfg(not(any(feature = "stm32g070")))]
-        self.ch().ndtr.write(|w| w.ndt().bits(len));
-        #[cfg(feature = "stm32g070")]
-        self.ch().ndtr.write(|w| unsafe { w.ndt().bits(len) });
+        self.ch().ndtr().write(|w| unsafe { w.ndt().bits(len) });
     }
 
     /// Get the number of words left to transfer.
     fn get_transfer_remaining(&mut self) -> u16 {
-        self.ch().ndtr.read().ndt().bits()
+        self.ch().ndtr().read().ndt().bits()
     }
 
     /// Set the word size.
     fn set_word_size(&mut self, wsize: WordSize) {
-        self.ch().cr.modify(|_, w| unsafe {
+        self.ch().cr().modify(|_, w| unsafe {
             w.psize().bits(wsize as u8);
             w.msize().bits(wsize as u8)
         });
@@ -183,84 +182,78 @@ pub trait Channel: private::Channel {
     /// Set the priority level of this channel
     fn set_priority_level(&mut self, priority: Priority) {
         let pl = priority.into();
-        #[cfg(not(any(feature = "stm32g070")))]
-        self.ch().cr.modify(|_, w| w.pl().bits(pl));
-        #[cfg(feature = "stm32g070")]
-        self.ch().cr.modify(|_, w| unsafe { w.pl().bits(pl) });
+        self.ch().cr().modify(|_, w| unsafe { w.pl().bits(pl) });
     }
 
     /// Set the transfer direction
     fn set_direction(&mut self, direction: Direction) {
         let dir = direction.into();
-        self.ch().cr.modify(|_, w| w.dir().bit(dir));
+        self.ch().cr().modify(|_, w| w.dir().bit(dir));
     }
 
     /// Set the circular mode of this channel
     fn set_circular_mode(&mut self, circular: bool) {
-        self.ch().cr.modify(|_, w| w.circ().bit(circular));
+        self.ch().cr().modify(|_, w| w.circ().bit(circular));
     }
 
     /// Enable the interrupt for the given event
     fn listen(&mut self, event: Event) {
         use Event::*;
         match event {
-            HalfTransfer => self.ch().cr.modify(|_, w| w.htie().set_bit()),
-            TransferComplete => self.ch().cr.modify(|_, w| w.tcie().set_bit()),
-            TransferError => self.ch().cr.modify(|_, w| w.teie().set_bit()),
-            Any => self.ch().cr.modify(|_, w| {
+            HalfTransfer => self.ch().cr().modify(|_, w| w.htie().set_bit()),
+            TransferComplete => self.ch().cr().modify(|_, w| w.tcie().set_bit()),
+            TransferError => self.ch().cr().modify(|_, w| w.teie().set_bit()),
+            Any => self.ch().cr().modify(|_, w| {
                 w.htie().set_bit();
                 w.tcie().set_bit();
                 w.teie().set_bit()
             }),
-        }
+        };
     }
 
     /// Disable the interrupt for the given event
     fn unlisten(&mut self, event: Event) {
         use Event::*;
         match event {
-            HalfTransfer => self.ch().cr.modify(|_, w| w.htie().clear_bit()),
-            TransferComplete => self.ch().cr.modify(|_, w| w.tcie().clear_bit()),
-            TransferError => self.ch().cr.modify(|_, w| w.teie().clear_bit()),
-            Any => self.ch().cr.modify(|_, w| {
+            HalfTransfer => self.ch().cr().modify(|_, w| w.htie().clear_bit()),
+            TransferComplete => self.ch().cr().modify(|_, w| w.tcie().clear_bit()),
+            TransferError => self.ch().cr().modify(|_, w| w.teie().clear_bit()),
+            Any => self.ch().cr().modify(|_, w| {
                 w.htie().clear_bit();
                 w.tcie().clear_bit();
                 w.teie().clear_bit()
             }),
-        }
+        };
     }
 
     /// Start a transfer
     fn enable(&mut self) {
         self.clear_event(Event::Any);
-        self.ch().cr.modify(|_, w| w.en().set_bit());
+        self.ch().cr().modify(|_, w| w.en().set_bit());
     }
 
     /// Stop the current transfer
     fn disable(&mut self) {
-        self.ch().cr.modify(|_, w| w.en().clear_bit());
+        self.ch().cr().modify(|_, w| w.en().clear_bit());
     }
 
     /// Is there a transfer in progress on this channel?
     fn is_enabled(&self) -> bool {
-        self.ch().cr.read().en().bit_is_set()
+        self.ch().cr().read().en().bit_is_set()
     }
 }
 
 macro_rules! dma {
     (
         channels: {
-            $( $Ci:ident: (
-                $chi:ident,
-                $htifi:ident, $tcifi:ident, $teifi:ident, $gifi:ident,
-                $chtifi:ident, $ctcifi:ident, $cteifi:ident, $cgifi:ident,
-                $MuxCi: ident
-            ), )+
+            $(
+                $Ci:ident: ($chi:ident, $i: literal),
+            )+
         },
     ) => {
         use crate::dmamux;
         use crate::rcc::{Enable, Reset};
-        use crate::stm32::{self, DMA};
+        use crate::stm32::{self, DMA1 as DMA};
         use crate::dmamux::DmaMuxExt;
 
         /// DMA channels
@@ -280,13 +273,13 @@ macro_rules! dma {
         $(
             /// Singleton that represents a DMA channel
             pub struct $Ci {
-                mux: dmamux::$MuxCi,
+                mux: dmamux::Channel<$i>,
             }
 
             impl private::Channel for $Ci {
-                fn ch(&self) -> &stm32::dma::CH {
+                fn ch(&self) -> &stm32::dma1::CH {
                     // NOTE(unsafe) $Ci grants exclusive access to this register
-                    unsafe { &(*DMA::ptr()).$chi }
+                    unsafe { &(*DMA::ptr()).ch($i) }
                 }
             }
 
@@ -306,12 +299,12 @@ macro_rules! dma {
                     use Event::*;
 
                     // NOTE(unsafe) atomic read
-                    let flags = unsafe { (*DMA::ptr()).isr.read() };
+                    let flags = unsafe { (*DMA::ptr()).isr().read() };
                     match event {
-                        HalfTransfer => flags.$htifi().bit_is_set(),
-                        TransferComplete => flags.$tcifi().bit_is_set(),
-                        TransferError => flags.$teifi().bit_is_set(),
-                        Any => flags.$gifi().bit_is_set(),
+                        HalfTransfer => flags.htif($i).bit_is_set(),
+                        TransferComplete => flags.tcif($i).bit_is_set(),
+                        TransferError => flags.teif($i).bit_is_set(),
+                        Any => flags.gif($i).bit_is_set(),
                     }
                 }
 
@@ -320,11 +313,11 @@ macro_rules! dma {
 
                     // NOTE(unsafe) atomic write to a stateless register
                     unsafe {
-                        let _ = &(*DMA::ptr()).ifcr.write(|w| match event {
-                            HalfTransfer => w.$chtifi().set_bit(),
-                            TransferComplete => w.$ctcifi().set_bit(),
-                            TransferError => w.$cteifi().set_bit(),
-                            Any => w.$cgifi().set_bit(),
+                        let _ = &(*DMA::ptr()).ifcr().write(|w| match event {
+                            HalfTransfer => w.chtif($i).set_bit(),
+                            TransferComplete => w.ctcif($i).set_bit(),
+                            TransferError => w.cteif($i).set_bit(),
+                            Any => w.cgif($i).set_bit(),
                         });
                     }
                 }
@@ -334,27 +327,33 @@ macro_rules! dma {
     }
 }
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g0b1",
+    feature = "stm32g0c1",
+))]
 dma!(
     channels: {
-        C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
-        C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
-        C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
-        C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
-        C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
-        C6: (ch6, htif6, tcif6, teif6, gif6, chtif6, ctcif6, cteif6, cgif6, C5),
-        C7: (ch7, htif7, tcif7, teif7, gif7, chtif7, ctcif7, cteif7, cgif7, C6),
+        C1: (ch1, 0),
+        C2: (ch2, 1),
+        C3: (ch3, 2),
+        C4: (ch4, 3),
+        C5: (ch5, 4),
+        C6: (ch6, 5),
+        C7: (ch7, 6),
     },
 );
 
 #[cfg(any(feature = "stm32g030", feature = "stm32g031", feature = "stm32g041"))]
 dma!(
     channels: {
-        C1: (ch1, htif1, tcif1, teif1, gif1, chtif1, ctcif1, cteif1, cgif1, C0),
-        C2: (ch2, htif2, tcif2, teif2, gif2, chtif2, ctcif2, cteif2, cgif2, C1),
-        C3: (ch3, htif3, tcif3, teif3, gif3, chtif3, ctcif3, cteif3, cgif3, C2),
-        C4: (ch4, htif4, tcif4, teif4, gif4, chtif4, ctcif4, cteif4, cgif4, C3),
-        C5: (ch5, htif5, tcif5, teif5, gif5, chtif5, ctcif5, cteif5, cgif5, C4),
+        C1: (ch1, 0),
+        C2: (ch2, 1),
+        C3: (ch3, 2),
+        C4: (ch4, 3),
+        C5: (ch5, 4),
     },
 );
 
@@ -388,11 +387,23 @@ impl DmaExt for DMA {
             ch5: C5 {
                 mux: muxchannels.ch4,
             },
-            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            #[cfg(any(
+                feature = "stm32g070",
+                feature = "stm32g071",
+                feature = "stm32g081",
+                feature = "stm32g0b1",
+                feature = "stm32g0c1",
+            ))]
             ch6: C6 {
                 mux: muxchannels.ch5,
             },
-            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            #[cfg(any(
+                feature = "stm32g070",
+                feature = "stm32g071",
+                feature = "stm32g081",
+                feature = "stm32g0b1",
+                feature = "stm32g0c1",
+            ))]
             ch7: C7 {
                 mux: muxchannels.ch6,
             },

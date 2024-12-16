@@ -122,7 +122,7 @@ impl Rcc {
                     Prescaler::Div128 => (HSI_FREQ / 128, 0b111),
                     _ => (HSI_FREQ, 0b000),
                 };
-                self.cr.write(|w| unsafe { w.hsidiv().bits(div_bits) });
+                self.cr().write(|w| unsafe { w.hsidiv().bits(div_bits) });
                 (freq.Hz(), 0b000)
             }
         };
@@ -150,7 +150,7 @@ impl Rcc {
         unsafe {
             // Adjust flash wait states
             let flash = &(*FLASH::ptr());
-            flash.acr.modify(|_, w| {
+            flash.acr().modify(|_, w| {
                 w.latency().bits(if sys_clk.raw() <= 24_000_000 {
                     0b000
                 } else if sys_clk.raw() <= 48_000_000 {
@@ -158,10 +158,10 @@ impl Rcc {
                 } else {
                     0b010
                 })
-            })
+            });
         }
 
-        self.cfgr.modify(|_, w| unsafe {
+        self.cfgr().modify(|_, w| unsafe {
             w.hpre()
                 .bits(ahb_psc_bits)
                 .ppre()
@@ -170,7 +170,7 @@ impl Rcc {
                 .bits(sw_bits)
         });
 
-        while self.cfgr.read().sws().bits() != sw_bits {}
+        while self.cfgr().read().sws().bits() != sw_bits {}
 
         Rcc {
             rb: self.rb,
@@ -186,24 +186,26 @@ impl Rcc {
     }
 
     pub fn trim_hsi_clocks(&mut self, value: u8) {
-        self.icscr.modify(|_, w| unsafe { w.hsitrim().bits(value) });
+        self.icscr()
+            .modify(|_, w| unsafe { w.hsitrim().bits(value) });
     }
 
+    #[cfg(not(feature = "stm32g0x0"))]
     pub fn set_reset_mode(&mut self, mode: ResetMode) {
         unsafe {
             let flash = &(*FLASH::ptr());
 
             // Unlock flash
-            flash.keyr.write(|w| w.keyr().bits(0x4567_0123));
-            flash.keyr.write(|w| w.keyr().bits(0xcdef_89ab));
+            flash.keyr().write(|w| w.key().bits(0x4567_0123));
+            flash.keyr().write(|w| w.key().bits(0xcdef_89ab));
 
             // Unlock flash OTP
-            flash.optkeyr.write(|w| w.optkeyr().bits(0x0819_2a3b));
-            flash.optkeyr.write(|w| w.optkeyr().bits(0x4c5d_6e7f));
-            flash.cr.modify(|_, w| w.optlock().clear_bit());
+            flash.optkeyr().write(|w| w.optkey().bits(0x0819_2a3b));
+            flash.optkeyr().write(|w| w.optkey().bits(0x4c5d_6e7f));
+            flash.cr().modify(|_, w| w.optlock().clear_bit());
 
-            flash.optr.modify(|_, w| w.nrst_mode().bits(mode as u8));
-            flash.cr.modify(|_, w| w.optstrt().set_bit());
+            flash.optr().modify(|_, w| w.nrst_mode().bits(mode as u8));
+            flash.cr().modify(|_, w| w.optstrt().set_bit());
         }
     }
 
@@ -214,7 +216,7 @@ impl Rcc {
         // If the system is currently clocked from the PLL, then switch back to
         // the HSI before we disable the PLL, otherwise the PLL will refuse to
         // switch off.
-        self.cfgr.modify(|r, w| {
+        self.cfgr().modify(|r, w| {
             if r.sw().bits() == 0b010 {
                 unsafe { w.sw().bits(0b000) };
             }
@@ -222,8 +224,8 @@ impl Rcc {
         });
 
         // Disable PLL
-        self.cr.modify(|_, w| w.pllon().clear_bit());
-        while self.cr.read().pllrdy().bit_is_set() {}
+        self.cr().modify(|_, w| w.pllon().clear_bit());
+        while self.cr().read().pllrdy().bit_is_set() {}
 
         let (freq, pll_sw_bits) = match pll_cfg.mux {
             PLLSrc::HSI => {
@@ -245,7 +247,7 @@ impl Rcc {
         let mut q = None;
         let mut p = None;
 
-        self.pllsyscfgr.write(|w| unsafe {
+        self.pllcfgr().write(|w| unsafe {
             w.pllsrc().bits(pll_sw_bits);
             w.pllm().bits(pll_cfg.m - 1);
             w.plln().bits(pll_cfg.n);
@@ -269,47 +271,47 @@ impl Rcc {
         });
 
         // Enable PLL
-        self.cr.modify(|_, w| w.pllon().set_bit());
-        while self.cr.read().pllrdy().bit_is_clear() {}
+        self.cr().modify(|_, w| w.pllon().set_bit());
+        while self.cr().read().pllrdy().bit_is_clear() {}
 
         PLLClocks { r, q, p }
     }
 
     pub(crate) fn enable_hsi(&self) {
-        self.cr.modify(|_, w| w.hsion().set_bit());
-        while self.cr.read().hsirdy().bit_is_clear() {}
+        self.cr().modify(|_, w| w.hsion().set_bit());
+        while self.cr().read().hsirdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_hse(&self, bypass: bool) {
-        self.cr
+        self.cr()
             .modify(|_, w| w.hseon().set_bit().hsebyp().bit(bypass));
-        while self.cr.read().hserdy().bit_is_clear() {}
+        while self.cr().read().hserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lse(&self, bypass: bool) {
-        self.bdcr
+        self.bdcr()
             .modify(|_, w| w.lseon().bit(!bypass).lsebyp().bit(bypass));
-        while !bypass && self.bdcr.read().lserdy().bit_is_clear() {}
+        while !bypass && self.bdcr().read().lserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lsi(&self) {
-        self.csr.modify(|_, w| w.lsion().set_bit());
-        while self.csr.read().lsirdy().bit_is_clear() {}
+        self.csr().modify(|_, w| w.lsion().set_bit());
+        while self.csr().read().lsirdy().bit_is_clear() {}
     }
 
     pub(crate) fn unlock_rtc(&self) {
-        self.apbenr1.modify(|_, w| w.pwren().set_bit());
+        self.apbenr1().modify(|_, w| w.pwren().set_bit());
         let pwr = unsafe { &(*PWR::ptr()) };
-        pwr.cr1.modify(|_, w| w.dbp().set_bit());
-        while pwr.cr1.read().dbp().bit_is_clear() {}
+        pwr.cr1().modify(|_, w| w.dbp().set_bit());
+        while pwr.cr1().read().dbp().bit_is_clear() {}
     }
 
     pub(crate) fn enable_rtc(&self, src: RTCSrc) {
         self.unlock_rtc();
-        self.apbenr1
+        self.apbenr1()
             .modify(|_, w| w.rtcapben().set_bit().pwren().set_bit());
-        self.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
-        self.bdcr.modify(|_, w| w.bdrst().set_bit());
+        self.apbsmenr1().modify(|_, w| w.rtcapbsmen().set_bit());
+        self.bdcr().modify(|_, w| w.bdrst().set_bit());
 
         let rtc_sel = match src {
             RTCSrc::LSE | RTCSrc::LSE_BYPASS => 0b01,
@@ -317,7 +319,7 @@ impl Rcc {
             RTCSrc::HSE | RTCSrc::HSE_BYPASS => 0b11,
         };
 
-        self.bdcr.modify(|_, w| unsafe {
+        self.bdcr().modify(|_, w| unsafe {
             w.rtcsel()
                 .bits(rtc_sel)
                 .rtcen()
@@ -438,15 +440,15 @@ macro_rules! bus_struct {
             impl $busX {
                 #[inline(always)]
                 fn enr(rcc: &RccRB) -> &rcc::$EN {
-                    &rcc.$en
+                    &rcc.$en()
                 }
                 #[inline(always)]
                 fn smenr(rcc: &RccRB) -> &rcc::$SMEN {
-                    &rcc.$smen
+                    &rcc.$smen()
                 }
                 #[inline(always)]
                 fn rstr(rcc: &RccRB) -> &rcc::$RST {
-                    &rcc.$rst
+                    &rcc.$rst()
                 }
             }
         )+
