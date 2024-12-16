@@ -438,10 +438,11 @@ macro_rules! gpio {
                     pub(crate) fn set_alt_mode(&self, mode: AltFunction) {
                         unsafe {
                             let gpio = &(*$GPIOX::ptr());
-                            if $i < 8 {
-                                gpio.afrl().modify(|_, w| w.afr($i).bits(mode as u8));
+                            let n = $i;
+                            if n < 8 {
+                                gpio.afrl().modify(|_, w| w.afr(n).bits(mode as u8));
                             } else {
-                                gpio.afrh().modify(|_, w| w.afr($i - 8).bits(mode as u8));
+                                gpio.afrh().modify(|_, w| w.afr(n - 8).bits(mode as u8));
                             }
                             gpio.moder().modify(|_, w| w.moder($i).alternate());
                         }
