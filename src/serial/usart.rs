@@ -175,13 +175,13 @@ where
     }
 }
 
-pub trait SerialExt<USART, CONFIG> {
-    fn usart<PINS: Pins<USART>>(
+pub trait SerialExt<CONFIG>: Sized {
+    fn usart(
         self,
-        pins: PINS,
+        pins: impl Pins<Self>,
         config: CONFIG,
         rcc: &mut Rcc,
-    ) -> Result<Serial<USART, CONFIG>, InvalidConfig>;
+    ) -> Result<Serial<Self, CONFIG>, InvalidConfig>;
 }
 
 macro_rules! uart_shared {
@@ -443,10 +443,10 @@ macro_rules! uart_basic {
     ($USARTX:ident,
         $usartX:ident, $clk_mul:expr
     ) => {
-        impl SerialExt<$USARTX, BasicConfig> for $USARTX {
-            fn usart<PINS: Pins<$USARTX>>(
+        impl SerialExt<BasicConfig> for $USARTX {
+            fn usart(
                 self,
-                pins: PINS,
+                pins: impl Pins<Self>,
                 config: BasicConfig,
                 rcc: &mut Rcc,
             ) -> Result<Serial<$USARTX, BasicConfig>, InvalidConfig> {
@@ -596,13 +596,13 @@ macro_rules! uart_full {
     ($USARTX:ident,
         $usartX:ident, $clk_mul:expr
     ) => {
-        impl SerialExt<$USARTX, FullConfig> for $USARTX {
-            fn usart<PINS: Pins<$USARTX>>(
+        impl SerialExt<FullConfig> for $USARTX {
+            fn usart(
                 self,
-                pins: PINS,
+                pins: impl Pins<Self>,
                 config: FullConfig,
                 rcc: &mut Rcc,
-            ) -> Result<Serial<$USARTX, FullConfig>, InvalidConfig> {
+            ) -> Result<Serial<Self, FullConfig>, InvalidConfig> {
                 Serial::$usartX(self, pins, config, rcc)
             }
         }

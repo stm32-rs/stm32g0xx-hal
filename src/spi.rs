@@ -1,8 +1,9 @@
 use crate::gpio::*;
-use crate::rcc::*;
-use crate::stm32::{SPI1, SPI2};
+use crate::rcc::{self, Rcc};
+use crate::stm32::{self as pac, spi1};
 use crate::time::Hertz;
 use core::convert::Infallible;
+use core::ptr;
 use embedded_hal::delay::DelayNs;
 use hal::digital;
 use hal::digital::OutputPin;
@@ -34,6 +35,11 @@ impl hal::spi::Error for Error {
             Error::Crc => ErrorKind::Other,
         }
     }
+}
+
+pub trait Instance:
+    crate::Sealed + core::ops::Deref<Target = spi1::RegisterBlock> + rcc::Enable + rcc::Reset
+{
 }
 
 /// A filler type for when the delay is unnecessary
@@ -124,11 +130,13 @@ pub trait SpiExt: Sized {
 }
 
 macro_rules! spi {
-    ($SPIX:ident, $spiX:ident,
+    ($SPIX:ty,
         sck: [ $(($SCK:ty, $SCK_AF:expr),)+ ],
         miso: [ $(($MISO:ty, $MISO_AF:expr),)+ ],
         mosi: [ $(($MOSI:ty, $MOSI_AF:expr),)+ ],
     ) => {
+        impl Instance for $SPIX {}
+
         impl PinSck<$SPIX> for NoSck {
             fn setup(&self) {}
 
@@ -186,214 +194,219 @@ macro_rules! spi {
                 }
             }
         )*
+    }
+}
 
-        impl<PINS: Pins<$SPIX>> SpiBus<$SPIX, PINS> {
-            pub fn $spiX(
-                spi: $SPIX,
-                pins: PINS,
-                mode: Mode,
-                speed: Hertz,
-                rcc: &mut Rcc
-            ) -> Self {
-                $SPIX::enable(rcc);
-                $SPIX::reset(rcc);
+impl<SPI: Instance, PINS: Pins<SPI>> SpiBus<SPI, PINS> {
+    pub fn new(spi: SPI, pins: PINS, mode: Mode, speed: Hertz, rcc: &mut Rcc) -> Self {
+        SPI::enable(rcc);
+        SPI::reset(rcc);
 
-                // disable SS output
-                spi.cr2().write(|w| w.ssoe().clear_bit());
+        // disable SS output
+        spi.cr2().write(|w| w.ssoe().clear_bit());
 
-                let br = match rcc.clocks.apb_clk / speed {
-                    0 => unreachable!(),
-                    1..=2 => 0b000,
-                    3..=5 => 0b001,
-                    6..=11 => 0b010,
-                    12..=23 => 0b011,
-                    24..=47 => 0b100,
-                    48..=95 => 0b101,
-                    96..=191 => 0b110,
-                    _ => 0b111,
-                };
+        let br = match rcc.clocks.apb_clk / speed {
+            0 => unreachable!(),
+            1..=2 => 0b000,
+            3..=5 => 0b001,
+            6..=11 => 0b010,
+            12..=23 => 0b011,
+            24..=47 => 0b100,
+            48..=95 => 0b101,
+            96..=191 => 0b110,
+            _ => 0b111,
+        };
 
-                spi.cr2().write(|w| unsafe {
-                    w.frxth().set_bit().ds().bits(0b111).ssoe().clear_bit()
-                });
+        spi.cr2()
+            .write(|w| unsafe { w.frxth().set_bit().ds().bits(0b111).ssoe().clear_bit() });
 
-                // Enable pins
-                pins.setup();
+        // Enable pins
+        pins.setup();
 
-                #[rustfmt::skip]
-                spi.cr1().write(|w| {
-                    w.cpha().bit(mode.phase == Phase::CaptureOnSecondTransition);
-                    w.cpol().bit(mode.polarity == Polarity::IdleHigh);
-                    w.mstr().set_bit();
-                    w.br().set(br);
-                    w.lsbfirst().clear_bit();
-                    w.ssm().set_bit();
-                    w.ssi().set_bit();
-                    w.rxonly().clear_bit();
-                    w.crcl().clear_bit();
-                    w.bidimode().clear_bit();
-                    w.spe().set_bit()
-                });
+        spi.cr1().write(|w| {
+            w.cpha().bit(mode.phase == Phase::CaptureOnSecondTransition);
+            w.cpol().bit(mode.polarity == Polarity::IdleHigh);
+            w.mstr().set_bit();
+            w.br().set(br);
+            w.lsbfirst().clear_bit();
+            w.ssm().set_bit();
+            w.ssi().set_bit();
+            w.rxonly().clear_bit();
+            w.crcl().clear_bit();
+            w.bidimode().clear_bit();
+            w.spe().set_bit()
+        });
 
-                SpiBus { spi, pins }
-            }
+        SpiBus { spi, pins }
+    }
 
-            pub fn exclusive<CS: OutputPin, DELAY: DelayNs>(self, cs: CS, delay: DELAY) -> SpiDevice<SpiBus<$SPIX, PINS>, CS, DELAY,> {
-                SpiDevice {
-                    bus: self,
-                    cs,
-                    delay
+    pub fn exclusive<CS: OutputPin, DELAY: DelayNs>(
+        self,
+        cs: CS,
+        delay: DELAY,
+    ) -> SpiDevice<SpiBus<SPI, PINS>, CS, DELAY> {
+        SpiDevice {
+            bus: self,
+            cs,
+            delay,
+        }
+    }
+
+    pub fn data_size(&mut self, nr_bits: u8) {
+        self.spi
+            .cr2()
+            .modify(|_, w| unsafe { w.ds().bits(nr_bits - 1) });
+    }
+
+    pub fn half_duplex_enable(&mut self, enable: bool) {
+        self.spi.cr1().modify(|_, w| w.bidimode().bit(enable));
+    }
+
+    pub fn half_duplex_output_enable(&mut self, enable: bool) {
+        self.spi.cr1().modify(|_, w| w.bidioe().bit(enable));
+    }
+
+    pub fn release(self) -> (SPI, PINS) {
+        (self.spi, self.pins.release())
+    }
+}
+
+impl<SPI: Instance, PINS, CS: OutputPin, DELAY> ErrorType
+    for SpiDevice<SpiBus<SPI, PINS>, CS, DELAY>
+{
+    type Error = Error;
+}
+impl<SPI: Instance, PINS, CS: OutputPin, DELAY: DelayNs> spi::SpiDevice
+    for SpiDevice<SpiBus<SPI, PINS>, CS, DELAY>
+{
+    fn transaction(&mut self, operations: &mut [hal::spi::Operation<'_, u8>]) -> Result<(), Error> {
+        use crate::hal::spi::SpiBus;
+        self.cs.set_low().map_err(|_| Error::ChipSelectFault)?;
+        for op in operations {
+            match op {
+                spi::Operation::Read(read) => {
+                    self.bus.read(read)?;
                 }
-            }
-
-            pub fn data_size(&mut self, nr_bits: u8) {
-                self.spi.cr2().modify(|_, w| unsafe {
-                    w.ds().bits(nr_bits-1)
-                });
-            }
-
-            pub fn half_duplex_enable(&mut self, enable: bool) {
-                self.spi.cr1().modify(|_, w|
-                    w.bidimode().bit(enable)
-                );
-            }
-
-            pub fn half_duplex_output_enable(&mut self, enable: bool) {
-                self.spi.cr1().modify(|_, w|
-                    w.bidioe().bit(enable)
-                );
-            }
-
-            pub fn release(self) -> ($SPIX, PINS) {
-                (self.spi, self.pins.release())
-            }
-        }
-
-        impl<PINS, CS: OutputPin, DELAY> ErrorType for SpiDevice<SpiBus<$SPIX, PINS>, CS, DELAY> {
-            type Error = Error;
-        }
-
-        impl<PINS, CS: OutputPin, DELAY: DelayNs> spi::SpiDevice for SpiDevice<SpiBus<$SPIX, PINS>, CS, DELAY> {
-            fn transaction(&mut self, operations: &mut [hal::spi::Operation<'_, u8>]) -> Result<(), Error> {
-                use crate::hal::spi::SpiBus;
-                self.cs.set_low().map_err(|_| Error::ChipSelectFault)?;
-                for op in operations {
-                    match op {
-                        spi::Operation::Read(read) => { self.bus.read(read)?; },
-                        spi::Operation::Write(write) => { self.bus.write(write)?; },
-                        spi::Operation::Transfer(write, read) => { self.bus.transfer(write, read)?; },
-                        spi::Operation::TransferInPlace(data) => { self.bus.transfer_in_place(data)?; },
-                        spi::Operation::DelayNs(ns) => { self.delay.delay_ns(*ns) },
-                    }
+                spi::Operation::Write(write) => {
+                    self.bus.write(write)?;
                 }
-                self.cs.set_high().map_err(|_| Error::ChipSelectFault)?;
-                Ok(())
+                spi::Operation::Transfer(write, read) => {
+                    self.bus.transfer(write, read)?;
+                }
+                spi::Operation::TransferInPlace(data) => {
+                    self.bus.transfer_in_place(data)?;
+                }
+                spi::Operation::DelayNs(ns) => self.delay.delay_ns(*ns),
             }
         }
+        self.cs.set_high().map_err(|_| Error::ChipSelectFault)?;
+        Ok(())
+    }
+}
 
-        impl SpiExt for $SPIX {
-            fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> SpiBus<$SPIX, PINS>
-            where
-                PINS: Pins<$SPIX>,
-            {
-                SpiBus::$spiX(self, pins, mode, freq, rcc)
-            }
+impl<SPI: Instance> SpiExt for SPI {
+    fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> SpiBus<SPI, PINS>
+    where
+        PINS: Pins<SPI>,
+    {
+        SpiBus::new(self, pins, mode, freq, rcc)
+    }
+}
+
+impl<SPI: Instance, PINS> SpiBus<SPI, PINS> {
+    fn receive_byte(&mut self) -> nb::Result<u8, Error> {
+        let sr = self.spi.sr().read();
+
+        Err(if sr.ovr().bit_is_set() {
+            nb::Error::Other(Error::Overrun)
+        } else if sr.modf().bit_is_set() {
+            nb::Error::Other(Error::ModeFault)
+        } else if sr.crcerr().bit_is_set() {
+            nb::Error::Other(Error::Crc)
+        } else if sr.rxne().bit_is_set() {
+            // NOTE(read_volatile) read only 1 byte (the svd2rust API only allows
+            // reading a half-word)
+            return Ok(unsafe { ptr::read_volatile(&self.spi.dr() as *const _ as *const u8) });
+        } else {
+            nb::Error::WouldBlock
+        })
+    }
+
+    fn send_byte(&mut self, byte: u8) -> nb::Result<(), Error> {
+        let sr = self.spi.sr().read();
+        Err(if sr.ovr().bit_is_set() {
+            nb::Error::Other(Error::Overrun)
+        } else if sr.modf().bit_is_set() {
+            nb::Error::Other(Error::ModeFault)
+        } else if sr.crcerr().bit_is_set() {
+            nb::Error::Other(Error::Crc)
+        } else if sr.txe().bit_is_set() {
+            self.spi.dr().write(|w| w.dr().set(byte.into()));
+            return Ok(());
+        } else {
+            nb::Error::WouldBlock
+        })
+    }
+}
+
+impl<SPI: Instance, PINS> ErrorType for SpiBus<SPI, PINS> {
+    type Error = Error;
+}
+
+impl<SPI: Instance, PINS> spi::SpiBus for SpiBus<SPI, PINS> {
+    fn read(&mut self, bytes: &mut [u8]) -> Result<(), Self::Error> {
+        for byte in bytes.iter_mut() {
+            block!(self.send_byte(0))?;
+            *byte = block!(self.receive_byte())?;
         }
+        Ok(())
+    }
 
-        impl<PINS> SpiBus<$SPIX, PINS> {
-            fn receive_byte(&mut self) -> nb::Result<u8, Error> {
-                let sr = self.spi.sr().read();
-                Err(if sr.ovr().bit_is_set() {
-                    nb::Error::Other(Error::Overrun)
-                } else if sr.modf().bit_is_set() {
-                    nb::Error::Other(Error::ModeFault)
-                } else if sr.crcerr().bit_is_set() {
-                    nb::Error::Other(Error::Crc)
-                } else if sr.rxne().bit_is_set() {
-                    return Ok(self.spi.dr8().read().bits() as u8);
-                } else {
-                    nb::Error::WouldBlock
-                })
-            }
-
-            fn send_byte(&mut self, byte: u8) -> nb::Result<(), Error> {
-                let sr = self.spi.sr().read();
-                Err(if sr.ovr().bit_is_set() {
-                    nb::Error::Other(Error::Overrun)
-                } else if sr.modf().bit_is_set() {
-                    nb::Error::Other(Error::ModeFault)
-                } else if sr.crcerr().bit_is_set() {
-                    nb::Error::Other(Error::Crc)
-                } else if sr.txe().bit_is_set() {
-                    self.spi.dr8().write(|w| unsafe { w.dr().bits(byte as _) });
-                    return Ok(());
-                } else {
-                    nb::Error::WouldBlock
-                })
-            }
+    fn write(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
+        for byte in bytes.iter() {
+            block!(self.send_byte(*byte))?;
+            block!(self.receive_byte())?;
         }
+        Ok(())
+    }
 
-        impl<PINS> ErrorType for SpiBus<$SPIX, PINS> {
-            type Error = Error;
-        }
-
-        impl<PINS> spi::SpiBus for SpiBus<$SPIX, PINS> {
-            fn read(&mut self, bytes: &mut [u8]) -> Result<(), Self::Error> {
-                for byte in bytes.iter_mut() {
+    fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
+        let mut iter_r = read.iter_mut();
+        let mut iter_w = write.iter().cloned();
+        loop {
+            match (iter_r.next(), iter_w.next()) {
+                (Some(r), Some(w)) => {
+                    block!(self.send_byte(w))?;
+                    *r = block!(self.receive_byte())?;
+                }
+                (Some(r), None) => {
                     block!(self.send_byte(0))?;
-                    *byte = block!(self.receive_byte())?;
+                    *r = block!(self.receive_byte())?;
                 }
-                Ok(())
-            }
-
-            fn write(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
-                for byte in bytes.iter() {
-                    block!(self.send_byte(*byte))?;
-                    block!(self.receive_byte())?;
+                (None, Some(w)) => {
+                    block!(self.send_byte(w))?;
+                    let _ = block!(self.receive_byte())?;
                 }
-                Ok(())
-            }
-
-            fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
-                let mut iter_r = read.iter_mut();
-                let mut iter_w = write.iter().cloned();
-                loop {
-                    match (iter_r.next(), iter_w.next()) {
-                        (Some(r), Some(w)) => {
-                            block!(self.send_byte(w))?;
-                            *r = block!(self.receive_byte())?;
-                        }
-                        (Some(r), None) => {
-                            block!(self.send_byte(0))?;
-                            *r = block!(self.receive_byte())?;
-                        }
-                        (None, Some(w)) => {
-                            block!(self.send_byte(w))?;
-                            let _ = block!(self.receive_byte())?;
-                        }
-                        (None, None) => return Ok(()),
-                    }
-                }
-            }
-
-            fn transfer_in_place(&mut self, bytes: &mut [u8]) -> Result<(), Self::Error> {
-                for byte in bytes.iter_mut() {
-                    block!(self.send_byte(*byte))?;
-                    *byte = block!(self.receive_byte())?;
-                }
-                Ok(())
-            }
-
-            fn flush(&mut self) -> Result<(), Self::Error> {
-                Ok(())
+                (None, None) => return Ok(()),
             }
         }
+    }
+
+    fn transfer_in_place(&mut self, bytes: &mut [u8]) -> Result<(), Self::Error> {
+        for byte in bytes.iter_mut() {
+            block!(self.send_byte(*byte))?;
+            *byte = block!(self.receive_byte())?;
+        }
+        Ok(())
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
     }
 }
 
 spi!(
-    SPI1,
-    spi1,
+    pac::SPI1,
     sck: [
         (PA1<DefaultMode>, AltFunction::AF0),
         (PA5<DefaultMode>, AltFunction::AF0),
@@ -416,8 +429,7 @@ spi!(
 );
 
 spi!(
-    SPI2,
-    spi2,
+    pac::SPI2,
     sck: [
         (PA0<DefaultMode>, AltFunction::AF0),
         (PB8<DefaultMode>, AltFunction::AF1),
