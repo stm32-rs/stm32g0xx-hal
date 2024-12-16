@@ -63,11 +63,11 @@ impl RngExt for RNG {
     fn constrain(self, cfg: Config, rcc: &mut Rcc) -> Rng {
         RNG::enable(rcc);
         RNG::reset(rcc);
-        rcc.ccipr
+        rcc.ccipr()
             .modify(|_, w| unsafe { w.rngsel().bits(cfg.clk_src as u8) });
-        rcc.ccipr
+        rcc.ccipr()
             .modify(|_, w| unsafe { w.rngdiv().bits(cfg.clk_div as u8) });
-        self.cr.modify(|_, w| w.rngen().set_bit());
+        self.cr().modify(|_, w| w.rngen().set_bit());
         Rng { rb: self }
     }
 }
@@ -85,9 +85,9 @@ pub struct Rng {
 impl Rng {
     pub fn gen(&mut self) -> Result<u32, ErrorKind> {
         loop {
-            let status = self.rb.sr.read();
+            let status = self.rb.sr().read();
             if status.drdy().bit() {
-                return Ok(self.rb.dr.read().rndata().bits());
+                return Ok(self.rb.dr().read().rndata().bits());
             }
             if status.cecs().bit() {
                 return Err(ErrorKind::ClockError);

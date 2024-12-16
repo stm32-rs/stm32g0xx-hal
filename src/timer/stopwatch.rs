@@ -20,7 +20,7 @@ macro_rules! stopwatches {
                     $TIM::enable(rcc);
                     $TIM::reset(rcc);
 
-                    tim.cr1.modify(|_, w| w.cen().set_bit());
+                    tim.cr1().modify(|_, w| w.cen().set_bit());
                     Stopwatch {
                         tim,
                         clk: rcc.clocks.apb_tim_clk,
@@ -40,20 +40,20 @@ macro_rules! stopwatches {
                 ///
                 /// The counter frequency is equal to the input clock divided by the prescaler + 1.
                 pub fn set_prescaler(&mut self, prescaler: u16) {
-                    self.tim.psc.write(|w| w.psc().bits(prescaler) );
-                    self.tim.egr.write(|w| w.ug().set_bit());
+                    self.tim.psc().write(|w| w.psc().set(prescaler));
+                    self.tim.egr().write(|w| w.ug().set_bit());
                 }
 
                 pub fn reset(&mut self) {
-                    self.tim.cnt.reset();
+                    self.tim.cnt().reset();
                 }
 
                 pub fn pause(&mut self) {
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().clear_bit());
                 }
 
                 pub fn resume(&mut self) {
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().set_bit());
                 }
 
                 pub fn release(self) -> $TIM {
@@ -61,13 +61,13 @@ macro_rules! stopwatches {
                 }
 
                 pub fn now(&self) -> Instant {
-                    Instant::from_ticks(self.tim.cnt.read().bits())
+                    Instant::from_ticks(self.tim.cnt().read().bits())
                 }
 
                 pub fn elapsed(&self, ts: Instant) -> MicroSecond {
                     let now = self.now().ticks();
                     let cycles = (now as $depth).wrapping_sub(ts.ticks() as $depth) as u32;
-                    duration(self.clk, cycles * (1 + self.tim.psc.read().bits()))
+                    duration(self.clk, cycles * (1 + self.tim.psc().read().bits()))
                 }
 
                 pub fn trace<F>(&self, mut closure: F) -> MicroSecond
@@ -77,7 +77,7 @@ macro_rules! stopwatches {
                     let started = self.now().ticks();
                     closure();
                     let now = self.now().ticks();
-                    duration(self.clk, now.wrapping_sub(started) * (1 + self.tim.psc.read().bits()))
+                    duration(self.clk, now.wrapping_sub(started) * (1 + self.tim.psc().read().bits()))
                 }
             }
 

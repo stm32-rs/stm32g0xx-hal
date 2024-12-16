@@ -106,8 +106,8 @@ macro_rules! dac {
                 pub fn enable(self) -> $CX<Enabled> {
                     let dac = unsafe { &(*DAC::ptr()) };
 
-                    dac.mcr.modify(|_, w| unsafe { w.$mode().bits(1) });
-                    dac.cr.modify(|_, w| w.$en().set_bit());
+                    dac.mcr().modify(|_, w| unsafe { w.$mode().bits(1) });
+                    dac.cr().modify(|_, w| w.$en().set_bit());
 
                     $CX {
                         _enabled: PhantomData,
@@ -117,8 +117,8 @@ macro_rules! dac {
                 pub fn enable_unbuffered(self) -> $CX<EnabledUnbuffered> {
                     let dac = unsafe { &(*DAC::ptr()) };
 
-                    dac.mcr.modify(|_, w| unsafe { w.$mode().bits(2) });
-                    dac.cr.modify(|_, w| w.$en().set_bit());
+                    dac.mcr().modify(|_, w| unsafe { w.$mode().bits(2) });
+                    dac.cr().modify(|_, w| w.$en().set_bit());
 
                     $CX {
                         _enabled: PhantomData,
@@ -128,8 +128,8 @@ macro_rules! dac {
                 pub fn enable_generator(self, config: GeneratorConfig) -> $CX<WaveGenerator> {
                     let dac = unsafe { &(*DAC::ptr()) };
 
-                    dac.mcr.modify(|_, w| unsafe { w.$mode().bits(1) });
-                    dac.cr.modify(|_, w| unsafe {
+                    dac.mcr().modify(|_, w| unsafe { w.$mode().bits(1) });
+                    dac.cr().modify(|_, w| unsafe {
                         w.$wave().bits(config.mode);
                         w.$ten().set_bit();
                         w.$mamp().bits(config.amp);
@@ -159,19 +159,19 @@ macro_rules! dac {
                     T: DelayNs,
                 {
                     let dac = unsafe { &(*DAC::ptr()) };
-                    dac.cr.modify(|_, w| w.$en().clear_bit());
-                    dac.mcr.modify(|_, w| unsafe { w.$mode().bits(0) });
-                    dac.cr.modify(|_, w| w.$cen().set_bit());
+                    dac.cr().modify(|_, w| w.$en().clear_bit());
+                    dac.mcr().modify(|_, w| unsafe { w.$mode().bits(0) });
+                    dac.cr().modify(|_, w| w.$cen().set_bit());
                     let mut trim = 0;
                     while true {
-                        dac.ccr.modify(|_, w| unsafe { w.$trim().bits(trim) });
-                        delay.delay_us(64_000_u32);
-                        if dac.sr.read().$cal_flag().bit() {
+                        dac.ccr().modify(|_, w| unsafe { w.$trim().bits(trim) });
+                        delay.delay_us(64_u32);
+                        if dac.sr().read().$cal_flag().bit() {
                             break;
                         }
                         trim += 1;
                     }
-                    dac.cr.modify(|_, w| w.$cen().clear_bit());
+                    dac.cr().modify(|_, w| w.$cen().clear_bit());
 
                     $CX {
                         _enabled: PhantomData,
@@ -181,7 +181,7 @@ macro_rules! dac {
                 /// Disable the DAC channel
                 pub fn disable(self) -> $CX<Disabled> {
                     let dac = unsafe { &(*DAC::ptr()) };
-                    dac.cr.modify(|_, w| unsafe {
+                    dac.cr().modify(|_, w| unsafe {
                         w.$en().clear_bit().$wave().bits(0).$ten().clear_bit()
                     });
 
@@ -196,12 +196,12 @@ macro_rules! dac {
             impl<ED> DacOut<u16> for $CX<ED> {
                 fn set_value(&mut self, val: u16) {
                     let dac = unsafe { &(*DAC::ptr()) };
-                    dac.$dhrx.write(|w| unsafe { w.bits(val as u32) });
+                    dac.$dhrx().write(|w| unsafe { w.bits(val as u32) });
                 }
 
                 fn get_value(&mut self) -> u16 {
                     let dac = unsafe { &(*DAC::ptr()) };
-                    dac.$dac_dor.read().bits() as u16
+                    dac.$dac_dor().read().bits() as u16
                 }
             }
 
@@ -209,7 +209,7 @@ macro_rules! dac {
             impl $CX<WaveGenerator> {
                 pub fn trigger(&mut self) {
                     let dac = unsafe { &(*DAC::ptr()) };
-                    dac.swtrgr.write(|w| { w.$swtrig().set_bit() });
+                    dac.swtrgr().write(|w| { w.$swtrig().set_bit() });
                 }
             }
         )+
