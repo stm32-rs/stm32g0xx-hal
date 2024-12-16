@@ -4,7 +4,8 @@
 pub struct FlashPage(pub usize);
 
 /// Flash operation error
-#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Error {
     /// Flash controller is not done yet
     Busy,

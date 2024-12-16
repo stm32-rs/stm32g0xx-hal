@@ -58,6 +58,8 @@ impl Default for Clocks {
 }
 
 /// Reset pin mode and remap
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ResetMode {
     /// Reset Input only: a low level on the NRST pin generates system reset, internal RESET not propagated to the NSRT pin
     ResetInput = 0b01,
