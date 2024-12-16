@@ -77,7 +77,10 @@ macro_rules! trigger_pins {
                         }
                     };
 
+                    #[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
                     tim.smcr().modify(|_, w| unsafe { w.ts().bits(ts) });
+                    #[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+                    tim.smcr().modify(|_, w| unsafe { w.ts1().bits(ts) });
 
                     Self {
                         pin,

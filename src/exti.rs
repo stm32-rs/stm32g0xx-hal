@@ -67,6 +67,8 @@ impl Event {
     }
 }
 
+#[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+const TRIGGER_MAX: u8 = 20;
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 const TRIGGER_MAX: u8 = 18;
 #[cfg(any(feature = "stm32g031", feature = "stm32g041"))]

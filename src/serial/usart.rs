@@ -262,7 +262,11 @@ macro_rules! uart_shared {
             /// Return true if the rx register is not empty (and can be read)
             pub fn is_rxne(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr().read().rxne().bit_is_set()
+                #[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
+                let f = usart.isr().read().rxne().bit_is_set();
+                #[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+                let f = usart.isr().read().rxfne().bit_is_set();
+                f
             }
 
             /// Listen for an idle interrupt event
@@ -303,13 +307,29 @@ macro_rules! uart_shared {
                     } else if isr.fe().bit_is_set() {
                         usart.icr().write(|w| w.fecf().set_bit());
                         nb::Error::Other(Error::Framing)
-                    } else if isr.nf().bit_is_set() {
+                    } else if {
+                        #[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
+                        let f = isr.nf().bit_is_set();
+                        #[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+                        let f = isr.ne().bit_is_set();
+                        f
+                    }
+                    {
+                        #[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
                         usart.icr().write(|w| w.ncf().set_bit());
+                        #[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+                        usart.icr().write(|w| w.necf().set_bit());
                         nb::Error::Other(Error::Noise)
                     } else if isr.ore().bit_is_set() {
                         usart.icr().write(|w| w.orecf().set_bit());
                         nb::Error::Other(Error::Overrun)
-                    } else if isr.rxne().bit_is_set() {
+                    } else if {
+                        #[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
+                        let f = isr.rxne().bit_is_set();
+                        #[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+                        let f = isr.rxfne().bit_is_set();
+                        f
+                    } {
                         return Ok(usart.rdr().read().bits() as u8)
                     } else {
                         nb::Error::WouldBlock
@@ -343,7 +363,11 @@ macro_rules! uart_shared {
             /// Return true if the tx register is empty (and can accept data)
             pub fn is_txe(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr().read().txe().bit_is_set()
+                #[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
+                let f = usart.isr().read().txe().bit_is_set();
+                #[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+                let f = usart.isr().read().txfnf().bit_is_set();
+                f
             }
 
         }
@@ -362,7 +386,13 @@ macro_rules! uart_shared {
 
             fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                if usart.isr().read().txe().bit_is_set() {
+                if {
+                    #[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
+                    let f = usart.isr().read().txe().bit_is_set();
+                    #[cfg(any(feature = "stm32g0b1", feature = "stm32g0c1"))]
+                    let f = usart.isr().read().txfnf().bit_is_set();
+                    f
+                } {
                     usart.tdr().write(|w| unsafe { w.bits(byte as u32) });
                     Ok(())
                 } else {
@@ -615,8 +645,8 @@ macro_rules! uart_full {
                 usart.cr2().reset();
                 usart.cr3().reset();
 
-                usart.cr2().write(|w| {
-                    w.stop().set(config.stopbits.bits());
+                usart.cr2().write(|w| unsafe {
+                    w.stop().bits(config.stopbits.bits());
                     w.txinv().bit(config.inverted_tx);
                     w.rxinv().bit(config.inverted_rx);
                     w.swap().bit(config.swap)
@@ -832,6 +862,7 @@ uart_shared!(USART4, USART4_RX, USART4_TX,
 );
 
 #[cfg(feature = "stm32g0x1")]
+#[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
 uart_shared!(LPUART, LPUART_RX, LPUART_TX,
     tx: [
         (PA2, AltFunction::AF6),
@@ -867,4 +898,5 @@ uart_basic!(USART4, usart4, 1);
 // the basic feature set such as: Dual clock domain, FIFO or prescaler.
 // Or when Synchronous mode is implemented for the basic feature set, since the LP feature set does not have support.
 #[cfg(feature = "stm32g0x1")]
+#[cfg(not(any(feature = "stm32g0b1", feature = "stm32g0c1")))]
 uart_basic!(LPUART, lpuart, 256);

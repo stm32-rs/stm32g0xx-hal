@@ -160,7 +160,13 @@ impl<const N: usize> DmaMuxChannel for Channel<N> {
     }
 }
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g0b1",
+    feature = "stm32g0c1",
+))]
 /// DMAMUX channels
 pub struct Channels {
     pub ch0: Channel<0>,
@@ -192,9 +198,21 @@ impl DmaMuxExt for DMAMUX {
             ch2: Channel::<2> { _0: () },
             ch3: Channel::<3> { _0: () },
             ch4: Channel::<4> { _0: () },
-            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            #[cfg(any(
+                feature = "stm32g070",
+                feature = "stm32g071",
+                feature = "stm32g081",
+                feature = "stm32g0b1",
+                feature = "stm32g0c1",
+            ))]
             ch5: Channel::<5> { _0: () },
-            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            #[cfg(any(
+                feature = "stm32g070",
+                feature = "stm32g071",
+                feature = "stm32g081",
+                feature = "stm32g0b1",
+                feature = "stm32g0c1",
+            ))]
             ch6: Channel::<6> { _0: () },
         }
     }

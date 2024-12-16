@@ -17,6 +17,7 @@ jobs:
           - stm32g070
           - stm32g071
           - stm32g081
+          - stm32g0b1
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1

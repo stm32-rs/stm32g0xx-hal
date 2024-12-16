@@ -1,4 +1,6 @@
 //! Direct Memory Access Engine
+
+// TODO: add DMA2 for B1, C1
 use crate::dmamux::DmaMuxIndex;
 use crate::rcc::Rcc;
 use crate::stm32::DMAMUX;
@@ -327,7 +329,13 @@ macro_rules! dma {
     }
 }
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(
+    feature = "stm32g070",
+    feature = "stm32g071",
+    feature = "stm32g081",
+    feature = "stm32g0b1",
+    feature = "stm32g0c1",
+))]
 dma!(
     channels: {
         C1: (ch1, 0),
@@ -381,11 +389,23 @@ impl DmaExt for DMA {
             ch5: C5 {
                 mux: muxchannels.ch4,
             },
-            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            #[cfg(any(
+                feature = "stm32g070",
+                feature = "stm32g071",
+                feature = "stm32g081",
+                feature = "stm32g0b1",
+                feature = "stm32g0c1",
+            ))]
             ch6: C6 {
                 mux: muxchannels.ch5,
             },
-            #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+            #[cfg(any(
+                feature = "stm32g070",
+                feature = "stm32g071",
+                feature = "stm32g081",
+                feature = "stm32g0b1",
+                feature = "stm32g0c1",
+            ))]
             ch7: C7 {
                 mux: muxchannels.ch6,
             },

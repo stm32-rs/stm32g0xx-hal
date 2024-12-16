@@ -41,7 +41,7 @@ cortex-m-rtic = "1.0.0"
 cortex-m-semihosting = "0.3.5"
 embedded-graphics = "0.5"
 embedded-sdmmc = "0.2.1"
-infrared =  "0.11.0"
+infrared = "0.11.0"
 panic-halt = "0.2.0"
 panic-semihosting = "0.5.3"
 smart-leds = "0.3.0"
@@ -59,6 +59,7 @@ stm32g041 = ["stm32g0/stm32g041", "stm32g0x1", "device-selected"]
 stm32g071 = ["stm32g0/stm32g071", "stm32g0x1", "device-selected"]
 stm32g081 = ["stm32g0/stm32g081", "stm32g0x1", "device-selected"]
 stm32g0b1 = ["stm32g0/stm32g0b1", "stm32g0x1", "device-selected"]
+stm32g0c1 = ["stm32g0/stm32g0c1", "stm32g0x1", "device-selected"]
 
 stm32g0x0 = []
 stm32g0x1 = []
