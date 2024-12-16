@@ -407,7 +407,7 @@ pub trait DmaMode<ADC> {
     /// Error type returned by ADC methods
     type Error;
     fn dma_enable(&mut self, enable: bool);
-    fn dma_circualr_mode(&mut self, enable: bool);
+    fn dma_circular_mode(&mut self, enable: bool);
 }
 
 impl DmaMode<Adc> for Adc {
@@ -421,7 +421,7 @@ impl DmaMode<Adc> for Adc {
         }
     }
 
-    fn dma_circualr_mode(&mut self, enable: bool) {
+    fn dma_circular_mode(&mut self, enable: bool) {
         if enable {
             self.rb.cfgr1().modify(|_, w| w.dmacfg().set_bit()); // activate circular mode
         } else {
