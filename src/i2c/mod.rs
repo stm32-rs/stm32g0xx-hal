@@ -9,11 +9,12 @@ pub use nonblocking::*;
 
 pub mod config;
 
-use crate::rcc::*;
+use crate::rcc::{self, Rcc};
 pub use config::Config;
 use hal::i2c::{ErrorKind, NoAcknowledgeSource};
 
-#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SlaveAddressMask {
     MaskNone = 0,
     MaskOneBit,
@@ -26,7 +27,8 @@ pub enum SlaveAddressMask {
 }
 
 /// Denotes which event marked the end of the I2C data
-#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EndMarker {
     /// A stop condition was encountered
     Stop,
@@ -41,20 +43,23 @@ pub enum I2cResult<'a> {
     Addressed(u16, I2cDirection), // a slave is addressed by a master
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum I2cDirection {
     MasterReadSlaveWrite = 0,
     MasterWriteSlaveRead = 1,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
     AddressMatch,
     Rxne,
 }
 
 /// I2C error
-#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Error {
     Overrun,
     Nack,
@@ -76,6 +81,14 @@ impl hal::i2c::Error for Error {
     }
 }
 
+pub trait Instance:
+    crate::Sealed
+    + core::ops::Deref<Target = crate::stm32::i2c1::RegisterBlock>
+    + rcc::Enable
+    + rcc::Reset
+{
+}
+
 /// I2C SDA pin
 pub trait SDAPin<I2C> {
     fn setup(&self);
@@ -88,17 +101,17 @@ pub trait SCLPin<I2C> {
     fn release(self) -> Self;
 }
 
-pub trait I2cExt<I2C> {
+pub trait I2cExt: Sized {
     fn i2c<SDA, SCL>(
         self,
         sda: SDA,
         scl: SCL,
         config: impl Into<Config>,
         rcc: &mut Rcc,
-    ) -> I2c<I2C, SDA, SCL>
+    ) -> I2c<Self, SDA, SCL>
     where
-        SDA: SDAPin<I2C>,
-        SCL: SCLPin<I2C>;
+        SDA: SDAPin<Self>,
+        SCL: SCLPin<Self>;
 }
 
 /// I2C abstraction

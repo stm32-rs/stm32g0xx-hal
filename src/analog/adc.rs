@@ -13,7 +13,8 @@ pub trait Channel<ADC> {
 }
 
 /// ADC Result Alignment
-#[derive(Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Align {
     /// Right aligned results (least significant bits)
     ///
@@ -29,7 +30,8 @@ pub enum Align {
 }
 
 /// ADC Sampling Precision
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Precision {
     /// 12 bit precision
     B_12 = 0b00,
@@ -42,7 +44,8 @@ pub enum Precision {
 }
 
 /// ADC Sampling time
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SampleTime {
     T_2 = 0b000,
     T_4 = 0b001,
@@ -55,7 +58,8 @@ pub enum SampleTime {
 }
 
 // ADC Oversampling ratio
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OversamplingRatio {
     X_2 = 0b000,
     X_4 = 0b001,
@@ -67,20 +71,23 @@ pub enum OversamplingRatio {
     X_256 = 0b111,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ClockSource {
     Pclk(PclkDiv),
     Async(AsyncClockDiv),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum PclkDiv {
     PclkD1 = 3,
     PclkD2 = 1,
     PclkD4 = 2,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum AsyncClockDiv {
     AsyncD1 = 0,
     AsyncD2 = 1,
@@ -94,7 +101,8 @@ pub enum AsyncClockDiv {
 }
 
 /// ADC injected trigger source selection
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum InjTrigSource {
     TRG_0 = 0b000, // TIM1_TRGO2
     TRG_1 = 0b001, // TIM1_CC4
