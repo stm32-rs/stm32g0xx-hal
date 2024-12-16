@@ -10,6 +10,8 @@ use crate::timer::pins::TimerPin;
 use crate::timer::*;
 
 /// Counting direction
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Direction {
     Upcounting,
     Downcounting,

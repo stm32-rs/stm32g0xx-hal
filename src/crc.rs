@@ -44,6 +44,8 @@ impl CrcExt for CRC {
 }
 
 /// Polynomial settings.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Polynomial {
     /// 7-bit polynomial, only the lowest 7 bits are valid
     L7(u8),
@@ -56,6 +58,8 @@ pub enum Polynomial {
 }
 
 /// Bit reversal settings.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BitReversal {
     /// Reverse bits by byte
     ByByte,

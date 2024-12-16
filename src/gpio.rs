@@ -149,7 +149,8 @@ impl<MODE> InputPin for Pin<Input<MODE>> {
 }
 
 /// GPIO Pin speed selection
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Speed {
     Low = 0,
     Medium = 1,
@@ -158,7 +159,8 @@ pub enum Speed {
 }
 
 /// Trigger edge
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SignalEdge {
     Rising,
     Falling,

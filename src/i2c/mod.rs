@@ -13,7 +13,8 @@ use crate::rcc::*;
 pub use config::Config;
 use hal::i2c::{ErrorKind, NoAcknowledgeSource};
 
-#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SlaveAddressMask {
     MaskNone = 0,
     MaskOneBit,
@@ -26,7 +27,8 @@ pub enum SlaveAddressMask {
 }
 
 /// Denotes which event marked the end of the I2C data
-#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EndMarker {
     /// A stop condition was encountered
     Stop,
@@ -41,20 +43,23 @@ pub enum I2cResult<'a> {
     Addressed(u16, I2cDirection), // a slave is addressed by a master
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum I2cDirection {
     MasterReadSlaveWrite = 0,
     MasterWriteSlaveRead = 1,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
     AddressMatch,
     Rxne,
 }
 
 /// I2C error
-#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Error {
     Overrun,
     Nack,

@@ -4,14 +4,16 @@ use core::mem;
 use crate::rcc::{Enable, Rcc, Reset};
 use crate::stm32::RNG;
 
-#[derive(Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RngClkSource {
     HSI = 1,
     SysClock = 2,
     PLLQ = 3,
 }
 
-#[derive(Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RngClkDivider {
     NotDivided = 0,
     Div2 = 1,
@@ -49,7 +51,8 @@ impl Default for Config {
     }
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ErrorKind {
     ClockError,
     SeedError,

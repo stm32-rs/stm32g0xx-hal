@@ -8,6 +8,8 @@ use crate::timer::pins::TimerPin;
 use crate::timer::*;
 use embedded_hal::pwm::{ErrorKind, ErrorType, SetDutyCycle};
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OutputCompareMode {
     Frozen = 0,
     MatchPos = 1,

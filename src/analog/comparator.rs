@@ -94,7 +94,8 @@ impl Config {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Hysteresis {
     None = 0b00,
     Low = 0b01,
@@ -102,7 +103,8 @@ pub enum Hysteresis {
     High = 0b11,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum PowerMode {
     HighSpeed = 0b00,
     MediumSpeed = 0b01,
@@ -183,7 +185,8 @@ negative_input_pin!(COMP2, PB3<Analog>, 0b0110);
 negative_input_pin!(COMP2, PB7<Analog>, 0b0111);
 negative_input_pin!(COMP2, PA2<Analog>, 0b1000);
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RefintInput {
     /// VRefint * 1/4
     VRefintM14 = 0b0000,

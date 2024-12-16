@@ -3,7 +3,7 @@
 // TODO: add DMA2 for B1, C1
 use crate::dmamux::{self, DmaMuxExt, DmaMuxIndex};
 use crate::rcc::{Enable, Rcc, Reset};
-use crate::stm32::{self, DMA1 as DMA, DMAMUX};
+use crate::stm32::{self, DMA1, DMAMUX};
 
 /// Extension trait to split a DMA peripheral into independent channels
 pub trait DmaExt {
@@ -18,6 +18,8 @@ pub trait DmaExt {
 }
 
 /// Channel priority level
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Priority {
     /// Low
     Low = 0b00,
@@ -41,6 +43,8 @@ impl From<Priority> for u8 {
 }
 
 /// DMA transfer direction
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Direction {
     /// From memory to peripheral
     FromMemory,
@@ -57,8 +61,9 @@ impl From<Direction> for bool {
     }
 }
 
-#[doc = "Peripheral size"]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Peripheral size
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum WordSize {
     #[doc = "0: 8-bit size"]
@@ -76,6 +81,8 @@ impl From<WordSize> for u8 {
 }
 
 /// DMA events
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
     /// First half of a transfer is done
     HalfTransfer,
@@ -251,7 +258,7 @@ pub struct C<const N: u8> {
 impl<const N: u8> private::Channel for C<N> {
     fn ch(&self) -> &stm32::dma1::CH {
         // NOTE(unsafe) $Ci grants exclusive access to this register
-        unsafe { &(*DMA::ptr()).ch(N as usize) }
+        unsafe { (*DMA1::ptr()).ch(N as usize) }
     }
 }
 
@@ -270,7 +277,7 @@ impl<const N: u8> Channel for C<N> {
         use Event::*;
 
         // NOTE(unsafe) atomic read
-        let flags = unsafe { (*DMA::ptr()).isr().read() };
+        let flags = unsafe { (*DMA1::ptr()).isr().read() };
         match event {
             HalfTransfer => flags.htif(N).bit_is_set(),
             TransferComplete => flags.tcif(N).bit_is_set(),
@@ -284,7 +291,7 @@ impl<const N: u8> Channel for C<N> {
 
         // NOTE(unsafe) atomic write to a stateless register
         unsafe {
-            let _ = &(*DMA::ptr()).ifcr().write(|w| match event {
+            let _ = &(*DMA1::ptr()).ifcr().write(|w| match event {
                 HalfTransfer => w.chtif(N).set_bit(),
                 TransferComplete => w.ctcif(N).set_bit(),
                 TransferError => w.cteif(N).set_bit(),
@@ -351,19 +358,19 @@ dma!(
     },
 );
 
-impl DmaExt for DMA {
+impl DmaExt for DMA1 {
     type Channels = Channels;
 
     fn reset(self, rcc: &mut Rcc) -> Self {
         // reset DMA
-        <DMA as Reset>::reset(rcc);
+        <DMA1 as Reset>::reset(rcc);
         self
     }
 
     fn split(self, rcc: &mut Rcc, dmamux: DMAMUX) -> Self::Channels {
         let muxchannels = dmamux.split();
         // enable DMA clock
-        DMA::enable(rcc);
+        DMA1::enable(rcc);
 
         let mut channels = Channels {
             ch1: C1 {

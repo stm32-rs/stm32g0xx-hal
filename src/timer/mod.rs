@@ -188,6 +188,8 @@ macro_rules! timers {
     }
 }
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ExternalClockMode {
     Mode1,
     Mode2,
