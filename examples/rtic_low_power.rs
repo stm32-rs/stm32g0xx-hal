@@ -37,7 +37,7 @@ mod app {
         let gpioc = ctx.device.GPIOC.split(&mut rcc);
 
         let led = gpioa.pa5.into_push_pull_output();
-        let button = gpioc.pc13.listen(SignalEdge::Falling, &mut exti);
+        let mut button = gpioc.pc13.listen(SignalEdge::Falling, &mut exti);
 
         let mut power = ctx.device.PWR.constrain(&mut rcc);
         power.set_mode(PowerMode::UltraLowPower(LowPowerMode::StopMode2));

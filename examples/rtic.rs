@@ -71,7 +71,7 @@ mod app {
     fn button_click(ctx: button_click::Context) {
         let date = ctx.local.rtc.get_date();
         let time = ctx.local.rtc.get_time();
-        hprintln!("Button pressed @ {:?} {:?}", date, time).unwrap();
+        hprintln!("Button pressed @ {:?} {:?}", date, time);
         ctx.local.exti.unpend(Event::GPIO13);
     }
 

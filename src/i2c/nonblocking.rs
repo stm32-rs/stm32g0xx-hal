@@ -441,8 +441,6 @@ macro_rules! i2c {
         } // i2c
 
         impl<SDA, SCL> I2cMaster for I2c<$I2CX, SDA, SCL> {
-
-
             fn master_write(&mut self, addr: u16, data: &[u8]) -> nb::Result<(), Error>{
                 // Check if the bus is free
                 if self.i2c.cr2.read().start().bit_is_set() {
@@ -556,7 +554,6 @@ macro_rules! i2c {
         }
 
         impl<SDA, SCL> I2cSlave for I2c<$I2CX, SDA, SCL> {
-
             fn slave_sbc(&mut self, sbc_enabled: bool)  {
                 // enable acknowlidge control
                 self.i2c.cr1.modify(|_, w|  w.sbc().bit(sbc_enabled) );
@@ -603,6 +600,30 @@ macro_rules! i2c {
             /// return a non mutable slice to the internal data, with the size of the last transaction
             fn get_data(&self) -> &[u8] {
                 &self.data[0..self.index]
+            }
+        }
+
+        impl<SDA, SCL> hal::i2c::ErrorType for I2c<$I2CX, SDA, SCL> {
+            type Error = Error;
+        }
+
+        impl<SDA, SCL> hal::i2c::I2c for I2c<$I2CX, SDA, SCL> {
+            fn transaction(
+                &mut self,
+                address: hal::i2c::SevenBitAddress,
+                operations: &mut [hal::i2c::Operation<'_>],
+            ) -> Result<(), Self::Error> {
+                for op in operations {
+                    match op {
+                        hal::i2c::Operation::Read(buffer) => {
+                            self.read(address, buffer)?;
+                        }
+                        hal::i2c::Operation::Write(buffer) => {
+                            self.write(address, buffer)?;
+                        }
+                    }
+                }
+                Ok(())
             }
         }
 

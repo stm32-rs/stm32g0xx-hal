@@ -34,8 +34,7 @@ fn main() -> ! {
             "crc32: 0x{:x}, crc32b: 0x{:x}",
             hash_sum,
             hash_sum ^ 0xffff_ffff
-        )
-        .unwrap();
+        );
 
         crc.reset();
         crc.feed(b"The quick brown fox jumps over the lazy dog");
@@ -44,7 +43,6 @@ fn main() -> ! {
             "crc32: 0x{:x}, crc32b: 0x{:x}",
             hash_sum,
             hash_sum ^ 0xffff_ffff
-        )
-        .unwrap();
+        );
     }
 }

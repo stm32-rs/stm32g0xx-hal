@@ -31,8 +31,8 @@ fn main() -> ! {
     let buf: [u8; 1] = [0];
     loop {
         match i2c.write(0x3c, &buf) {
-            Ok(_) => hprintln!("ok").unwrap(),
-            Err(err) => hprintln!("error: {:?}", err).unwrap(),
+            Ok(_) => hprintln!("ok"),
+            Err(err) => hprintln!("error: {:?}", err),
         }
     }
 }

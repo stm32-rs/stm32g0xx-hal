@@ -1,9 +1,3 @@
-pub use hal::adc::OneShot as _;
-pub use hal::digital::v2::*;
-pub use hal::prelude::*;
-pub use hal::watchdog::Watchdog as _;
-pub use hal::watchdog::WatchdogEnable as _;
-
 pub use crate::analog::adc::AdcExt as _;
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 pub use crate::analog::comparator::ComparatorExt as _;
@@ -17,6 +11,7 @@ pub use crate::analog::dac::DacExt as _;
 pub use crate::analog::dac::DacOut as _;
 pub use crate::crc::CrcExt as _;
 pub use crate::timer::delay::DelayExt as _;
+pub use hal::digital::*;
 // pub use crate::dma::CopyDma as _;
 pub use crate::dma::DmaExt as _;
 // pub use crate::dma::ReadDma as _;

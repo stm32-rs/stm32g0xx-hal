@@ -21,7 +21,7 @@ fn main() -> ! {
 
     let mut rcc = dp.RCC.constrain();
     let mut delay = cp.SYST.delay(&mut rcc);
-    hprintln!("Watchdog").unwrap();
+    hprintln!("Watchdog");
 
     let mut watchdog = dp.WWDG.constrain(&mut rcc);
     // let mut watchdog = dp.IWDG.constrain();

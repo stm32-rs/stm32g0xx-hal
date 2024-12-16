@@ -35,10 +35,9 @@ fn main() -> ! {
             hprintln!(
                 "{:02X?}",
                 u64::from_le_bytes((&buffer[0..8]).try_into().expect("never fails"))
-            )
-            .ok();
+            );
         }
-        Err(_) => hprintln!("Cannot unlock flash").unwrap(),
+        Err(_) => hprintln!("Cannot unlock flash"),
     }
 
     loop {}

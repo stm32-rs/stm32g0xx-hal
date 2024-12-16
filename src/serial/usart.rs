@@ -1,14 +1,11 @@
-use core::fmt;
-use core::marker::PhantomData;
-
 use crate::dma;
 use crate::dmamux::DmaMuxIndex;
 use crate::gpio::{AltFunction, *};
-use crate::prelude::*;
 use crate::rcc::*;
 use crate::serial::config::*;
 use crate::stm32::*;
-
+use core::fmt;
+use core::marker::PhantomData;
 use cortex_m::interrupt;
 use nb::block;
 
@@ -175,33 +172,13 @@ where
     }
 }
 
-pub trait SerialExt<USART, Config> {
+pub trait SerialExt<USART, CONFIG> {
     fn usart<PINS: Pins<USART>>(
         self,
         pins: PINS,
-        config: Config,
+        config: CONFIG,
         rcc: &mut Rcc,
-    ) -> Result<Serial<USART, Config>, InvalidConfig>;
-}
-
-impl<USART, Config> fmt::Write for Serial<USART, Config>
-where
-    Serial<USART, Config>: hal::serial::Write<u8>,
-{
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();
-        Ok(())
-    }
-}
-
-impl<USART, Config> fmt::Write for Tx<USART, Config>
-where
-    Tx<USART, Config>: hal::serial::Write<u8>,
-{
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();
-        Ok(())
-    }
+    ) -> Result<Serial<USART, CONFIG>, InvalidConfig>;
 }
 
 macro_rules! uart_shared {
@@ -290,10 +267,8 @@ macro_rules! uart_shared {
             }
         }
 
-        impl<Config> hal::serial::Read<u8> for Rx<$USARTX, Config> {
-            type Error = Error;
-
-            fn read(&mut self) -> nb::Result<u8, Error> {
+        impl<Config> Rx<$USARTX, Config> {
+            pub fn read(&mut self) -> nb::Result<u8, Error> {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 let isr = usart.isr.read();
                 Err(
@@ -318,16 +293,13 @@ macro_rules! uart_shared {
             }
         }
 
-        impl<Config> hal::serial::Read<u8> for Serial<$USARTX, Config> {
-            type Error = Error;
-
-            fn read(&mut self) -> nb::Result<u8, Error> {
+        impl<Config> Serial<$USARTX, Config> {
+            pub fn read(&mut self) -> nb::Result<u8, Error> {
                 self.rx.read()
             }
         }
 
         impl<Config> Tx<$USARTX, Config> {
-
             /// Starts listening for an interrupt event
             pub fn listen(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
@@ -348,10 +320,8 @@ macro_rules! uart_shared {
 
         }
 
-        impl<Config> hal::serial::Write<u8> for Tx<$USARTX, Config> {
-            type Error = Error;
-
-            fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        impl<Config> Tx<$USARTX, Config> {
+            pub fn flush(&mut self) -> nb::Result<(), nb::Error<Error>> {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 if usart.isr.read().tc().bit_is_set() {
                     Ok(())
@@ -360,7 +330,7 @@ macro_rules! uart_shared {
                 }
             }
 
-            fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
+            pub fn write(&mut self, byte: u8) -> nb::Result<(), nb::Error<Error>> {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 if usart.isr.read().txe().bit_is_set() {
                     usart.tdr.write(|w| unsafe { w.bits(byte as u32) });
@@ -371,21 +341,17 @@ macro_rules! uart_shared {
             }
         }
 
-        impl<Config> hal::serial::Write<u8> for Serial<$USARTX, Config> {
-            type Error = Error;
-
-            fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        impl<Config> Serial<$USARTX, Config> {
+            pub fn flush(&mut self) -> nb::Result<(), nb::Error<Error>> {
                 self.tx.flush()
             }
 
-            fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
+            pub fn write(&mut self, byte: u8) -> nb::Result<(), nb::Error<Error>> {
                 self.tx.write(byte)
             }
         }
 
-
         impl<Config> Serial<$USARTX, Config> {
-
             /// Separates the serial struct into separate channel objects for sending (Tx) and
             /// receiving (Rx)
             pub fn split(self) -> (Tx<$USARTX, Config>, Rx<$USARTX, Config>) {
@@ -395,7 +361,6 @@ macro_rules! uart_shared {
         }
 
         impl<Config> dma::Target for Rx<$USARTX, Config> {
-
             fn dmamux(&self) -> DmaMuxIndex {
                 DmaMuxIndex::$dmamux_rx
             }
@@ -418,7 +383,6 @@ macro_rules! uart_shared {
         }
 
         impl<Config> dma::Target for Tx<$USARTX, Config> {
-
             fn dmamux(&self) -> DmaMuxIndex {
                 DmaMuxIndex::$dmamux_tx
             }
@@ -493,6 +457,7 @@ macro_rules! uart_basic {
                         .ps()
                         .bit(config.parity == Parity::ParityOdd)
                 });
+                #[allow(unused_unsafe)]
                 usart.cr2.write(|w| unsafe {
                     w.stop()
                         .bits(match config.stopbits {
@@ -563,6 +528,20 @@ macro_rules! uart_basic {
                 self.usart
                     .icr
                     .write(|w| unsafe { w.bits(event.val() & mask) });
+            }
+        }
+
+        impl fmt::Write for Tx<$USARTX, BasicConfig> {
+            fn write_str(&mut self, s: &str) -> fmt::Result {
+                let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();
+                Ok(())
+            }
+        }
+
+        impl fmt::Write for Serial<$USARTX, BasicConfig> {
+            fn write_str(&mut self, s: &str) -> fmt::Result {
+                let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();
+                Ok(())
             }
         }
     };
@@ -703,6 +682,7 @@ macro_rules! uart_full {
                     .write(|w| unsafe { w.bits(event.val() & mask) });
             }
         }
+
         impl Tx<$USARTX, FullConfig> {
             /// Returns true if the tx fifo threshold has been reached.
             pub fn fifo_threshold_reached(&self) -> bool {
@@ -729,6 +709,20 @@ macro_rules! uart_full {
             pub fn fifo_threshold_reached(&self) -> bool {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 usart.isr.read().rxft().bit_is_set()
+            }
+        }
+
+        impl fmt::Write for Tx<$USARTX, FullConfig> {
+            fn write_str(&mut self, s: &str) -> fmt::Result {
+                let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();
+                Ok(())
+            }
+        }
+
+        impl fmt::Write for Serial<$USARTX, FullConfig> {
+            fn write_str(&mut self, s: &str) -> fmt::Result {
+                let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();
+                Ok(())
             }
         }
     };

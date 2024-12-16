@@ -3,8 +3,7 @@ use core::marker::PhantomData;
 
 use crate::rcc::Rcc;
 use core::convert::Infallible;
-use embedded_hal::digital::v2::PinState;
-use hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin};
+use hal::digital::{ErrorType, InputPin, OutputPin, PinState, StatefulOutputPin};
 
 /// Default pin mode
 pub type DefaultMode = Analog;
@@ -95,21 +94,23 @@ unsafe impl<MODE> Sync for Pin<MODE> {}
 // threads
 unsafe impl<MODE> Send for Pin<MODE> {}
 
+impl<MODE> ErrorType for Pin<Output<MODE>> {
+    type Error = Infallible;
+}
+
 impl<MODE> StatefulOutputPin for Pin<Output<MODE>> {
     #[inline(always)]
-    fn is_set_high(&self) -> Result<bool, Self::Error> {
+    fn is_set_high(&mut self) -> Result<bool, Self::Error> {
         self.is_set_low().map(|v| !v)
     }
 
     #[inline(always)]
-    fn is_set_low(&self) -> Result<bool, Self::Error> {
+    fn is_set_low(&mut self) -> Result<bool, Self::Error> {
         Ok(unsafe { (*self.port).is_set_low(self.i) })
     }
 }
 
 impl<MODE> OutputPin for Pin<Output<MODE>> {
-    type Error = Infallible;
-
     #[inline(always)]
     fn set_high(&mut self) -> Result<(), Self::Error> {
         unsafe { (*self.port).set_high(self.i) };
@@ -123,32 +124,30 @@ impl<MODE> OutputPin for Pin<Output<MODE>> {
     }
 }
 
-impl<MODE> toggleable::Default for Pin<Output<MODE>> {}
-
 impl InputPin for Pin<Output<OpenDrain>> {
-    type Error = Infallible;
-
     #[inline(always)]
-    fn is_high(&self) -> Result<bool, Self::Error> {
+    fn is_high(&mut self) -> Result<bool, Self::Error> {
         self.is_low().map(|v| !v)
     }
 
     #[inline(always)]
-    fn is_low(&self) -> Result<bool, Self::Error> {
+    fn is_low(&mut self) -> Result<bool, Self::Error> {
         Ok(unsafe { (*self.port).is_low(self.i) })
     }
 }
 
-impl<MODE> InputPin for Pin<Input<MODE>> {
+impl<MODE> ErrorType for Pin<Input<MODE>> {
     type Error = Infallible;
+}
 
+impl<MODE> InputPin for Pin<Input<MODE>> {
     #[inline(always)]
-    fn is_high(&self) -> Result<bool, Self::Error> {
+    fn is_high(&mut self) -> Result<bool, Self::Error> {
         self.is_low().map(|v| !v)
     }
 
     #[inline(always)]
-    fn is_low(&self) -> Result<bool, Self::Error> {
+    fn is_low(&mut self) -> Result<bool, Self::Error> {
         Ok(unsafe { (*self.port).is_low(self.i) })
     }
 }
@@ -190,7 +189,6 @@ macro_rules! gpio {
         pub mod $gpiox {
             use core::convert::Infallible;
             use core::marker::PhantomData;
-            use hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin};
             use crate::stm32::{EXTI, $GPIOX};
             use crate::exti::{ExtiExt, Event};
             use crate::rcc::{Enable, Rcc};
@@ -223,9 +221,11 @@ macro_rules! gpio {
                 _mode: PhantomData<MODE>,
             }
 
-            impl<MODE> OutputPin for $PXx<Output<MODE>> {
+            impl<MODE> ErrorType for $PXx<Output<MODE>> {
                 type Error = Infallible;
+            }
 
+            impl<MODE> OutputPin for $PXx<Output<MODE>> {
                 fn set_high(&mut self) -> Result<(), Self::Error> {
                     // NOTE(unsafe) atomic write to a stateless register
                     unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << self.i)) };
@@ -240,45 +240,42 @@ macro_rules! gpio {
             }
 
             impl<MODE> StatefulOutputPin for $PXx<Output<MODE>> {
-                fn is_set_high(&self) -> Result<bool, Self::Error> {
+                fn is_set_high(&mut self) -> Result<bool, Self::Error> {
                     let is_set_high = !self.is_set_low()?;
                     Ok(is_set_high)
                 }
 
-                fn is_set_low(&self) -> Result<bool, Self::Error> {
+                fn is_set_low(&mut self) -> Result<bool, Self::Error> {
                     // NOTE(unsafe) atomic read with no side effects
                     let is_set_low = unsafe { (*$GPIOX::ptr()).odr.read().bits() & (1 << self.i) == 0 };
                     Ok(is_set_low)
                 }
             }
 
-            impl<MODE> toggleable::Default for $PXx<Output<MODE>> {
-            }
-
             impl<MODE> InputPin for $PXx<Output<MODE>> {
-                type Error = Infallible;
-
-                fn is_high(&self) -> Result<bool, Self::Error> {
+                fn is_high(&mut self) -> Result<bool, Self::Error> {
                     let is_high = !self.is_low()?;
                     Ok(is_high)
                 }
 
-                fn is_low(&self) -> Result<bool, Self::Error>  {
+                fn is_low(&mut self) -> Result<bool, Self::Error>  {
                     // NOTE(unsafe) atomic read with no side effects
                     let is_low = unsafe { (*$GPIOX::ptr()).idr.read().bits() & (1 << self.i) == 0 };
                     Ok(is_low)
                 }
             }
 
-            impl<MODE> InputPin for $PXx<Input<MODE>> {
+            impl<MODE> ErrorType for $PXx<Input<MODE>> {
                 type Error = Infallible;
+            }
 
-                fn is_high(&self) -> Result<bool, Self::Error> {
+            impl<MODE> InputPin for $PXx<Input<MODE>> {
+                fn is_high(&mut self) -> Result<bool, Self::Error> {
                     let is_high = !self.is_low()?;
                     Ok(is_high)
                 }
 
-                fn is_low(&self) -> Result<bool, Self::Error> {
+                fn is_low(&mut self) -> Result<bool, Self::Error> {
                     // NOTE(unsafe) atomic read with no side effects
                     let is_low = unsafe { (*$GPIOX::ptr()).idr.read().bits() & (1 << self.i) == 0 };
                     Ok(is_low)
@@ -529,9 +526,11 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> OutputPin for $PXi<Output<MODE>> {
+                impl<MODE> ErrorType for $PXi<Output<MODE>> {
                     type Error = Infallible;
+                }
 
+                impl<MODE> OutputPin for $PXi<Output<MODE>> {
                     fn set_high(&mut self) -> Result<(), Self::Error> {
                         self.internal_set_state(PinState::High);
                         Ok(())
@@ -544,30 +543,25 @@ macro_rules! gpio {
                 }
 
                 impl<MODE> StatefulOutputPin for $PXi<Output<MODE>> {
-                    fn is_set_high(&self) -> Result<bool, Self::Error> {
+                    fn is_set_high(&mut self) -> Result<bool, Self::Error> {
                         let is_set_high = !self.is_set_low()?;
                         Ok(is_set_high)
                     }
 
-                    fn is_set_low(&self) -> Result<bool, Self::Error> {
+                    fn is_set_low(&mut self) -> Result<bool, Self::Error> {
                         // NOTE(unsafe) atomic read with no side effects
                         let is_set_low = unsafe { (*$GPIOX::ptr()).odr.read().bits() & (1 << $i) == 0 };
                         Ok(is_set_low)
                     }
                 }
 
-                impl<MODE> toggleable::Default for $PXi<Output<MODE>> {
-                }
-
                 impl<MODE> InputPin for $PXi<Output<MODE>> {
-                    type Error = Infallible;
-
-                    fn is_high(&self) -> Result<bool, Self::Error> {
+                    fn is_high(&mut self) -> Result<bool, Self::Error> {
                         let is_high = !self.is_low()?;
                         Ok(is_high)
                     }
 
-                    fn is_low(&self) -> Result<bool, Self::Error>  {
+                    fn is_low(&mut self) -> Result<bool, Self::Error>  {
                         // NOTE(unsafe) atomic read with no side effects
                         let is_low = unsafe { (*$GPIOX::ptr()).idr.read().bits() & (1 << $i) == 0 };
                         Ok(is_low)
@@ -584,15 +578,17 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> InputPin for $PXi<Input<MODE>> {
+                impl<MODE> ErrorType for $PXi<Input<MODE>> {
                     type Error = Infallible;
+                }
 
-                    fn is_high(&self) -> Result<bool, Self::Error> {
+                impl<MODE> InputPin for $PXi<Input<MODE>> {
+                    fn is_high(&mut self) -> Result<bool, Self::Error> {
                         let is_high = !self.is_low()?;
                         Ok(is_high)
                     }
 
-                    fn is_low(&self) -> Result<bool, Self::Error> {
+                    fn is_low(&mut self) -> Result<bool, Self::Error> {
                         // NOTE(unsafe) atomic read with no side effects
                         let is_low = unsafe { (*$GPIOX::ptr()).idr.read().bits() & (1 << $i) == 0 };
                         Ok(is_low)

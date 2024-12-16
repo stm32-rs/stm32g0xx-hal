@@ -3,7 +3,8 @@ use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
 use core::{cell, ptr};
-pub use hal::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
+pub use hal::spi::*;
+use nb::block;
 
 /// SPI error
 #[derive(Debug)]
@@ -14,6 +15,16 @@ pub enum Error {
     ModeFault,
     /// CRC error
     Crc,
+}
+
+impl hal::spi::Error for Error {
+    fn kind(&self) -> ErrorKind {
+        match self {
+            Error::Overrun => ErrorKind::Overrun,
+            Error::ModeFault => ErrorKind::ModeFault,
+            Error::Crc => ErrorKind::Other,
+        }
+    }
 }
 
 /// A filler type for when the SCK pin is unnecessary
@@ -229,10 +240,8 @@ macro_rules! spi {
             }
         }
 
-        impl<PINS> hal::spi::FullDuplex<u8> for Spi<$SPIX, PINS> {
-            type Error = Error;
-
-            fn read(&mut self) -> nb::Result<u8, Error> {
+        impl<PINS> Spi<$SPIX, PINS> {
+            pub fn read(&mut self) -> nb::Result<u8, Error> {
                 let sr = self.spi.sr.read();
 
                 Err(if sr.ovr().bit_is_set() {
@@ -252,7 +261,7 @@ macro_rules! spi {
                 })
             }
 
-            fn send(&mut self, byte: u8) -> nb::Result<(), Error> {
+            pub fn send(&mut self, byte: u8) -> nb::Result<(), Error> {
                 let sr = self.spi.sr.read();
 
                 Err(if sr.ovr().bit_is_set() {
@@ -272,9 +281,46 @@ macro_rules! spi {
             }
         }
 
-        impl<PINS> ::hal::blocking::spi::transfer::Default<u8> for Spi<$SPIX, PINS> {}
+        impl<PINS> ErrorType for Spi<$SPIX, PINS> {
+            type Error = Error;
+        }
 
-        impl<PINS> ::hal::blocking::spi::write::Default<u8> for Spi<$SPIX, PINS> {}
+        impl<PINS> SpiBus for Spi<$SPIX, PINS> {
+            fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+                for word in words.iter_mut() {
+                    *word = block!(self.read())?;
+                }
+                Ok(())
+            }
+
+            fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+                for word in words.iter() {
+                    block!(self.send(word.clone()))?;
+                    block!(self.read())?;
+                }
+                Ok(())
+            }
+
+            fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
+                for (r, w) in read.iter_mut().zip(write.iter()) {
+                    block!(self.send(w.clone()))?;
+                    *r = block!(self.read())?;
+                }
+                Ok(())
+            }
+
+            fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+                for word in words.iter_mut() {
+                    block!(self.send(word.clone()))?;
+                    *word = block!(self.read())?;
+                }
+                Ok(())
+            }
+
+            fn flush(&mut self) -> Result<(), Self::Error> {
+                Ok(())
+            }
+        }
     }
 }
 

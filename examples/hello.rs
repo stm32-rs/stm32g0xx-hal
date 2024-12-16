@@ -14,7 +14,7 @@ use rt::entry;
 #[allow(clippy::empty_loop)]
 #[entry]
 fn main() -> ! {
-    hprintln!("Hello, STM32G0!").unwrap();
+    hprintln!("Hello, STM32G0!");
 
     loop {}
 }

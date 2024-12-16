@@ -4,7 +4,6 @@ use crate::i2c::config::Config;
 use crate::i2c::{self, Error, I2c, I2cDirection, I2cExt, SCLPin, SDAPin};
 use crate::rcc::*;
 use crate::stm32::{I2C1, I2C2};
-use hal::blocking::i2c::{Read, Write, WriteRead};
 
 pub trait I2cSlave {
     /// Enable/Disable Slave Byte Control. Default SBC is switched on.
@@ -86,7 +85,7 @@ macro_rules! busy_wait {
                 // in case of a master write_read operation, this flag is the only exit for the function.
                 // Leave the bit set, so it can be detected in the wait_addressed function
                 if $idx == $buflen {
-                    return Ok( () )
+                    return Ok(())
                 } else {
                   return Err(Error::IncorrectFrameSize($idx))
                 }
@@ -95,7 +94,7 @@ macro_rules! busy_wait {
                 // Clear the stop condition flag
                 $i2c.icr.write(|w| w.stopcf().set_bit());
                 if $idx == $buflen {
-                    return Ok( () )
+                    return Ok(())
                 } else
                 if $idx == 0 {
                     return Err(Error::Nack)
@@ -238,15 +237,13 @@ macro_rules! i2c {
             }
         }
 
-        impl<SDA, SCL> WriteRead for I2c<$I2CX, SDA, SCL> {
-            type Error = Error;
-
-            fn write_read(
+        impl<SDA, SCL> I2c<$I2CX, SDA, SCL> {
+            pub fn write_read(
                 &mut self,
                 addr: u8,
                 snd_buffer: &[u8],
                 rcv_buffer: &mut [u8],
-            ) -> Result<(), Self::Error> {
+            ) -> Result<(), Error> {
                 // TODO support transfers of more than 255 bytes
                 let sndlen = snd_buffer.len();
                 let rcvlen = rcv_buffer.len();
@@ -323,10 +320,8 @@ macro_rules! i2c {
             }
         }
 
-        impl<SDA, SCL> Write for I2c<$I2CX, SDA, SCL> {
-            type Error = Error;
-
-            fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Self::Error> {
+        impl<SDA, SCL> I2c<$I2CX, SDA, SCL> {
+            pub fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
                 let buflen = bytes.len();
                 assert!(buflen < 256 && buflen > 0);
 
@@ -363,10 +358,8 @@ macro_rules! i2c {
             }
         }
 
-        impl<SDA, SCL> Read for I2c<$I2CX, SDA, SCL> {
-            type Error = Error;
-
-            fn read(&mut self, addr: u8, bytes: &mut [u8]) -> Result<(), Self::Error> {
+        impl<SDA, SCL> I2c<$I2CX, SDA, SCL> {
+            pub fn read(&mut self, addr: u8, bytes: &mut [u8]) -> Result<(), Error> {
                 let buflen = bytes.len();
                 // TODO support transfers of more than 255 bytes
                 assert!(buflen < 256 && buflen > 0);
@@ -407,7 +400,6 @@ macro_rules! i2c {
         }
 
         impl<SDA, SCL> I2cSlave for I2c<$I2CX, SDA, SCL> {
-
             fn slave_sbc(&mut self, sbc_enabled: bool)  {
                 // Enable Slave byte control
                 self.i2c.cr1.modify(|_, w|  w.sbc().bit(sbc_enabled) );
@@ -504,6 +496,30 @@ macro_rules! i2c {
                         idx += 1;
                     }
                 }
+            }
+        }
+
+        impl<SDA, SCL> hal::i2c::ErrorType for I2c<$I2CX, SDA, SCL> {
+            type Error = Error;
+        }
+
+        impl<SDA, SCL> hal::i2c::I2c for I2c<$I2CX, SDA, SCL> {
+            fn transaction(
+                &mut self,
+                address: hal::i2c::SevenBitAddress,
+                operations: &mut [hal::i2c::Operation<'_>],
+            ) -> Result<(), Self::Error> {
+                for op in operations {
+                    match op {
+                        hal::i2c::Operation::Read(buffer) => {
+                            self.read(address, buffer)?;
+                        }
+                        hal::i2c::Operation::Write(buffer) => {
+                            self.write(address, buffer)?;
+                        }
+                    }
+                }
+                Ok(())
             }
         }
     }

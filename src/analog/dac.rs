@@ -6,7 +6,7 @@ use core::mem::MaybeUninit;
 use crate::gpio::{DefaultMode, PA4, PA5};
 use crate::rcc::*;
 use crate::stm32::DAC;
-use hal::blocking::delay::DelayUs;
+use hal::delay::DelayNs;
 
 pub trait DacOut<V> {
     fn set_value(&mut self, val: V);
@@ -156,7 +156,7 @@ macro_rules! dac {
                 /// disabled.
                 pub fn calibrate_buffer<T>(self, delay: &mut T) -> $CX<Disabled>
                 where
-                    T: DelayUs<u32>,
+                    T: DelayNs,
                 {
                     let dac = unsafe { &(*DAC::ptr()) };
                     dac.cr.modify(|_, w| w.$en().clear_bit());
@@ -165,7 +165,7 @@ macro_rules! dac {
                     let mut trim = 0;
                     while true {
                         dac.ccr.modify(|_, w| unsafe { w.$trim().bits(trim) });
-                        delay.delay_us(64_u32);
+                        delay.delay_us(64_000_u32);
                         if dac.sr.read().$cal_flag().bit() {
                             break;
                         }
