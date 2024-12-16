@@ -27,7 +27,7 @@ impl COMP1 {
     pub fn csr(&self) -> &COMP1_CSR {
         // SAFETY: The COMP1 type is only constructed with logical ownership of
         // these registers.
-        &unsafe { &*COMP::ptr() }.comp1_csr()
+        unsafe { &*COMP::ptr() }.comp1_csr()
     }
 }
 
@@ -39,7 +39,7 @@ impl COMP2 {
     pub fn csr(&self) -> &COMP2_CSR {
         // SAFETY: The COMP1 type is only constructed with logical ownership of
         // these registers.
-        &unsafe { &*COMP::ptr() }.comp2_csr()
+        unsafe { &*COMP::ptr() }.comp2_csr()
     }
 }
 

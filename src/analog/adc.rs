@@ -312,7 +312,7 @@ impl Adc {
         };
 
         self.power_down();
-        Ok(val.into())
+        Ok(val)
     }
 
     pub fn read_temperature(&mut self) -> nb::Result<i16, Infallible> {
