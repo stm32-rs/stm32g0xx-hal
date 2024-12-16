@@ -39,7 +39,10 @@ mod app {
         timer.listen();
 
         let mut exti = ctx.device.EXTI;
-        gpioa.pa2.into_pull_up_input().listen(SignalEdge::Falling, &mut exti);
+        gpioa
+            .pa2
+            .into_pull_up_input()
+            .listen(SignalEdge::Falling, &mut exti);
 
         let mut rtc = ctx.device.RTC.constrain(&mut rcc);
         rtc.set_date(&Date::new(2019.year(), 11.month(), 24.day()));
