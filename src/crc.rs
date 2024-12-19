@@ -173,7 +173,12 @@ impl Crc {
     pub fn feed(&mut self, data: &[u8]) {
         let crc = unsafe { &(*CRC::ptr()) };
         for byte in data {
-            crc.dr().write(|w| unsafe { w.dr().bits((*byte).into()) });
+            unsafe {
+                core::ptr::write_volatile(
+                    core::cell::UnsafeCell::<u8>::raw_get(crc.dr().as_ptr() as _),
+                    *byte,
+                )
+            }
         }
     }
 

@@ -8,7 +8,7 @@ extern crate cortex_m_rt as rt;
 extern crate panic_halt;
 extern crate stm32g0xx_hal as hal;
 
-use cortex_m_semihosting::hprintln;
+use defmt_rtt as _;
 use hal::crc::*;
 use hal::prelude::*;
 use hal::stm32;
@@ -25,24 +25,24 @@ fn main() -> ! {
         .output_bit_reversal(true)
         .freeze();
 
-    loop {
-        crc.reset();
-        crc.feed(b"123456789");
+    crc.reset();
+    crc.feed(b"123456789");
 
-        let hash_sum = crc.result();
-        hprintln!(
-            "crc32: 0x{:x}, crc32b: 0x{:x}",
-            hash_sum,
-            hash_sum ^ 0xffff_ffff
-        );
+    let hash_sum = crc.result();
+    defmt::info!(
+        "target: 0xcbf43926, crc32: 0x{:x}, crc32b: 0x{:x}",
+        hash_sum,
+        hash_sum ^ 0xffff_ffff
+    );
 
-        crc.reset();
-        crc.feed(b"The quick brown fox jumps over the lazy dog");
-        let hash_sum = crc.result();
-        hprintln!(
-            "crc32: 0x{:x}, crc32b: 0x{:x}",
-            hash_sum,
-            hash_sum ^ 0xffff_ffff
-        );
-    }
+    crc.reset();
+    crc.feed(b"The quick brown fox jumps over the lazy dog");
+    let hash_sum = crc.result();
+    defmt::info!(
+        "target: 0x414fa339, crc32: 0x{:x}, crc32b: 0x{:x}",
+        hash_sum,
+        hash_sum ^ 0xffff_ffff
+    );
+
+    loop {}
 }

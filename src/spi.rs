@@ -3,7 +3,6 @@ use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
 use core::convert::Infallible;
-use core::ptr;
 use embedded_hal::delay::DelayNs;
 use hal::digital;
 use hal::digital::OutputPin;
@@ -310,7 +309,7 @@ macro_rules! spi {
                 } else if sr.crcerr().bit_is_set() {
                     nb::Error::Other(Error::Crc)
                 } else if sr.rxne().bit_is_set() {
-                    return Ok(self.spi.dr().read().bits() as u8);
+                    return Ok(self.spi.dr8().read().bits() as u8);
                 } else {
                     nb::Error::WouldBlock
                 })
@@ -325,9 +324,7 @@ macro_rules! spi {
                 } else if sr.crcerr().bit_is_set() {
                     nb::Error::Other(Error::Crc)
                 } else if sr.txe().bit_is_set() {
-                    unsafe {
-                        ptr::write_volatile(core::cell::UnsafeCell::raw_get(self.spi.dr() as *const _ as _), byte)
-                    }
+                    self.spi.dr8().write(|w| unsafe { w.dr().bits(byte as _) });
                     return Ok(());
                 } else {
                     nb::Error::WouldBlock
