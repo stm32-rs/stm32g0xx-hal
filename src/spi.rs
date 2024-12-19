@@ -2,9 +2,13 @@ use crate::gpio::*;
 use crate::rcc::*;
 use crate::stm32::{SPI1, SPI2};
 use crate::time::Hertz;
+use core::convert::Infallible;
 use core::ptr;
+use embedded_hal::delay::DelayNs;
+use hal::digital;
+use hal::digital::OutputPin;
 pub use hal::spi::{
-    ErrorKind, ErrorType, Mode, Phase, Polarity, SpiBus, MODE_0, MODE_1, MODE_2, MODE_3,
+    self, ErrorKind, ErrorType, Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3,
 };
 use nb::block;
 
@@ -17,6 +21,8 @@ pub enum Error {
     ModeFault,
     /// CRC error
     Crc,
+    /// Chip Select Fault
+    ChipSelectFault,
 }
 
 impl hal::spi::Error for Error {
@@ -24,8 +30,33 @@ impl hal::spi::Error for Error {
         match self {
             Error::Overrun => ErrorKind::Overrun,
             Error::ModeFault => ErrorKind::ModeFault,
+            Error::ChipSelectFault => ErrorKind::ChipSelectFault,
             Error::Crc => ErrorKind::Other,
         }
+    }
+}
+
+/// A filler type for when the delay is unnecessary
+pub struct NoDelay;
+
+impl DelayNs for NoDelay {
+    fn delay_ns(&mut self, _: u32) {}
+}
+
+/// A filler type for when the CS pin is unnecessary
+pub struct NoCS;
+
+impl digital::ErrorType for NoCS {
+    type Error = Infallible;
+}
+
+impl digital::OutputPin for NoCS {
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        Ok(())
     }
 }
 
@@ -74,13 +105,20 @@ where
 }
 
 #[derive(Debug)]
-pub struct Spi<SPI, PINS> {
+pub struct SpiBus<SPI, PINS> {
     spi: SPI,
     pins: PINS,
 }
 
+#[derive(Debug)]
+pub struct SpiDevice<BUS, CS, DELAY> {
+    bus: BUS,
+    cs: CS,
+    delay: DELAY,
+}
+
 pub trait SpiExt: Sized {
-    fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<Self, PINS>
+    fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> SpiBus<Self, PINS>
     where
         PINS: Pins<Self>;
 }
@@ -149,7 +187,7 @@ macro_rules! spi {
             }
         )*
 
-        impl<PINS: Pins<$SPIX>> Spi<$SPIX, PINS> {
+        impl<PINS: Pins<$SPIX>> SpiBus<$SPIX, PINS> {
             pub fn $spiX(
                 spi: $SPIX,
                 pins: PINS,
@@ -197,7 +235,15 @@ macro_rules! spi {
                     w.spe().set_bit()
                 });
 
-                Spi { spi, pins }
+                SpiBus { spi, pins }
+            }
+
+            pub fn exclusive<CS: OutputPin, DELAY: DelayNs>(self, cs: CS, delay: DELAY) -> SpiDevice<SpiBus<$SPIX, PINS>, CS, DELAY,> {
+                SpiDevice {
+                    bus: self,
+                    cs,
+                    delay
+                }
             }
 
             pub fn data_size(&mut self, nr_bits: u8) {
@@ -223,17 +269,39 @@ macro_rules! spi {
             }
         }
 
-        impl SpiExt for $SPIX {
-            fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> Spi<$SPIX, PINS>
-            where
-                PINS: Pins<$SPIX>,
-            {
-                Spi::$spiX(self, pins, mode, freq, rcc)
+        impl<PINS, CS: OutputPin, DELAY> ErrorType for SpiDevice<SpiBus<$SPIX, PINS>, CS, DELAY> {
+            type Error = Error;
+        }
+
+        impl<PINS, CS: OutputPin, DELAY: DelayNs> spi::SpiDevice for SpiDevice<SpiBus<$SPIX, PINS>, CS, DELAY> {
+            fn transaction(&mut self, operations: &mut [hal::spi::Operation<'_, u8>]) -> Result<(), Error> {
+                use crate::hal::spi::SpiBus;
+                self.cs.set_low().map_err(|_| Error::ChipSelectFault)?;
+                for op in operations {
+                    match op {
+                        spi::Operation::Read(read) => { self.bus.read(read)?; },
+                        spi::Operation::Write(write) => { self.bus.write(write)?; },
+                        spi::Operation::Transfer(write, read) => { self.bus.transfer(write, read)?; },
+                        spi::Operation::TransferInPlace(data) => { self.bus.transfer_in_place(data)?; },
+                        spi::Operation::DelayNs(ns) => { self.delay.delay_ns(*ns) },
+                    }
+                }
+                self.cs.set_high().map_err(|_| Error::ChipSelectFault)?;
+                Ok(())
             }
         }
 
-        impl<PINS> Spi<$SPIX, PINS> {
-            pub fn read(&mut self) -> nb::Result<u8, Error> {
+        impl SpiExt for $SPIX {
+            fn spi<PINS>(self, pins: PINS, mode: Mode, freq: Hertz, rcc: &mut Rcc) -> SpiBus<$SPIX, PINS>
+            where
+                PINS: Pins<$SPIX>,
+            {
+                SpiBus::$spiX(self, pins, mode, freq, rcc)
+            }
+        }
+
+        impl<PINS> SpiBus<$SPIX, PINS> {
+            fn receive_byte(&mut self) -> nb::Result<u8, Error> {
                 let sr = self.spi.sr().read();
                 Err(if sr.ovr().bit_is_set() {
                     nb::Error::Other(Error::Overrun)
@@ -248,7 +316,7 @@ macro_rules! spi {
                 })
             }
 
-            pub fn send(&mut self, byte: u8) -> nb::Result<(), Error> {
+            fn send_byte(&mut self, byte: u8) -> nb::Result<(), Error> {
                 let sr = self.spi.sr().read();
                 Err(if sr.ovr().bit_is_set() {
                     nb::Error::Other(Error::Overrun)
@@ -267,38 +335,53 @@ macro_rules! spi {
             }
         }
 
-        impl<PINS> ErrorType for Spi<$SPIX, PINS> {
+        impl<PINS> ErrorType for SpiBus<$SPIX, PINS> {
             type Error = Error;
         }
 
-        impl<PINS> SpiBus for Spi<$SPIX, PINS> {
-            fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
-                for word in words.iter_mut() {
-                    *word = block!(self.read())?;
+        impl<PINS> spi::SpiBus for SpiBus<$SPIX, PINS> {
+            fn read(&mut self, bytes: &mut [u8]) -> Result<(), Self::Error> {
+                for byte in bytes.iter_mut() {
+                    block!(self.send_byte(0))?;
+                    *byte = block!(self.receive_byte())?;
                 }
                 Ok(())
             }
 
-            fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
-                for word in words.iter() {
-                    block!(self.send(*word))?;
-                    block!(self.read())?;
+            fn write(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
+                for byte in bytes.iter() {
+                    block!(self.send_byte(*byte))?;
+                    block!(self.receive_byte())?;
                 }
                 Ok(())
             }
 
             fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
-                for (r, w) in read.iter_mut().zip(write.iter()) {
-                    block!(self.send(*w))?;
-                    *r = block!(self.read())?;
+                let mut iter_r = read.iter_mut();
+                let mut iter_w = write.iter().cloned();
+                loop {
+                    match (iter_r.next(), iter_w.next()) {
+                        (Some(r), Some(w)) => {
+                            block!(self.send_byte(w))?;
+                            *r = block!(self.receive_byte())?;
+                        }
+                        (Some(r), None) => {
+                            block!(self.send_byte(0))?;
+                            *r = block!(self.receive_byte())?;
+                        }
+                        (None, Some(w)) => {
+                            block!(self.send_byte(w))?;
+                            let _ = block!(self.receive_byte())?;
+                        }
+                        (None, None) => return Ok(()),
+                    }
                 }
-                Ok(())
             }
 
-            fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
-                for word in words.iter_mut() {
-                    block!(self.send(*word))?;
-                    *word = block!(self.read())?;
+            fn transfer_in_place(&mut self, bytes: &mut [u8]) -> Result<(), Self::Error> {
+                for byte in bytes.iter_mut() {
+                    block!(self.send_byte(*byte))?;
+                    *byte = block!(self.receive_byte())?;
                 }
                 Ok(())
             }
