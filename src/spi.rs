@@ -235,7 +235,6 @@ macro_rules! spi {
         impl<PINS> Spi<$SPIX, PINS> {
             pub fn read(&mut self) -> nb::Result<u8, Error> {
                 let sr = self.spi.sr().read();
-
                 Err(if sr.ovr().bit_is_set() {
                     nb::Error::Other(Error::Overrun)
                 } else if sr.modf().bit_is_set() {
@@ -243,11 +242,7 @@ macro_rules! spi {
                 } else if sr.crcerr().bit_is_set() {
                     nb::Error::Other(Error::Crc)
                 } else if sr.rxne().bit_is_set() {
-                    // NOTE(read_volatile) read only 1 byte (the svd2rust API only allows
-                    // reading a half-word)
-                    return Ok(unsafe {
-                        ptr::read_volatile(&self.spi.dr() as *const _ as *const u8)
-                    });
+                    return Ok(self.spi.dr().read().bits() as u8);
                 } else {
                     nb::Error::WouldBlock
                 })
@@ -262,7 +257,9 @@ macro_rules! spi {
                 } else if sr.crcerr().bit_is_set() {
                     nb::Error::Other(Error::Crc)
                 } else if sr.txe().bit_is_set() {
-                    self.spi.dr().write(|w| w.dr().set(byte.into()));
+                    unsafe {
+                        ptr::write_volatile(core::cell::UnsafeCell::raw_get(self.spi.dr() as *const _ as _), byte)
+                    }
                     return Ok(());
                 } else {
                     nb::Error::WouldBlock
@@ -284,7 +281,7 @@ macro_rules! spi {
 
             fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
                 for word in words.iter() {
-                    block!(self.send(word.clone()))?;
+                    block!(self.send(*word))?;
                     block!(self.read())?;
                 }
                 Ok(())
@@ -292,7 +289,7 @@ macro_rules! spi {
 
             fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
                 for (r, w) in read.iter_mut().zip(write.iter()) {
-                    block!(self.send(w.clone()))?;
+                    block!(self.send(*w))?;
                     *r = block!(self.read())?;
                 }
                 Ok(())
@@ -300,7 +297,7 @@ macro_rules! spi {
 
             fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
                 for word in words.iter_mut() {
-                    block!(self.send(word.clone()))?;
+                    block!(self.send(*word))?;
                     *word = block!(self.read())?;
                 }
                 Ok(())
