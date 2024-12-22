@@ -4,6 +4,7 @@ pub use fugit::{
 };
 
 /// Baudrate
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Eq, PartialEq, PartialOrd, Clone, Copy)]
 pub struct Bps(pub u32);
 
@@ -11,25 +12,31 @@ pub struct Bps(pub u32);
 pub type Instant = fugit::TimerInstantU32<1_000_000>;
 
 /// WeekDay (1-7)
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WeekDay(pub u32);
 
 /// Date (1-31)
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MonthDay(pub u32);
 
 /// Week (1-52)
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Week(pub u32);
 
 /// Month (1-12)
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Month(pub u32);
 
 /// Year
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Year(pub u32);
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Time {
     pub hours: u32,
@@ -49,6 +56,7 @@ impl Time {
     }
 }
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Date {
     pub day: u32,

@@ -12,7 +12,8 @@ pub use hal::spi::{
 use nb::block;
 
 /// SPI error
-#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Error {
     /// Overrun occurred
     Overrun,
