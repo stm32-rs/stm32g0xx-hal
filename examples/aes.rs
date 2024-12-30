@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 #![no_main]
 #![no_std]
 
@@ -21,7 +21,6 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
     let aes = dp.AES.constrain(&mut rcc);
-    defmt::info!(">>");
     let message = b"The quick brown ";
     let key = Key::try_from_slice(&[01; 32]).unwrap();
 
