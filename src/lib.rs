@@ -43,6 +43,8 @@ pub use stm32g0::stm32g0b1 as stm32;
 #[cfg(feature = "rt")]
 pub use crate::stm32::interrupt;
 
+#[cfg(any(feature = "stm32g041", feature = "stm32g081"))]
+pub mod aes;
 pub mod analog;
 pub mod crc;
 pub mod dma;

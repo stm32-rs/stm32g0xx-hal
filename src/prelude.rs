@@ -1,3 +1,5 @@
+#[cfg(any(feature = "stm32g041", feature = "stm32g081"))]
+pub use crate::aes::AesExt as _;
 pub use crate::analog::adc::AdcExt as _;
 #[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
 pub use crate::analog::comparator::ComparatorExt as _;
