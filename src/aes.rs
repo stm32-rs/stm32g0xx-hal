@@ -200,21 +200,21 @@ pub trait Mode {
         match key {
             Key::Key128(key) => unsafe {
                 rb.cr().modify(|_, w| w.keysize().bit(false));
-                rb.keyr0().write(|w| w.bits(key[0]));
-                rb.keyr1().write(|w| w.bits(key[1]));
-                rb.keyr2().write(|w| w.bits(key[2]));
-                rb.keyr3().write(|w| w.bits(key[3]));
+                rb.keyr3().write(|w| w.bits(key[0]));
+                rb.keyr2().write(|w| w.bits(key[1]));
+                rb.keyr1().write(|w| w.bits(key[2]));
+                rb.keyr0().write(|w| w.bits(key[3]));
             },
             Key::Key256(key) => unsafe {
                 rb.cr().modify(|_, w| w.keysize().bit(true));
-                rb.keyr0().write(|w| w.bits(key[0]));
-                rb.keyr1().write(|w| w.bits(key[1]));
-                rb.keyr2().write(|w| w.bits(key[2]));
-                rb.keyr3().write(|w| w.bits(key[3]));
-                rb.keyr4().write(|w| w.bits(key[4]));
-                rb.keyr5().write(|w| w.bits(key[5]));
-                rb.keyr6().write(|w| w.bits(key[6]));
-                rb.keyr7().write(|w| w.bits(key[7]));
+                rb.keyr7().write(|w| w.bits(key[0]));
+                rb.keyr6().write(|w| w.bits(key[1]));
+                rb.keyr5().write(|w| w.bits(key[2]));
+                rb.keyr4().write(|w| w.bits(key[3]));
+                rb.keyr3().write(|w| w.bits(key[4]));
+                rb.keyr2().write(|w| w.bits(key[5]));
+                rb.keyr1().write(|w| w.bits(key[6]));
+                rb.keyr0().write(|w| w.bits(key[7]));
             },
         }
     }
