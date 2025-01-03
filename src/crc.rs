@@ -77,28 +77,24 @@ impl Config {
     /// Sets the initial value of the CRC.
     pub fn initial_value(mut self, init: u32) -> Self {
         self.initial_value = init;
-
         self
     }
 
     /// Sets the polynomial of the CRC.
     pub fn polynomial(mut self, polynomial: Polynomial) -> Self {
         self.polynomial = polynomial;
-
         self
     }
 
     /// Enables bit reversal of the inputs.
     pub fn input_bit_reversal(mut self, rev: Option<BitReversal>) -> Self {
         self.input_bit_reversal = rev;
-
         self
     }
 
     /// Enables bit reversal of the outputs.
     pub fn output_bit_reversal(mut self, rev: bool) -> Self {
         self.output_bit_reversal = rev;
-
         self
     }
 
@@ -147,11 +143,20 @@ impl Config {
 pub struct Crc {}
 
 impl Crc {
+    /// Release CRC peripheral.
+    pub fn release(self) -> Config {
+        Config {
+            initial_value: 0xffff_ffff,
+            polynomial: Polynomial::L32(0x04c1_1db7),
+            input_bit_reversal: None,
+            output_bit_reversal: false,
+        }
+    }
+
     /// This will reset the CRC to its initial condition.
     #[inline]
     pub fn reset(&mut self) {
         let crc = unsafe { &(*CRC::ptr()) };
-
         crc.cr().modify(|_, w| w.reset().set_bit());
     }
 
@@ -162,7 +167,6 @@ impl Crc {
     #[inline]
     pub fn reset_with_inital_value(&mut self, initial_value: u32) {
         let crc = unsafe { &(*CRC::ptr()) };
-
         crc.init()
             .write(|w| unsafe { w.crc_init().bits(initial_value) });
         crc.cr().modify(|_, w| w.reset().set_bit());
@@ -187,9 +191,7 @@ impl Crc {
     #[inline]
     pub fn result(&mut self) -> u32 {
         let ret = self.peek_result();
-
         self.reset();
-
         ret
     }
 
@@ -198,7 +200,6 @@ impl Crc {
     #[inline]
     pub fn peek_result(&self) -> u32 {
         let crc = unsafe { &(*CRC::ptr()) };
-
         crc.dr().read().bits()
     }
 }
