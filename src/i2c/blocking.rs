@@ -535,12 +535,12 @@ macro_rules! i2c {
                 })
             }
 
-            fn read(&mut self, buf: &mut [u8]) -> Result<(), Self::Error> {
+            fn rx(&mut self, buf: &mut [u8]) -> Result<(), Self::Error> {
                 self.slave_sbc(false);
                 self.slave_read(buf)
             }
 
-            fn write(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
+            fn tx(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
                 self.slave_sbc(true);
                 self.slave_write(buf)
             }
