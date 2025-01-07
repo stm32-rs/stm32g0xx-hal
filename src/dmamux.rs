@@ -149,13 +149,12 @@ pub trait DmaMuxChannel {
     fn select_peripheral(&mut self, index: DmaMuxIndex);
 }
 
-pub struct Channel<const N: usize> {
-    _0: (),
-}
+#[non_exhaustive]
+pub struct Channel<const N: u8>;
 
-impl<const N: usize> DmaMuxChannel for Channel<N> {
+impl<const N: u8> DmaMuxChannel for Channel<N> {
     fn select_peripheral(&mut self, index: DmaMuxIndex) {
-        let reg = unsafe { &(*DMAMUX::ptr()).ccr(N) };
+        let reg = unsafe { &(*DMAMUX::ptr()).ccr(N as usize) };
         reg.write(|w| unsafe { w.dmareq_id().bits(index.val()).ege().set_bit() });
     }
 }
@@ -193,11 +192,11 @@ impl DmaMuxExt for DMAMUX {
 
     fn split(self) -> Self::Channels {
         Channels {
-            ch0: Channel::<0> { _0: () },
-            ch1: Channel::<1> { _0: () },
-            ch2: Channel::<2> { _0: () },
-            ch3: Channel::<3> { _0: () },
-            ch4: Channel::<4> { _0: () },
+            ch0: Channel::<0>,
+            ch1: Channel::<1>,
+            ch2: Channel::<2>,
+            ch3: Channel::<3>,
+            ch4: Channel::<4>,
             #[cfg(any(
                 feature = "stm32g070",
                 feature = "stm32g071",
@@ -205,7 +204,7 @@ impl DmaMuxExt for DMAMUX {
                 feature = "stm32g0b1",
                 feature = "stm32g0c1",
             ))]
-            ch5: Channel::<5> { _0: () },
+            ch5: Channel::<5>,
             #[cfg(any(
                 feature = "stm32g070",
                 feature = "stm32g071",
@@ -213,7 +212,7 @@ impl DmaMuxExt for DMAMUX {
                 feature = "stm32g0b1",
                 feature = "stm32g0c1",
             ))]
-            ch6: Channel::<6> { _0: () },
+            ch6: Channel::<6>,
         }
     }
 }

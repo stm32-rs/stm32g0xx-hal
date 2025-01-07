@@ -4,18 +4,22 @@ use crate::rcc::{RTCSrc, Rcc};
 use crate::stm32::RTC;
 use crate::time::*;
 
-#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RtcHourFormat {
     H24,
     H12,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RtcCalibrationFrequency {
     F1Hz,
     F512Hz,
 }
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
     WakeupTimer,
     AlarmA,

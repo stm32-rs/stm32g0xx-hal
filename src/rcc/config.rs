@@ -1,7 +1,8 @@
 use crate::time::Hertz;
 
 /// Prescaler
-#[derive(Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Prescaler {
     NotDivided,
     Div2,
@@ -27,6 +28,8 @@ pub enum SysClockSrc {
 }
 
 /// Microcontroller clock output source
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MCOSrc {
     LSI,
     PLL,
@@ -37,6 +40,8 @@ pub enum MCOSrc {
 }
 
 /// Low-speed clocks output source
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LSCOSrc {
     LSI,
     LSE,
@@ -51,7 +56,8 @@ pub enum PLLSrc {
 }
 
 /// RTC clock input source
-#[derive(Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RTCSrc {
     LSE,
     LSE_BYPASS,

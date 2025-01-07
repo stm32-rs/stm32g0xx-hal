@@ -3,7 +3,7 @@ authors = ["Vitaly Domnikov <oss@vitaly.codes>"]
 categories = ["embedded", "hardware-support", "no-std"]
 description = "Peripheral access API for STM32G0 series microcontrollers"
 documentation = "https://docs.rs/stm32g0xx-hal"
-edition = "2018"
+edition = "2021"
 keywords = ["arm", "cortex-m", "stm32g0xx", "hal"]
 license = "MIT/Apache-2.0"
 name = "stm32g0xx-hal"
@@ -18,14 +18,16 @@ default-target = "thumbv6m-none-eabi"
 [dependencies]
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 nb = "1.1.0"
+defmt = { version = "0.3.10", optional = true }
 fugit = "0.3.7"
 embedded-hal = "1.0.0"
 bare-metal = "1.0.0"
-
+portable-atomic = { version = "1.10.0", features = ["critical-section"] }
 
 [dependencies.stm32g0]
 package = "stm32g0-staging"
 version = "0.16.0"
+features = ["atomics"]
 
 [dependencies.void]
 default-features = false
@@ -34,11 +36,9 @@ version = "1.0.2"
 [dev-dependencies]
 cortex-m-rt = "0.7.5"
 cortex-m-semihosting = "0.5.0"
-defmt = "0.3.8"
 defmt-rtt = "0.4.0"
 panic-halt = "1.0.0"
 panic-semihosting = "0.6.0"
-portable-atomic = {version = "1.7.0", features = ["critical-section"]}
 rtic = { version = "2.1.1", features = ["thumbv6-backend"] }
 panic-probe = "0.3.2"
 
@@ -46,7 +46,7 @@ panic-probe = "0.3.2"
 default = ["i2c-blocking"]
 device-selected = []
 rt = ["stm32g0/rt"]
-defmt = ["embedded-hal/defmt-03"]
+defmt = ["dep:defmt", "embedded-hal/defmt-03", "stm32g0/defmt"]
 stm32g030 = ["stm32g0/stm32g030", "stm32g0x0", "device-selected"]
 stm32g070 = ["stm32g0/stm32g070", "stm32g0x0", "device-selected"]
 stm32g031 = ["stm32g0/stm32g031", "stm32g0x1", "device-selected"]

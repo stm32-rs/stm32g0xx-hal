@@ -6,6 +6,8 @@ use crate::{
     stm32::PWR,
 };
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LowPowerMode {
     StopMode1 = 0b000,
     StopMode2 = 0b001,
@@ -19,6 +21,8 @@ pub enum PowerMode {
     UltraLowPower(LowPowerMode),
 }
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum WakeUp {
     InternalLine,
     Line1,

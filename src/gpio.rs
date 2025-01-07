@@ -63,27 +63,19 @@ macro_rules! gpio_trait {
     ($gpiox:ident) => {
         impl GpioRegExt for crate::stm32::$gpiox::RegisterBlock {
             fn is_low(&self, pos: u8) -> bool {
-                // NOTE(unsafe) atomic read with no side effects
-                self.idr().read().bits() & (1 << pos) == 0
+                self.idr().read().idr(pos).bit_is_clear()
             }
 
             fn is_set_low(&self, pos: u8) -> bool {
-                // NOTE(unsafe) atomic read with no side effects
-                self.odr().read().bits() & (1 << pos) == 0
+                self.odr().read().odr(pos).bit_is_clear()
             }
 
             fn set_high(&self, pos: u8) {
-                // NOTE(unsafe) atomic write to a stateless register
-                unsafe {
-                    self.bsrr().write(|w| w.bits(1 << pos));
-                }
+                self.bsrr().write(|w| w.bs(pos).set_bit());
             }
 
             fn set_low(&self, pos: u8) {
-                // NOTE(unsafe) atomic write to a stateless register
-                unsafe {
-                    self.bsrr().write(|w| w.bits(1 << (pos + 16)));
-                }
+                self.bsrr().write(|w| w.br(pos).set_bit());
             }
         }
     };
@@ -157,7 +149,8 @@ impl<MODE> InputPin for Pin<Input<MODE>> {
 }
 
 /// GPIO Pin speed selection
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Speed {
     Low = 0,
     Medium = 1,
@@ -166,7 +159,8 @@ pub enum Speed {
 }
 
 /// Trigger edge
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SignalEdge {
     Rising,
     Falling,
@@ -232,13 +226,13 @@ macro_rules! gpio {
             impl<MODE> OutputPin for $PXx<Output<MODE>> {
                 fn set_high(&mut self) -> Result<(), Self::Error> {
                     // NOTE(unsafe) atomic write to a stateless register
-                    unsafe { (*$GPIOX::ptr()).bsrr().write(|w| w.bits(1 << self.i)) };
+                    unsafe { (*$GPIOX::ptr()).bsrr().write(|w| w.bs(self.i).set_bit()) };
                     Ok(())
                 }
 
                 fn set_low(&mut self) -> Result<(), Self::Error> {
                     // NOTE(unsafe) atomic write to a stateless register
-                    unsafe { (*$GPIOX::ptr()).bsrr().write(|w| w.bits(1 << (self.i + 16))) };
+                    unsafe { (*$GPIOX::ptr()).bsrr().write(|w| w.br(self.i).set_bit()) };
                     Ok(())
                 }
             }
@@ -251,7 +245,7 @@ macro_rules! gpio {
 
                 fn is_set_low(&mut self) -> Result<bool, Self::Error> {
                     // NOTE(unsafe) atomic read with no side effects
-                    let is_set_low = unsafe { (*$GPIOX::ptr()).odr().read().bits() & (1 << self.i) == 0 };
+                    let is_set_low = unsafe { (*$GPIOX::ptr()).odr().read().odr(self.i).bit_is_clear() };
                     Ok(is_set_low)
                 }
             }
@@ -264,7 +258,7 @@ macro_rules! gpio {
 
                 fn is_low(&mut self) -> Result<bool, Self::Error>  {
                     // NOTE(unsafe) atomic read with no side effects
-                    let is_low = unsafe { (*$GPIOX::ptr()).idr().read().bits() & (1 << self.i) == 0 };
+                    let is_low = unsafe { (*$GPIOX::ptr()).idr().read().idr(self.i).bit_is_clear() };
                     Ok(is_low)
                 }
             }
@@ -281,7 +275,7 @@ macro_rules! gpio {
 
                 fn is_low(&mut self) -> Result<bool, Self::Error> {
                     // NOTE(unsafe) atomic read with no side effects
-                    let is_low = unsafe { (*$GPIOX::ptr()).idr().read().bits() & (1 << self.i) == 0 };
+                    let is_low = unsafe { (*$GPIOX::ptr()).idr().read().idr(self.i).bit_is_clear() };
                     Ok(is_low)
                 }
             }
@@ -329,60 +323,40 @@ macro_rules! gpio {
                 impl<MODE> $PXi<MODE> {
                     /// Configures the pin to operate as a floating input pin
                     pub fn into_floating_input(self) -> $PXi<Input<Floating>> {
-                        let offset = 2 * $i;
                         unsafe {
                             let gpio = &(*$GPIOX::ptr());
-                            gpio.pupdr().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            });
-                            gpio.moder().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            })
+                            gpio.pupdr().modify(|_, w| w.pupdr($i).floating());
+                            gpio.moder().modify(|_, w| w.moder($i).input());
                         };
                         $PXi { _mode: PhantomData }
                     }
 
                     /// Configures the pin to operate as a pulled down input pin
                     pub fn into_pull_down_input(self) -> $PXi<Input<PullDown>> {
-                        let offset = 2 * $i;
                         unsafe {
                             let gpio = &(*$GPIOX::ptr());
-                            gpio.pupdr().modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b10 << offset))
-                            });
-                            gpio.moder().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            })
+                            gpio.pupdr().modify(|_, w| w.pupdr($i).pull_down());
+                            gpio.moder().modify(|_, w| w.moder($i).input());
                         };
                         $PXi { _mode: PhantomData }
                     }
 
                     /// Configures the pin to operate as a pulled up input pin
                     pub fn into_pull_up_input(self) -> $PXi<Input<PullUp>> {
-                        let offset = 2 * $i;
                         unsafe {
                             let gpio = &(*$GPIOX::ptr());
-                            gpio.pupdr().modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b01 << offset))
-                            });
-                            gpio.moder().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            })
+                            gpio.pupdr().modify(|_, w| w.pupdr($i).pull_up());
+                            gpio.moder().modify(|_, w| w.moder($i).input());
                         };
                         $PXi { _mode: PhantomData }
                     }
 
                     /// Configures the pin to operate as an analog pin
                     pub fn into_analog(self) -> $PXi<Analog> {
-                        let offset = 2 * $i;
                         unsafe {
                             let gpio = &(*$GPIOX::ptr());
-                            gpio.pupdr().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            });
-                            gpio.moder().modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b11 << offset))
-                            });
+                            gpio.pupdr().modify(|_, w| w.pupdr($i).floating());
+                            gpio.moder().modify(|_, w| w.moder($i).analog());
                         }
                         $PXi { _mode: PhantomData }
                     }
@@ -397,18 +371,11 @@ macro_rules! gpio {
 
                     /// Configures the pin to operate as an open drain output pin
                     pub fn into_open_drain_output(self) -> $PXi<Output<OpenDrain>> {
-                        let offset = 2 * $i;
                         unsafe {
                             let gpio = &(*$GPIOX::ptr());
-                            gpio.pupdr().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            });
-                            gpio.otyper().modify(|r, w| {
-                                w.bits(r.bits() | (0b1 << $i))
-                            });
-                            gpio.moder().modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b01 << offset))
-                            })
+                            gpio.pupdr().modify(|_, w| w.pupdr($i).floating());
+                            gpio.otyper().modify(|_, w| w.ot($i).open_drain());
+                            gpio.moder().modify(|_, w| w.moder($i).output());
                         };
                         $PXi { _mode: PhantomData }
                     }
@@ -423,32 +390,21 @@ macro_rules! gpio {
 
                     /// Configures the pin to operate as a push pull output pin
                     pub fn into_push_pull_output(self) -> $PXi<Output<PushPull>> {
-                        let offset = 2 * $i;
                         unsafe {
                             let gpio = &(*$GPIOX::ptr());
-                            gpio.pupdr().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            });
-                            gpio.otyper().modify(|r, w| {
-                                w.bits(r.bits() & !(0b1 << $i))
-                            });
-                            gpio.moder().modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b01 << offset))
-                            })
+                            gpio.pupdr().modify(|_, w| w.pupdr($i).floating());
+                            gpio.otyper().modify(|_, w| w.ot($i).push_pull());
+                            gpio.moder().modify(|_, w| w.moder($i).output());
                         };
                         $PXi { _mode: PhantomData }
                     }
 
                     /// Configures the pin as external trigger
                     pub fn listen(self, edge: SignalEdge, exti: &mut EXTI) -> $PXi<Input<Floating>> {
-                        let offset = 2 * $i;
                         unsafe {
-                            let _ = &(*$GPIOX::ptr()).pupdr().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            });
-                            let _ = &(*$GPIOX::ptr()).moder().modify(|r, w| {
-                                w.bits(r.bits() & !(0b11 << offset))
-                            });
+                            let gpio = &(*$GPIOX::ptr());
+                            gpio.pupdr().modify(|_, w| w.pupdr($i).floating());
+                            gpio.moder().modify(|_, w| w.moder($i).input());
                         };
                         let offset = ($i % 4) * 8;
                         let mask = $Pxn << offset;
@@ -474,35 +430,23 @@ macro_rules! gpio {
 
                     /// Set pin speed
                     pub fn set_speed(self, speed: Speed) -> Self {
-                        let offset = 2 * $i;
                         unsafe {
-                            let _ = &(*$GPIOX::ptr()).ospeedr().modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | ((speed as u32) << offset))
-                            });
-                        };
+                            (*$GPIOX::ptr()).ospeedr().modify(|_, w| w.ospeedr($i).bits(speed as u8));
+                        }
                         self
                     }
 
                     #[allow(dead_code)]
                     pub(crate) fn set_alt_mode(&self, mode: AltFunction) {
-                        let mode = mode as u32;
-                        let offset = 2 * $i;
-                        let offset2 = 4 * $i;
                         unsafe {
                             let gpio = &(*$GPIOX::ptr());
-                            if offset2 < 32 {
-                                gpio.afrl().modify(|r, w| {
-                                    w.bits((r.bits() & !(0b1111 << offset2)) | (mode << offset2))
-                                });
+                            let n = $i;
+                            if n < 8 {
+                                gpio.afrl().modify(|_, w| w.afr(n).bits(mode as u8));
                             } else {
-                                let offset2 = offset2 - 32;
-                                gpio.afrh().modify(|r, w| {
-                                    w.bits((r.bits() & !(0b1111 << offset2)) | (mode << offset2))
-                                });
+                                gpio.afrh().modify(|_, w| w.afr(n - 8).bits(mode as u8));
                             }
-                            gpio.moder().modify(|r, w| {
-                                w.bits((r.bits() & !(0b11 << offset)) | (0b10 << offset))
-                            });
+                            gpio.moder().modify(|_, w| w.moder($i).alternate());
                         }
                     }
 
@@ -510,11 +454,11 @@ macro_rules! gpio {
                         match state {
                             PinState::High => {
                                 // NOTE(unsafe) atomic write to a stateless register
-                                unsafe { (*$GPIOX::ptr()).bsrr().write(|w| w.bits(1 << $i)) };
+                                unsafe { (*$GPIOX::ptr()).bsrr().write(|w| w.bs($i).set_bit()) };
                             }
                             PinState::Low => {
                                 // NOTE(unsafe) atomic write to a stateless register
-                                unsafe { (*$GPIOX::ptr()).bsrr().write(|w| w.bits(1 << ($i + 16))) };
+                                unsafe { (*$GPIOX::ptr()).bsrr().write(|w| w.br($i).set_bit()) };
                             }
                         }
                     }
@@ -554,7 +498,7 @@ macro_rules! gpio {
 
                     fn is_set_low(&mut self) -> Result<bool, Self::Error> {
                         // NOTE(unsafe) atomic read with no side effects
-                        let is_set_low = unsafe { (*$GPIOX::ptr()).odr().read().bits() & (1 << $i) == 0 };
+                        let is_set_low = unsafe { (*$GPIOX::ptr()).odr().read().odr($i).bit_is_clear() };
                         Ok(is_set_low)
                     }
                 }
@@ -567,7 +511,7 @@ macro_rules! gpio {
 
                     fn is_low(&mut self) -> Result<bool, Self::Error>  {
                         // NOTE(unsafe) atomic read with no side effects
-                        let is_low = unsafe { (*$GPIOX::ptr()).idr().read().bits() & (1 << $i) == 0 };
+                        let is_low = unsafe { (*$GPIOX::ptr()).idr().read().idr($i).bit_is_clear() };
                         Ok(is_low)
                     }
                 }
@@ -594,7 +538,7 @@ macro_rules! gpio {
 
                     fn is_low(&mut self) -> Result<bool, Self::Error> {
                         // NOTE(unsafe) atomic read with no side effects
-                        let is_low = unsafe { (*$GPIOX::ptr()).idr().read().bits() & (1 << $i) == 0 };
+                        let is_low = unsafe { (*$GPIOX::ptr()).idr().read().idr($i).bit_is_clear() };
                         Ok(is_low)
                     }
                 }

@@ -10,7 +10,8 @@ use cortex_m::interrupt;
 use nb::block;
 
 /// Serial error
-#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Error {
     /// Framing error
     Framing,
@@ -23,6 +24,8 @@ pub enum Error {
 }
 
 /// Interrupt event
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
     /// TXFIFO reaches the threshold
     TXFT = 1 << 27,
