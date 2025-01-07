@@ -124,3 +124,17 @@ pub struct I2c<I2C, SDA, SCL> {
     data: [u8; 255], // during transfer the driver will be the owner of the buffer
     current_direction: I2cDirection,
 }
+
+pub enum I2cPeripheralEvent {
+    Read(u8),
+    Write(u8),
+}
+
+pub trait I2cPeripheral {
+    type Error;
+
+    fn poll(&mut self) -> Result<Option<I2cPeripheralEvent>, Self::Error>;
+    fn read(&mut self, buf: &mut [u8]) -> Result<(), Self::Error>;
+    fn write(&mut self, buf: &[u8]) -> Result<(), Self::Error>;
+    fn flush(&mut self) -> Result<(), Self::Error>;
+}

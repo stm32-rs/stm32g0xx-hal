@@ -1,7 +1,9 @@
 //! I2C
 use crate::gpio::*;
 use crate::i2c::config::Config;
-use crate::i2c::{self, Error, I2c, I2cDirection, I2cExt, SCLPin, SDAPin};
+use crate::i2c::{
+    self, Error, I2c, I2cDirection, I2cExt, I2cPeripheral, I2cPeripheralEvent, SCLPin, SDAPin,
+};
 use crate::rcc::*;
 use crate::stm32::{I2C1, I2C2};
 
@@ -514,6 +516,38 @@ macro_rules! i2c {
                         }
                     }
                 }
+                Ok(())
+            }
+        }
+
+        impl<SDA, SCL> I2cPeripheral for I2c<$I2CX, SDA, SCL> where
+            SDA: SDAPin<$I2CX>,
+            SCL: SCLPin<$I2CX>
+        {
+            type Error = Error;
+
+            fn poll(&mut self) -> Result<Option<I2cPeripheralEvent>, Self::Error> {
+                self.slave_addressed().map(|event| {
+                    event.map(|(addr, dir)| match dir {
+                        I2cDirection::MasterWriteSlaveRead => I2cPeripheralEvent::Read(addr as _),
+                        I2cDirection::MasterReadSlaveWrite => I2cPeripheralEvent::Write(addr as _),
+                    })
+                })
+            }
+
+            fn read(&mut self, buf: &mut [u8]) -> Result<(), Self::Error> {
+                self.slave_sbc(false);
+                self.slave_read(buf)
+            }
+
+            fn write(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
+                self.slave_sbc(true);
+                self.slave_write(buf)
+            }
+
+            fn flush(&mut self) -> Result<(), Self::Error> {
+                self.clear_irq(i2c::Event::Rxne);
+                self.clear_irq(i2c::Event::AddressMatch);
                 Ok(())
             }
         }
