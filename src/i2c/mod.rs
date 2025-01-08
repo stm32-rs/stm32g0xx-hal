@@ -9,7 +9,7 @@ pub use nonblocking::*;
 
 pub mod config;
 
-use crate::rcc::*;
+use crate::rcc::{self, Rcc};
 pub use config::Config;
 use hal::i2c::{ErrorKind, NoAcknowledgeSource};
 
@@ -81,6 +81,14 @@ impl hal::i2c::Error for Error {
     }
 }
 
+pub trait Instance:
+    crate::Sealed
+    + core::ops::Deref<Target = crate::stm32::i2c1::RegisterBlock>
+    + rcc::Enable
+    + rcc::Reset
+{
+}
+
 /// I2C SDA pin
 pub trait SDAPin<I2C> {
     fn setup(&self);
@@ -93,17 +101,17 @@ pub trait SCLPin<I2C> {
     fn release(self) -> Self;
 }
 
-pub trait I2cExt<I2C> {
+pub trait I2cExt: Sized {
     fn i2c<SDA, SCL>(
         self,
         sda: SDA,
         scl: SCL,
         config: impl Into<Config>,
         rcc: &mut Rcc,
-    ) -> I2c<I2C, SDA, SCL>
+    ) -> I2c<Self, SDA, SCL>
     where
-        SDA: SDAPin<I2C>,
-        SCL: SCLPin<I2C>;
+        SDA: SDAPin<Self>,
+        SCL: SCLPin<Self>;
 }
 
 /// I2C abstraction
