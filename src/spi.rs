@@ -3,7 +3,6 @@ use crate::rcc::{self, Rcc};
 use crate::stm32::{self as pac, spi1};
 use crate::time::Hertz;
 use core::convert::Infallible;
-use core::ptr;
 use embedded_hal::delay::DelayNs;
 use hal::digital;
 use hal::digital::OutputPin;
@@ -324,9 +323,7 @@ impl<SPI: Instance, PINS> SpiBus<SPI, PINS> {
         } else if sr.crcerr().bit_is_set() {
             nb::Error::Other(Error::Crc)
         } else if sr.rxne().bit_is_set() {
-            // NOTE(read_volatile) read only 1 byte (the svd2rust API only allows
-            // reading a half-word)
-            return Ok(unsafe { ptr::read_volatile(&self.spi.dr() as *const _ as *const u8) });
+            return Ok(self.spi.dr8().read().bits() as u8);
         } else {
             nb::Error::WouldBlock
         })
@@ -341,7 +338,7 @@ impl<SPI: Instance, PINS> SpiBus<SPI, PINS> {
         } else if sr.crcerr().bit_is_set() {
             nb::Error::Other(Error::Crc)
         } else if sr.txe().bit_is_set() {
-            self.spi.dr().write(|w| w.dr().set(byte.into()));
+            self.spi.dr8().write(|w| unsafe { w.dr().bits(byte as _) });
             return Ok(());
         } else {
             nb::Error::WouldBlock
