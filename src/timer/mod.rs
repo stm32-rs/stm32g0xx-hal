@@ -94,10 +94,10 @@ pub trait TimerExt<TIM> {
 }
 
 pub(super) mod private {
+    use crate::pac::SYST;
     use crate::timer::MicroSecond;
     use cortex_m::peripheral::syst::SystClkSource;
     use fugit::HertzU32;
-    use crate::pac::SYST;
 
     use super::{Rcc, TimerFrequencySettings};
 
