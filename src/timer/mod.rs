@@ -97,7 +97,7 @@ pub(super) mod private {
     use crate::timer::MicroSecond;
     use cortex_m::peripheral::syst::SystClkSource;
     use fugit::HertzU32;
-    use stm32g0::stm32g081::SYST;
+    use crate::pac::SYST;
 
     use super::{Rcc, TimerFrequencySettings};
 

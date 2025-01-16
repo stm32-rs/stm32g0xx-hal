@@ -296,6 +296,7 @@ impl Irq for pac::TIM3 {
     const IRQ: pac::Interrupt = pac::Interrupt::TIM3;
 }
 
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 impl Irq for pac::TIM15 {
     const IRQ: pac::Interrupt = pac::Interrupt::TIM15;
 }
