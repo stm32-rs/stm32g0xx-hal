@@ -4,9 +4,12 @@ use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
 use core::marker::PhantomData;
 use fugit::HertzU32;
+use fugit::RateExtU32;
 use void::Void;
 
 pub mod delay;
+#[cfg(feature = "rtic2")]
+pub mod monotonics;
 pub mod opm;
 pub mod pins;
 pub mod pwm;
@@ -29,6 +32,46 @@ type Channel1 = Channel<0>;
 type Channel2 = Channel<1>;
 type Channel3 = Channel<2>;
 type Channel4 = Channel<3>;
+
+/// Timer wrapper for fixed precision timers.
+///
+/// Uses `fugit::TimerDurationU32` for most of operations
+pub struct FTimer<TIM, const FREQ: u32> {
+    tim: TIM,
+}
+
+/// `FTimer` with precision of 1 μs (1 MHz sampling)
+pub type FTimerUs<TIM> = FTimer<TIM, 1_000_000>;
+
+/// `FTimer` with precision of 1 ms (1 kHz sampling)
+///
+/// NOTE: don't use this if your system frequency more than 65 MHz
+pub type FTimerMs<TIM> = FTimer<TIM, 1_000>;
+
+impl<TIM: private::TimerBase, const FREQ: u32> FTimer<TIM, FREQ> {
+    /// Initialize timer
+    pub fn new(mut tim: TIM, rcc: &mut Rcc) -> Self {
+        tim.init(rcc);
+        tim.set_freq(FREQ.Hz(), rcc.clocks.apb_tim_clk);
+
+        Self { tim }
+    }
+
+    /*/// Creates `Counter` that implements [embedded_hal_02::timer::CountDown]
+    pub fn counter(self) -> Counter<TIM, FREQ> {
+        Counter(self)
+    }
+
+    /// Creates `Delay` that implements [embedded_hal_02::blocking::delay] traits
+    pub fn delay(self) -> Delay<TIM, FREQ> {
+        Delay(self)
+    }*/
+
+    /// Releases the TIM peripheral
+    pub fn release(self) -> TIM {
+        self.tim
+    }
+}
 
 pub struct TimerFrequencySettings {
     psc: u16,
@@ -59,6 +102,8 @@ pub(super) mod private {
     use super::{Rcc, TimerFrequencySettings};
 
     pub trait TimerCommon {
+        type Width: Into<u32> + From<u16>;
+
         fn init(&mut self, rcc: &mut Rcc);
 
         fn set_urs(&mut self);
@@ -80,6 +125,8 @@ pub(super) mod private {
     }
 
     impl TimerCommon for SYST {
+        type Width = u32;
+
         fn init(&mut self, _rcc: &mut Rcc) {
             self.set_clock_source(SystClkSource::Core);
         }
@@ -144,6 +191,8 @@ macro_rules! timers {
     ($($TIM:ident: ($tim:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
         $(
             impl private::TimerCommon for $TIM {
+                type Width = u16; // TODO: Are there any with 32 bits?
+
                 fn init(&mut self, rcc: &mut Rcc) {
                     $TIM::enable(rcc);
                     $TIM::reset(rcc);
