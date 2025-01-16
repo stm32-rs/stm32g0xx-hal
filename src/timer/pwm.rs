@@ -70,83 +70,61 @@ impl<TIM> Pwm<TIM> {
     }
 }
 
-macro_rules! pwm {
-    ($($TIMX:ident: ($timX:ident, $arr:ident $(,$arr_h:ident)*),)+) => {
-        $(
-            impl PwmExt for $TIMX {
-                fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self> {
-                    $timX(self, freq, rcc, ClockSource::ApbTim)
-                }
+impl<T: super::private::TimerBase> PwmExt for T {
+    fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self> {
+        Pwm::new(self, freq, rcc, ClockSource::ApbTim)
+    }
+}
+
+impl<T: super::private::TimerBase> Pwm<T> {
+    fn new(mut tim: T, freq: Hertz, rcc: &mut Rcc, clock_source: ClockSource) -> Pwm<T> {
+        tim.init(rcc);
+
+        let clk = match clock_source {
+            ClockSource::ApbTim => {
+                rcc.ccipr().modify(|_, w| w.tim1sel().clear_bit());
+                rcc.clocks.apb_tim_clk
             }
-
-            fn $timX(tim: $TIMX, freq: Hertz, rcc: &mut Rcc, clock_source: ClockSource) -> Pwm<$TIMX> {
-                $TIMX::enable(rcc);
-                $TIMX::reset(rcc);
-
-                let clk = match clock_source {
-                    ClockSource::ApbTim => {
-                        rcc.ccipr().modify(|_, w| w.tim1sel().clear_bit());
-                        rcc.clocks.apb_tim_clk
-                    }
-                    ClockSource::Pllq => {
-                        rcc.ccipr().modify(|_, w| w.tim1sel().set_bit());
-                        rcc.clocks.pll_clk.q.unwrap()
-                    }
-                };
-
-                let mut pwm = Pwm::<$TIMX> {
-                    clk,
-                    tim,
-                };
-                pwm.set_freq(freq);
-                pwm
+            ClockSource::Pllq => {
+                rcc.ccipr().modify(|_, w| w.tim1sel().set_bit());
+                rcc.clocks.pll_clk.q.unwrap()
             }
+        };
 
-            impl Pwm<$TIMX> {
-                /// Set the PWM frequency. Actual frequency may differ from
-                /// requested due to precision of input clock. To check actual
-                /// frequency, call freq.
-                pub fn set_freq(&mut self, freq: Hertz) {
-                    let ratio = self.clk / freq;
-                    let psc = (ratio - 1) / 0xffff;
+        tim.set_freq(freq, clk);
+        tim.resume();
 
-                    unsafe {
-                        let arr = ratio / (psc + 1) - 1;
-                        self.tim.psc().write(|w| w.psc().bits(psc as u16));
-                        self.tim.arr().write(|w| w.$arr().bits((arr as u16).into()));
-                        $(
-                            self.tim.arr().modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
-                        )*
-                        self.tim.cr1().write(|w| w.cen().set_bit());
-                    }
-                }
-                /// Starts listening
-                pub fn listen(&mut self) {
-                    self.tim.dier().write(|w| w.uie().set_bit());
-                }
+        Self { clk, tim }
+    }
 
-                /// Stops listening
-                pub fn unlisten(&mut self) {
-                    self.tim.dier().write(|w| w.uie().clear_bit());
-                }
-                /// Clears interrupt flag
-                pub fn clear_irq(&mut self) {
-                    self.tim.sr().modify(|_, w| w.uif().clear_bit());
-                }
+    /// Set the PWM frequency. Actual frequency may differ from
+    /// requested due to precision of input clock. To check actual
+    /// frequency, call freq.
+    pub fn set_freq(&mut self, freq: Hertz) {
+        self.tim.set_freq(freq, self.clk);
+    }
+    /// Starts listening
+    pub fn listen(&mut self) {
+        self.tim.listen();
+    }
 
-                /// Resets counter value
-                pub fn reset(&mut self) {
-                    self.tim.cnt().reset();
-                }
+    /// Stops listening
+    pub fn unlisten(&mut self) {
+        self.tim.unlisten();
+    }
+    /// Clears interrupt flag
+    pub fn clear_irq(&mut self) {
+        self.tim.clear_irq();
+    }
 
-                /// Returns the currently configured frequency
-                pub fn freq(&self) -> Hertz {
-                    Hertz::from_raw(self.clk.raw()
-                        / (self.tim.psc().read().bits() + 1)
-                        / (self.tim.arr().read().bits() + 1))
-                }
-            }
-        )+
+    /// Resets counter value
+    pub fn reset(&mut self) {
+        self.tim.reset();
+    }
+
+    /// Returns the currently configured frequency
+    pub fn freq(&self) -> Hertz {
+        self.tim.freq(self.clk)
     }
 }
 
@@ -156,7 +134,7 @@ macro_rules! pwm_q {
         $(
             impl PwmQExt for $TIMX {
                 fn pwm_q(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self> {
-                    $timX(self, freq, rcc, ClockSource::Pllq)
+                    Pwm::new(self, freq, rcc, ClockSource::Pllq)
                 }
             }
         )+
@@ -323,32 +301,4 @@ pwm_hal! {
     TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
     TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
     TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
-}
-
-pwm! {
-    TIM1: (tim1, arr),
-    TIM3: (tim3, arr),
-    TIM14: (tim14, arr),
-    TIM16: (tim16, arr),
-    TIM17: (tim17, arr),
-}
-
-#[cfg(feature = "stm32g0x1")]
-pwm! {
-    TIM2: (tim2, arr),
-}
-
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
-pwm! {
-    TIM15: (tim15, arr),
-}
-
-#[cfg(feature = "stm32g0x1")]
-pwm_q! {
-    TIM1: tim1,
-}
-
-#[cfg(any(feature = "stm32g071", feature = "stm32g081"))]
-pwm_q! {
-    TIM15: tim15,
 }
