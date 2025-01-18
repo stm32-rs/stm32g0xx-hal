@@ -188,10 +188,10 @@ pub(super) mod private {
 }
 
 macro_rules! timers {
-    ($($TIM:ident: ($tim:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
+    ($($TIM:ident: $width:ty, ($tim:ident, $cnt:ident $(,$cnt_h:ident)*),)+) => {
         $(
             impl private::TimerCommon for $TIM {
-                type Width = u16; // TODO: Are there any with 32 bits?
+                type Width = $width;
 
                 fn init(&mut self, rcc: &mut Rcc) {
                     $TIM::enable(rcc);
@@ -273,7 +273,7 @@ macro_rules! timers {
                 fn set_freq_settings(&mut self, freq_settings: TimerFrequencySettings) {
                     unsafe {
                         self.psc().write(|w| w.psc().bits(freq_settings.psc as u16));
-                        self.arr().write(|w| w.arr().bits((freq_settings.arr as u16).into()));
+                        self.arr().write(|w| w.arr().bits(freq_settings.arr as $width));
                     }
                 }
 
@@ -443,21 +443,21 @@ timers_external_clocks! {
 }
 
 timers! {
-    TIM1: (tim1, cnt),
-    TIM3: (tim3, cnt),
-    TIM14: (tim14, cnt),
-    TIM16: (tim16, cnt),
-    TIM17: (tim17, cnt),
+    TIM1: u16, (tim1, cnt),
+    TIM3: u16, (tim3, cnt),
+    TIM14: u16, (tim14, cnt),
+    TIM16: u16, (tim16, cnt),
+    TIM17: u16, (tim17, cnt),
 }
 
 #[cfg(feature = "stm32g0x1")]
 timers! {
-    TIM2: (tim2, cnt),
+    TIM2: u32, (tim2, cnt),
 }
 
 #[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
 timers! {
-    TIM6: (tim6, cnt),
-    TIM7: (tim7, cnt),
-    TIM15: (tim15, cnt),
+    TIM6: u16, (tim6, cnt),
+    TIM7: u16, (tim7, cnt),
+    TIM15: u16, (tim15, cnt),
 }

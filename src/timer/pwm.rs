@@ -163,17 +163,16 @@ macro_rules! pwm_hal {
                 }
 
 
-                pub fn get_duty(&self) -> u32 {
-                    unsafe { (*$TIMX::ptr()).$ccrx().read().bits() }
+                pub fn get_duty(&self) -> <$TIMX as super::private::TimerCommon>::Width {
+                    unsafe { (*$TIMX::ptr()).$ccrx().read().ccr().bits() }
                 }
 
-                pub fn get_max_duty(&self) -> u32 {
-                    unsafe { (*$TIMX::ptr()).arr().read().bits() }
-
+                pub fn get_max_duty(&self) -> <$TIMX as super::private::TimerCommon>::Width {
+                    unsafe { (*$TIMX::ptr()).arr().read().arr().bits() }
                 }
 
-                pub fn set_duty(&mut self, duty: u32) {
-                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.bits(duty)); }
+                pub fn set_duty(&mut self, duty: <$TIMX as super::private::TimerCommon>::Width) {
+                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.ccr().bits(duty)); }
                 }
             }
 
@@ -187,7 +186,7 @@ macro_rules! pwm_hal {
                 }
 
                 fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
-                    self.set_duty(duty as u32);
+                    self.set_duty(duty.into());
                     Ok(())
                 }
             }
