@@ -164,7 +164,10 @@ macro_rules! pwm_hal {
 
 
                 pub fn get_duty(&self) -> <$TIMX as super::private::TimerCommon>::Width {
-                    unsafe { (*$TIMX::ptr()).$ccrx().read().ccr().bits() }
+                    // TODO: Remove this cast once stm32g0-staging > 0.16.0 is released
+                    unsafe {
+                        (*$TIMX::ptr()).$ccrx().read().ccr().bits() as <$TIMX as super::private::TimerCommon>::Width
+                    }
                 }
 
                 pub fn get_max_duty(&self) -> <$TIMX as super::private::TimerCommon>::Width {
@@ -172,7 +175,8 @@ macro_rules! pwm_hal {
                 }
 
                 pub fn set_duty(&mut self, duty: <$TIMX as super::private::TimerCommon>::Width) {
-                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.ccr().bits(duty)); }
+                    // TODO: Remove this cast once stm32g0-staging > 0.16.0 is released
+                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.ccr().bits(duty as _)); }
                 }
             }
 
