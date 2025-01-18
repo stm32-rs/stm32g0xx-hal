@@ -23,6 +23,10 @@ fugit = "0.3.7"
 embedded-hal = "1.0.0"
 bare-metal = "1.0.0"
 portable-atomic = { version = "1.10.0", features = ["critical-section"] }
+embedded-hal-async = { version = "1.0.0", optional = true }
+atomic-polyfill = { version = "1.0.3", optional = true }
+rtic-time = { version = "2.0.0", optional = true }
+embedded-time = { version = "0.12.1", optional = true }
 
 [dependencies.stm32g0]
 package = "stm32g0-staging"
@@ -61,6 +65,7 @@ stm32g0x1 = []
 
 i2c-blocking = []
 i2c-nonblocking = []
+rtic2 = ["dep:embedded-hal-async", "dep:atomic-polyfill", "dep:rtic-time"]
 
 [profile.dev]
 incremental = false
