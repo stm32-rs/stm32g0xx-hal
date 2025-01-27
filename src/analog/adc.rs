@@ -308,7 +308,7 @@ impl Adc {
             .chselr0()
             .modify(|_, w| unsafe { w.bits(1 << PIN::channel()) });
 
-        self.rb.isr().modify(|_, w| w.eos().set_bit());
+        self.rb.isr().modify(|_, w| w.eos().clear_bit_by_one());
         self.rb.cr().modify(|_, w| w.adstart().set_bit());
         while self.rb.isr().read().eos().bit_is_clear() {}
 
@@ -352,14 +352,14 @@ impl Adc {
     }
 
     fn power_up(&mut self) {
-        self.rb.isr().modify(|_, w| w.adrdy().set_bit());
+        self.rb.isr().modify(|_, w| w.adrdy().clear_bit_by_one());
         self.rb.cr().modify(|_, w| w.aden().set_bit());
         while self.rb.isr().read().adrdy().bit_is_clear() {}
     }
 
     fn power_down(&mut self) {
         self.rb.cr().modify(|_, w| w.addis().set_bit());
-        self.rb.isr().modify(|_, w| w.adrdy().set_bit());
+        self.rb.isr().modify(|_, w| w.adrdy().clear_bit_by_one());
         while self.rb.cr().read().aden().bit_is_set() {}
     }
 }

@@ -26,7 +26,7 @@ portable-atomic = { version = "1.10.0", features = ["critical-section"] }
 
 [dependencies.stm32g0]
 package = "stm32g0-staging"
-version = "0.16.0"
+version = "0.17.0"
 features = ["atomics"]
 
 [dependencies.void]

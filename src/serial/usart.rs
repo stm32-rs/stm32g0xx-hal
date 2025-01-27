@@ -886,14 +886,15 @@ uart_full!(USART2, usart2, 1);
     feature = "stm32g030",
     feature = "stm32g031",
     feature = "stm32g041",
-    feature = "stm32g0b1"
+    feature = "stm32g0b1",
+    feature = "stm32g0c1",
 ))]
 uart_basic!(USART2, usart2, 1);
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081",))]
 uart_basic!(USART3, usart3, 1);
 
-#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081"))]
+#[cfg(any(feature = "stm32g070", feature = "stm32g071", feature = "stm32g081",))]
 uart_basic!(USART4, usart4, 1);
 
 // LPUART Should be given its own implementation when it needs to be used with features not present on

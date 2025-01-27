@@ -131,7 +131,7 @@ impl WriteErase for UnlockedFlash {
                 }
                 #[cfg(not(feature = "stm32g0x0"))]
                 unsafe {
-                    w.pnb().bits(page.0 as u8);
+                    w.pnb().bits(page.0 as _);
                 }
                 w.strt().set_bit()
             });

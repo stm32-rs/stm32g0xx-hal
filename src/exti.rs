@@ -114,7 +114,8 @@ impl ExtiExt for EXTI {
             feature = "stm32g070",
             feature = "stm32g031",
             feature = "stm32g041",
-            feature = "stm32g0b1"
+            feature = "stm32g0b1",
+            feature = "stm32g0c1"
         ))]
         self.imr1()
             .modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
