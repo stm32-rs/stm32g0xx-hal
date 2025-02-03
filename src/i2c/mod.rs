@@ -89,6 +89,9 @@ pub trait Instance:
 {
 }
 
+impl Instance for crate::stm32::I2C1 {}
+impl Instance for crate::stm32::I2C2 {}
+
 /// I2C SDA pin
 pub trait SDAPin<I2C> {
     fn setup(&self);
