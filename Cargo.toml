@@ -34,9 +34,12 @@ default-features = false
 version = "1.0.2"
 
 [dev-dependencies]
+stm32g0xx-hal = { path = ".", features = ["defmt", "rt"] }
+
 cortex-m-rt = "0.7.5"
 cortex-m-semihosting = "0.5.0"
-defmt-rtt = "0.4.0"
+defmt = "0.3"
+defmt-rtt = "0.4"
 panic-halt = "1.0.0"
 panic-semihosting = "0.6.0"
 rtic = { version = "2.1.1", features = ["thumbv6-backend"] }

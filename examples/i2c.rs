@@ -3,17 +3,15 @@
 #![no_main]
 #![no_std]
 
-extern crate cortex_m;
-extern crate cortex_m_rt as rt;
-extern crate cortex_m_semihosting as sh;
-extern crate panic_halt;
-extern crate stm32g0xx_hal as hal;
+use cortex_m_semihosting as _;
+use defmt_rtt as _;
+use panic_halt as _;
+use stm32g0xx_hal as hal;
 
+use cortex_m_rt::entry;
 use hal::i2c::Config;
 use hal::prelude::*;
 use hal::stm32;
-use rt::entry;
-use sh::hprintln;
 
 #[entry]
 fn main() -> ! {
@@ -31,8 +29,8 @@ fn main() -> ! {
     let buf: [u8; 1] = [0];
     loop {
         match i2c.write(0x3c, &buf) {
-            Ok(_) => hprintln!("ok"),
-            Err(err) => hprintln!("error: {:?}", err),
+            Ok(_) => defmt::println!("ok"),
+            Err(err) => defmt::println!("error: {:?}", err),
         }
     }
 }
