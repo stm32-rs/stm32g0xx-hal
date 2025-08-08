@@ -27,33 +27,35 @@ impl<TIM, PIN: TimerPin<TIM>> TriggerPin<TIM, PIN> {
     }
 }
 
+macro_rules! timer_pin_impl {
+    ($TIMX:ident, $ch:ty, $pin:tt, $af_mode:expr, [ $(($mode:ty, $release:ident),)+]) => {
+        $(
+            impl TimerPin<$TIMX> for $pin<$mode> {
+                type Channel = $ch;
+
+                fn setup(&self) {
+                    self.set_alt_mode($af_mode);
+                }
+
+                fn release(self) -> Self {
+                    self.$release()
+                }
+            }
+        )+
+    };
+}
+
 macro_rules! timer_pins {
     ($TIMX:ident, [ $(($ch:ty, $pin:tt, $af_mode:expr),)+ ]) => {
         $(
-            impl TimerPin<$TIMX> for $pin<Analog> {
-                type Channel = $ch;
-
-                fn setup(&self) {
-                    self.set_alt_mode($af_mode);
-                }
-
-                fn release(self) -> Self {
-                    self.into_analog()
-                }
-            }
-
-            impl TimerPin<$TIMX> for $pin<Output<OpenDrain>> {
-                type Channel = $ch;
-
-                fn setup(&self) {
-                    self.set_alt_mode($af_mode);
-                }
-
-                fn release(self) -> Self {
-                    self.into_open_drain_output()
-                }
-            }
-
+            timer_pin_impl!($TIMX, $ch, $pin, $af_mode, [
+                (Analog, into_analog),
+                (Output<OpenDrain>, into_open_drain_output),
+                (Output<PushPull>, into_push_pull_output),
+                (Input<Floating>, into_floating_input),
+                (Input<PullUp>, into_pull_up_input),
+                (Input<PullDown>, into_pull_down_input),
+            ]);
         )+
     };
 }
