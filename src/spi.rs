@@ -315,7 +315,6 @@ impl<SPI: Instance> SpiExt for SPI {
 impl<SPI: Instance, PINS> SpiBus<SPI, PINS> {
     fn receive_byte(&mut self) -> nb::Result<u8, Error> {
         let sr = self.spi.sr().read();
-
         Err(if sr.ovr().bit_is_set() {
             nb::Error::Other(Error::Overrun)
         } else if sr.modf().bit_is_set() {
@@ -362,7 +361,6 @@ impl<SPI: Instance, PINS> spi::SpiBus for SpiBus<SPI, PINS> {
     fn write(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
         for byte in bytes.iter() {
             block!(self.send_byte(*byte))?;
-            block!(self.receive_byte())?;
         }
         Ok(())
     }
