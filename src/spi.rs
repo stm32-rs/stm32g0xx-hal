@@ -343,6 +343,15 @@ impl<SPI: Instance, PINS> SpiBus<SPI, PINS> {
             nb::Error::WouldBlock
         })
     }
+
+    fn wait_until_not_busy(&self) -> nb::Result<(), Error> {
+        let sr = self.spi.sr().read();
+        if sr.bsy().bit_is_set() {
+            Err(nb::Error::WouldBlock)
+        } else {
+            Ok(())
+        }
+    }
 }
 
 impl<SPI: Instance, PINS> ErrorType for SpiBus<SPI, PINS> {
@@ -362,6 +371,7 @@ impl<SPI: Instance, PINS> spi::SpiBus for SpiBus<SPI, PINS> {
         for byte in bytes.iter() {
             block!(self.send_byte(*byte))?;
         }
+        block!(self.wait_until_not_busy())?;
         Ok(())
     }
 
