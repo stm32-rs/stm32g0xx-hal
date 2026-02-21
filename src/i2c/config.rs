@@ -6,6 +6,7 @@ pub struct Config {
     pub speed: Option<Hertz>,
     pub timing: Option<u32>,
     pub analog_filter: bool,
+    pub general_call: bool,
     pub digital_filter: u8,
     pub slave_address_1: u16,
     pub address_11bits: bool,
@@ -19,6 +20,7 @@ impl Config {
             speed: Some(speed),
             timing: None,
             analog_filter: true,
+            general_call: false,
             digital_filter: 0,
             slave_address_1: 0,
             address_11bits: false,
@@ -32,6 +34,7 @@ impl Config {
             timing: Some(timing),
             speed: None,
             analog_filter: true,
+            general_call: false,
             digital_filter: 0,
             slave_address_1: 0,
             address_11bits: false,
@@ -48,6 +51,11 @@ impl Config {
     pub fn enable_digital_filter(mut self, cycles: u8) -> Self {
         assert!(cycles <= 16);
         self.digital_filter = cycles;
+        self
+    }
+
+    pub fn enable_general_call(mut self) -> Self {
+        self.general_call = true;
         self
     }
 

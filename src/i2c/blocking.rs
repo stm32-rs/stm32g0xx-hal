@@ -185,6 +185,7 @@ where
         i2c.cr1().modify(|_, w| {
             w.pe().set_bit();
             w.dnf().set(config.digital_filter);
+            w.gcen().bit(config.general_call);
             w.anfoff().bit(!config.analog_filter)
         });
 
